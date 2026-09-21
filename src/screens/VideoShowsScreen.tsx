@@ -18,7 +18,7 @@ import { useNav } from '../store/NavContext';
 import { useSpeech } from '../hooks/useSpeech';
 import { ff } from '../theme/fonts';
 import { C } from '../theme/colors';
-import { neliWorldAssets } from '../assets/neliWorldAssets';
+import { neliWorldAssets, roomBackgroundPickers } from '../assets/neliWorldAssets';
 import { characterAssets } from '../assets/characterAssets';
 import { ALPHABET_AUDIO_ID_OVERRIDE, FA_AUDIO_KEYS, FALLBACK_LETTER_NAME_FA, makeAlphabetAudioKey, playFaAudio, playFaAudioOrSpeak } from '../utils/faAudio';
 import PopperCelebration from '../components/PopperCelebration';
@@ -417,7 +417,7 @@ function AlphabetScenePlayer({
 
   return (
     <View style={styles.root}>
-      <ImageBackground source={neliWorldAssets.rooms.garden} style={StyleSheet.absoluteFill} resizeMode="cover">
+      <ImageBackground source={roomBackgroundPickers.garden(width, height)} style={StyleSheet.absoluteFill} imageStyle={styles.bgImage} resizeMode="cover">
         <LinearGradient colors={['rgba(74, 210, 255, 0.56)', 'rgba(255, 250, 217, 0.35)', 'rgba(71, 190, 118, 0.38)']} style={StyleSheet.absoluteFill} />
       </ImageBackground>
       <TopBar title="Alphabet Show" titleFa="نمایش الفبا" showClose dark topInset={10} onBack={close} />
@@ -809,6 +809,10 @@ export default function VideoShowsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#27105F' },
+  // Without an explicit imageStyle, react-native-web can leave the background
+  // <img> unsized in some nested-flex layouts, so it falls back to its own
+  // huge natural pixel size and only a random cropped sliver shows.
+  bgImage: { width: '100%', height: '100%' },
   sequenceRoot: { flex: 1, overflow: 'hidden' },
   sequenceBlob: { position: 'absolute', borderRadius: 999, opacity: 0.18 },
   sequenceBlobA: { width: 320, height: 320, top: -120, right: -88 },

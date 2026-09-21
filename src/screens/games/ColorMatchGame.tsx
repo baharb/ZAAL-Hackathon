@@ -31,7 +31,7 @@ function makeRound() {
 
 function PaintCharacter({ color, accent, characterId }: { color: string; accent: string; characterId: string }) {
   return (
-    <ImageBackground source={neliWorldAssets.rooms.garden} style={styles.characterStage} imageStyle={styles.characterBg}>
+    <ImageBackground source={neliWorldAssets.rooms.gardenWide} style={styles.characterStage} imageStyle={styles.characterBg}>
       <View style={styles.sceneWash} />
       <View style={[styles.paintHalo, { backgroundColor: accent }]} />
       <CharacterAvatar characterId={characterId} size={176} />

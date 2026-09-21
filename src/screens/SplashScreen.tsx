@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, ImageBackground, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
-import { Audio } from 'expo-av';
+import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import PopperCelebration from '../components/PopperCelebration';
 import { characterAssets } from '../assets/characterAssets';
-import { neliWorldAssets } from '../assets/neliWorldAssets';
+import { roomBackgroundPickers } from '../assets/neliWorldAssets';
 import { AppContext } from '../store/AppContext';
 import { useNav } from '../store/NavContext';
 import { dir, ff } from '../theme/fonts';
@@ -13,6 +13,9 @@ import { dir, ff } from '../theme/fonts';
 // instant Neli (the last character) arrives. ~2.116s long, mixed quiet.
 const YAY_KIDS_SOUND = require('../../assets/audio/yay-kids.mp3');
 const YAY_DURATION_MS = 2116;
+// One short pop as each cast member lands — six of them, 340ms apart,
+// so it reads as the huddle assembling rather than as six separate cues.
+const POP_SOUND = require('../../assets/audio/pop.wav');
 const LOGO_WHITE = require('../../assets/logo-white.webp');
 const LOGO_WHITE_ASPECT = 961 / 501;
 
@@ -48,14 +51,65 @@ export default function SplashScreen() {
   const { lang, authReady, hasAccount, timeExpired } = useContext(AppContext);
   const { width, height } = useWindowDimensions();
   const isFa = lang === 'fa' || lang === 'ar';
-  const landscape = width > height;
-  const splashSource = landscape ? neliWorldAssets.rooms.splashLandscape : neliWorldAssets.rooms.splashPortrait;
+  const portrait = height > width;
+
+  // Size the wordmark from BOTH axes in explicit points. A percentage width
+  // plus `aspectRatio` resolves differently on iOS than on web, and on short
+  // landscape phones (~2.2:1) it let the logo outgrow the screen, clipping the
+  // outer letters and pushing the name off the bottom. Portrait has width to
+  // spare and little height; landscape is the opposite.
+  const logoWidth = portrait
+    ? Math.min(width * 0.68, height * 0.26 * LOGO_WHITE_ASPECT)
+    : Math.min(width * 0.38, height * 0.42 * LOGO_WHITE_ASPECT);
+
+  // The yard exists in several shapes. Pick the nearest so `cover` has least
+  // to crop: a 2.22:1 phone and a 1.33:1 iPad are very different pictures,
+  // and choosing by orientation alone (as this used to) handed everyone the
+  // 16:9 — costing 20% of its height on a Pixel 7 and 25% of its width on an
+  // iPad. Same aspect-ratio-bucket picker the room screens use.
+  const splashSource = roomBackgroundPickers.splash(width, height);
+
+  // The huddle was composed against a 16:9 yard, every position a percentage.
+  // Anchoring those to the raw screen spreads the cast apart on a wide phone
+  // and blows it up on a tall one, so place them inside a centred box of the
+  // shape they were drawn for. Keeps the composition intact at any ratio.
+  const SCENE_ASPECT = 16 / 9;
+  const stageW = Math.min(width, height * SCENE_ASPECT);
+  const stageH = stageW / SCENE_ASPECT;
+  const stageX = (width - stageW) / 2;
+  const stageY = (height - stageH) / 2;
 
   const [finaleVisible, setFinaleVisible] = useState(false);
   const [celebrationOn, setCelebrationOn] = useState(false);
   const finaleOpacity = useRef(new Animated.Value(0)).current;
   const castAnims = useRef(CAST.map(() => new Animated.Value(0))).current;
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const soundRef = useRef<AudioPlayer | null>(null);
+  // goNext is defined below, but the entrance effect must reach the
+  // current one at fire time, so route it through a ref.
+  const goNextRef = useRef<() => void>(() => {});
+
+  // A fresh player per pop, disposed when it finishes — the same shape as the
+  // "yay" clip below, which is the pattern that actually works here. Reusing
+  // one player and re-seeking it silently played nothing: a player parked at
+  // the end won't restart, and seekTo() on a not-yet-loaded player throws
+  // before play() is ever reached.
+  const playPop = () => {
+    try {
+      const player = createAudioPlayer(POP_SOUND);
+      player.volume = 0.45;
+      player.play();
+      const subscription = player.addListener('playbackStatusUpdate', status => {
+        if (status.isLoaded && status.didJustFinish) {
+          subscription.remove();
+          try { player.remove(); } catch {}
+        }
+      });
+      // Belt and braces: if the status event never arrives, don't leak.
+      setTimeout(() => { try { player.remove(); } catch {} }, 1500);
+    } catch {
+      // Sound is a nice-to-have; never block the splash on it.
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +123,7 @@ export default function SplashScreen() {
 
     castAnims.forEach((anim, i) => {
       timers.push(setTimeout(() => {
+        playPop();
         Animated.timing(anim, {
           toValue: 1,
           duration: ENTRANCE_DURATION_MS,
@@ -82,18 +137,21 @@ export default function SplashScreen() {
     const lastCharAt = FIRST_ENTRANCE_DELAY_MS + lastIndex * ENTRANCE_GAP_MS;
 
     // Neli (the last arrival) triggers the real "yay" cheer clip, played quiet.
-    timers.push(setTimeout(async () => {
+    timers.push(setTimeout(() => {
       try {
-        const { sound } = await Audio.Sound.createAsync(YAY_KIDS_SOUND, { shouldPlay: true, volume: 0.4 });
+        const player = createAudioPlayer(YAY_KIDS_SOUND);
         if (cancelled) {
-          await sound.unloadAsync();
+          try { player.remove(); } catch {}
           return;
         }
-        soundRef.current = sound;
-        sound.setOnPlaybackStatusUpdate(async status => {
+        player.volume = 0.4;
+        soundRef.current = player;
+        player.play();
+        const subscription = player.addListener('playbackStatusUpdate', status => {
           if (status.isLoaded && status.didJustFinish) {
-            try { await sound.unloadAsync(); } catch { /* ignore */ }
-            if (soundRef.current === sound) soundRef.current = null;
+            subscription.remove();
+            try { player.remove(); } catch { /* ignore */ }
+            if (soundRef.current === player) soundRef.current = null;
           }
         });
       } catch {
@@ -115,31 +173,59 @@ export default function SplashScreen() {
       }).start();
     }, finaleAt));
 
+    // Safety net. goNext() is otherwise reachable ONLY from the celebration's
+    // completion callback, and Animated.timing reports finished:false whenever
+    // it is interrupted or starved of frames — a backgrounded tab, a slow
+    // device, an animation cut short. Any of those stranded the user on the
+    // splash permanently, with no way forward. Move on regardless.
+    timers.push(setTimeout(() => {
+      if (cancelled) return;
+      goNextRef.current();
+    }, finaleAt + 2800));
+
     return () => {
       cancelled = true;
       timers.forEach(clearTimeout);
       if (soundRef.current) {
-        soundRef.current.stopAsync().catch(() => {});
-        soundRef.current.unloadAsync().catch(() => {});
+        try { soundRef.current.pause(); } catch {}
+        try { soundRef.current.remove(); } catch {}
         soundRef.current = null;
       }
     };
+    // Deliberately run once, not on [authReady]. authReady flips true
+    // asynchronously (an AsyncStorage read in AppContext) partway through
+    // this multi-second sequence, not before it starts — depending on it
+    // here restarted the whole entrance animation from scratch mid-splash on
+    // every real launch. goNext() below is what actually needs to know
+    // whether auth is ready, not this effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authReady]);
+  }, []);
+
+  // goNext() no-ops while auth isn't ready yet (see below). If the
+  // celebration's onComplete or the safety-net timeout already fired during
+  // that window, reachedEndRef remembers to retry the moment authReady
+  // flips true, instead of relying on the animation effect to react to it.
+  const reachedEndRef = useRef(false);
 
   const goNext = () => {
-    if (!authReady) return;
+    if (!authReady) { reachedEndRef.current = true; return; }
     if (timeExpired) { reset({ name: 'TimeUp' }); return; }
     reset(hasAccount ? { name: 'Home' } : { name: 'AccountSetup' });
   };
+  goNextRef.current = goNext;
+
+  useEffect(() => {
+    if (authReady && reachedEndRef.current) goNext();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authReady]);
 
   return (
-    <ImageBackground source={splashSource} style={styles.root} resizeMode="cover">
+    <ImageBackground source={splashSource} style={styles.root} imageStyle={styles.rootImage} resizeMode="cover">
       {CAST.map((member, i) => {
-        const heightPx = (member.heightPct / 100) * height;
+        const heightPx = (member.heightPct / 100) * stageH;
         const widthPx = heightPx * member.aspectRatio;
-        const leftPx = (member.leftPct / 100) * width - widthPx / 2;
-        const bottomPx = (member.bottomPct / 100) * height;
+        const leftPx = stageX + (member.leftPct / 100) * stageW - widthPx / 2;
+        const bottomPx = stageY + (member.bottomPct / 100) * stageH;
         const anim = castAnims[i];
         return (
           <View
@@ -167,8 +253,8 @@ export default function SplashScreen() {
 
       <Animated.View pointerEvents={finaleVisible ? 'auto' : 'none'} style={[styles.finale, { opacity: finaleOpacity }]}>
         <PopperCelebration visible={celebrationOn} onComplete={() => { setCelebrationOn(false); goNext(); }} />
-        <Image source={LOGO_WHITE} resizeMode="contain" style={[styles.finaleLogo, { aspectRatio: LOGO_WHITE_ASPECT }]} />
-        <Text style={[styles.finaleName, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
+        <Image source={LOGO_WHITE} resizeMode="contain" style={{ width: logoWidth, height: logoWidth / LOGO_WHITE_ASPECT }} />
+        <Text allowFontScaling={false} style={[styles.finaleName, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
           {isFa ? 'زال' : 'Persian for kids'}
         </Text>
       </Animated.View>
@@ -178,6 +264,10 @@ export default function SplashScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#6B21A8' },
+  // Without an explicit imageStyle, react-native-web can leave the background
+  // <img> unsized in some nested-flex layouts, so it falls back to its own
+  // huge natural pixel size and only a random cropped sliver shows.
+  rootImage: { width: '100%', height: '100%' },
   finale: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#6B21A8',
@@ -185,6 +275,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 20,
   },
-  finaleLogo: { width: '38%' },
-  finaleName: { color: '#FFFFFF', fontSize: 30, marginTop: 14 },
+  finaleName: { color: '#FFFFFF', fontSize: 30, lineHeight: 42, marginTop: 14 },
 });

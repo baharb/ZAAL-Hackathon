@@ -42,6 +42,9 @@ Data type: Personal info → Email address and/or Phone number
   Users can request data deletion: Yes (bahar.bahreman@gmail.com)
 No other data types collected (no location, no financial info, no photos, no device identifiers, no analytics/advertising data — ZAAL has no ad or analytics SDKs).
 
+## Privacy policy URL (for the Play Console "App content" section)
+https://zaalapp.com/privacy.html
+
 ## Store listing assets in this folder
 play-store-icon-512.png — 512x512 app icon
 feature-graphic-1024x500.png — feature graphic for the store listing header

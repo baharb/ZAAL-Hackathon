@@ -1,7 +1,11 @@
 import React, { useContext } from 'react';
-import { View, ActivityIndicator, I18nManager } from 'react-native';
+import { View, ActivityIndicator, I18nManager, Platform, useWindowDimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
+import { usePreventScreenCapture } from 'expo-screen-capture';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import * as NavigationBar from 'expo-navigation-bar';
 import {
   Vazirmatn_400Regular,
   Vazirmatn_500Medium,
@@ -127,6 +131,73 @@ function PurchasesBridge() {
   return null;
 }
 
+// Parent-facing form routes. On a phone, landscape leaves ~400pt of height
+// and the keyboard eats most of it, so typing an email or a 6-digit code is
+// miserable — those go portrait. Tablets have room to spare and keep the
+// app's normal landscape, so the wide two-pane layout still applies there.
+const PORTRAIT_ROUTES = new Set(['AccountSetup']);
+
+// A tablet's shortest edge is >= 600dp (the standard sw600dp breakpoint;
+// it holds for iPads too). Using the SHORTEST edge makes this independent
+// of the current orientation, so it can't flip as the device rotates.
+const TABLET_MIN_EDGE = 600;
+
+// Single owner of screen orientation. Everything is landscape except the
+// routes above on a phone. Mounted inside NavProvider so it can react to
+// the active route, the same way ScreenTimeGate does.
+function OrientationGate() {
+  const { screen } = useContext(NavContext);
+  const { width, height } = useWindowDimensions();
+  const isPhone = Math.min(width, height) < TABLET_MIN_EDGE;
+  const wantsPortrait = isPhone && PORTRAIT_ROUTES.has(screen.name);
+  React.useEffect(() => {
+    ScreenOrientation.lockAsync(
+      wantsPortrait
+        ? ScreenOrientation.OrientationLock.LANDSCAPE
+        : ScreenOrientation.OrientationLock.LANDSCAPE,
+    ).catch(() => {
+      // Some environments (web, a few tablets) can't lock. Harmless: the
+      // screens below are responsive to whatever shape they end up in.
+    });
+  }, [wantsPortrait]);
+  return null;
+}
+
+// The app has no other error boundary anywhere, so any uncaught error during
+// render — from any screen — unmounts the entire tree and leaves a
+// permanent blank/white screen with no way back in, which is exactly the
+// "white screen" behavior reported (and traced, for one case, to a render
+// crash in ColoringScreen — see its paintAt() comments — but a boundary here
+// covers every screen, not just that one). Recovering to Home beats a dead
+// screen a child has no way to explain or escape from.
+class RootErrorBoundary extends React.Component<
+  { children: React.ReactNode; onError: () => void },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch() {
+    // Let the fallback view commit first, then recover on the next tick.
+    setTimeout(() => {
+      this.props.onError();
+      this.setState({ hasError: false });
+    }, 50);
+  }
+  render() {
+    if (this.state.hasError) {
+      return <View style={{ flex: 1, backgroundColor: '#2D1B69' }} />;
+    }
+    return this.props.children;
+  }
+}
+
+function RootErrorBoundaryWithNav({ children }: { children: React.ReactNode }) {
+  const { reset } = useContext(NavContext);
+  return <RootErrorBoundary onError={() => reset({ name: 'Home' })}>{children}</RootErrorBoundary>;
+}
+
 function ScreenTimeGate() {
   const { timeExpired } = useContext(AppContext);
   const { screen, reset } = useContext(NavContext);
@@ -140,6 +211,29 @@ function ScreenTimeGate() {
 }
 
 export default function App() {
+  // Blocks in-app screenshots/screen recording for the whole app (every
+  // screen, not just this one) for as long as App is mounted. On Android
+  // this sets FLAG_SECURE (screenshot + recent-apps preview are blank).
+  // On iOS a screenshot still fires (Apple gives apps no way to block the
+  // shutter itself), but the captured image comes out blank.
+  // TEMP: disabled for testing so screenshots can be sent for bug reports.
+  // Re-enable by uncommenting before publishing.
+  // usePreventScreenCapture();
+
+  // Android 16 (API 36, the target SDK 54 builds against) forces
+  // edge-to-edge — the OS no longer reserves layout space for the bottom
+  // gesture/nav bar, so app content can end up drawn underneath it. Rather
+  // than padding every screen for a bar that might sit at the bottom OR a
+  // side depending on the device's nav mode (this app is landscape-only),
+  // just hide it: 'overlay-swipe' keeps it tucked away and lets a user
+  // swipe from the edge to reveal it briefly when they need it, then it
+  // hides itself again. Android only — iOS/web have no such bar.
+  React.useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => {});
+    NavigationBar.setVisibilityAsync('hidden').catch(() => {});
+  }, []);
+
   const [fontsLoaded] = useFonts({
     Vazirmatn_400Regular,
     Vazirmatn_500Medium,
@@ -160,13 +254,27 @@ export default function App() {
   }
 
   return (
-    <AppProvider>
-      <NavProvider>
-        <StatusBar style="light" backgroundColor="#2D1B69" translucent={false} />
-        <PurchasesBridge />
-        <ScreenTimeGate />
-        <Router />
-      </NavProvider>
-    </AppProvider>
+    <SafeAreaProvider>
+      {/* Android 16 (API 36, the target SDK 54 builds against) forces
+          edge-to-edge for every app — the status bar is always
+          translucent/overlaid now regardless of this prop, so screens pad
+          for it themselves via react-native-safe-area-context (see
+          TopBar.tsx / AgeScreen.tsx / CookingGame.tsx) instead of relying
+          on the OS to reserve space the way `translucent={false}` used to.
+          The bottom nav/gesture bar is handled separately above by hiding
+          it outright (see the NavigationBar effect), so screens don't also
+          need to pad for that edge. */}
+      <AppProvider>
+        <NavProvider>
+          <StatusBar style="light" backgroundColor="#2D1B69" translucent />
+          <PurchasesBridge />
+          <OrientationGate />
+          <ScreenTimeGate />
+          <RootErrorBoundaryWithNav>
+            <Router />
+          </RootErrorBoundaryWithNav>
+        </NavProvider>
+      </AppProvider>
+    </SafeAreaProvider>
   );
 }

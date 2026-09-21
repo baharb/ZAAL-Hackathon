@@ -12,11 +12,12 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppContext } from '../../store/AppContext';
 import { useNav } from '../../store/NavContext';
 import { useSpeech } from '../../hooks/useSpeech';
 import { useLandscapeDimensions } from '../../hooks/useLandscapeDimensions';
-import TopBar from '../../components/TopBar';
+import TopBar, { topBarHeight } from '../../components/TopBar';
 import { characterAssets } from '../../assets/characterAssets';
 import { dir, ff } from '../../theme/fonts';
 import { neliWorldAssets } from '../../assets/neliWorldAssets';
@@ -95,16 +96,69 @@ const RECIPES: Recipe[] = [
   { id: 'zereshk-polo', fa: 'زرشک پلو', en: 'Zereshk Polo', color: '#C026D3', vessel: 'pot', steps: [ALL.rice, ALL.zereshk, ALL.saffron, ALL.oil, ALL.salt], menuSource: neliWorldAssets.persianFoods.zereshkPolo, resultSource: neliWorldAssets.persianFoods.zereshkPolo },
 ];
 
+// Only these recipes show as tabs for now — the rest are saved for a future
+// version. Every recipe is still fully in RECIPES and playable; add an id
+// back here (or clear this set) to bring it back into the picker.
+const VISIBLE_RECIPE_IDS = new Set(['sabzi-polo', 'omelette', 'shirazi-salad', 'kuku-sabzi', 'tahchin', 'kebab']);
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-function getCounterSlots(width: number, height: number, target: Rect, count: number, vessel: Recipe['vessel']): Slot[] {
+// The counter surface sits at a fixed fraction of the ARTWORK's height above
+// its bottom edge, and the artwork is bottom-anchored. It used to be a
+// fraction of the SCREEN height, which drifts as the header and recipe row
+// take a bigger share of a short screen: on an 800pt tablet that chrome is
+// 15% of the height, on a 428pt phone it is 24%, so the bowl slid below the
+// counter on phones. 0.594 reproduces the existing tablet layout exactly —
+// but only for the tablet art (kitchen_landscape_2048x1536). The WIDE art
+// phones fall back to (kitchen_landscape_1920x1080) is a different crop
+// with a much shallower counter, so this fraction doesn't apply there — see
+// COUNTER_EDGE_FROM_BOTTOM below. The ingredient row has no fraction of its
+// own any more — see getCounterSlots, which anchors it to the bowl's own
+// rendered rect instead, so the two can't drift apart.
+const TARGET_FROM_BOTTOM = 0.594;
+// On short/wide phones the chef needs enough of a push down to clear the
+// header + recipe row (see extraDrop below), and that push is computed from
+// the chef's fixed size alone — it has no idea where the counter actually
+// is in the art. On the tablet art that's harmless: the counter is a deep
+// band, so any reasonable push still lands on it. But the WIDE phone art
+// (kitchen_landscape_1920x1080) is a different crop whose counter is a
+// shallow strip — measured directly from the file, the cream counter meets
+// the teal cabinet front at 32.3% of the image height from the bottom
+// (68.7% is the analogous line in kitchen_landscape_2048x1536, at 6.1% from
+// the bottom, for the tablet-style art). A push sized only for chef
+// clearance can overshoot that shallow strip on the shortest phones. Rather
+// than capping the drop outright — which used to leave the chef's own head
+// tucked under the header/recipe row, trading one visible glitch for
+// another — the chef shrinks a bit first (see chefShrink below) so the
+// clearance it needs and the room the counter has are closer to begin with;
+// EDGE_MARGIN is the small buffer kept between the counter's front edge and
+// wherever that negotiation lands.
+const COUNTER_EDGE_FROM_BOTTOM_WIDE = 0.323;
+const COUNTER_EDGE_FROM_BOTTOM_STANDARD = 0.061;
+const EDGE_MARGIN = 4;
+
+function getCounterSlots(width: number, height: number, target: Rect, count: number, vessel: Recipe['vessel'], ingredientSize: number, maxLineY = Infinity): Slot[] {
   const isLandscape = width > height;
   const cardW = Math.min(isLandscape ? 104 : 88, Math.max(68, Math.floor(width * 0.11)));
   const cardH = Math.min(isLandscape ? 92 : 80, Math.max(64, Math.floor(height * 0.09)));
-  const lineYBase = clamp(target.y - cardH * 0.20, height * 0.09, height * 0.36 - cardH);
-  const lineY = target.y !== 0 && target.h > 1 ? lineYBase + height * 0.18 : lineYBase;
+  // Anchored to the bowl's OWN rendered rect — bottom-aligned with the bowl
+  // image (counterBowl is target.h * 1.044 tall) — rather than computed
+  // independently via its own from-bottom fraction and extraDrop. The two
+  // used to be computed in parallel and mostly agreed by coincidence: once
+  // the chef started shrinking (see chefShrink) to keep clear of the
+  // header, the amount of push each one got could diverge, and the
+  // ingredients visibly sat lower than the bowl on short phones. Deriving
+  // one from the other's actual position makes that impossible.
+  // FoodTile top-aligns the ingredient art (boxH tall) within a touch target
+  // (touchHeight tall) centred on this slot, offset by `slot.h * 0.02` below
+  // — mirror that arithmetic in reverse to land the art's own bottom edge,
+  // not just the slot's, on the bowl's.
+  const touchHeight = Math.max(cardH, ingredientSize + 42);
+  const boxH = ingredientSize + 14;
+  const bowlBottom = target.y + target.h * 1.006;
+  const lineY = clamp(bowlBottom - cardH * 0.02 + (touchHeight - cardH) / 2 - boxH, height * 0.08, Math.min(height - cardH - 8, maxLineY));
   const gap = Math.max(4, Math.round(cardW * 0.06));
   const leftCount = Math.ceil(count / 2);
   const rightCount = count - leftCount;
@@ -126,27 +180,45 @@ function getCounterSlots(width: number, height: number, target: Rect, count: num
   });
 }
 
-function getTargetRect(width: number, height: number, recipe: Recipe): Rect {
+function getTargetRect(width: number, height: number, sceneH: number, recipe: Recipe, targetFromBottom: number, extraDrop = 0): Rect {
   const isLandscape = width > height;
   const centerX = isLandscape ? width * 0.58 : width * 0.56;
-  const centerY = isLandscape ? height * 0.62 : height * 0.64;
   const w = isLandscape ? width * 0.20 : width * 0.26;
   const h = isLandscape ? height * 0.16 : height * 0.14;
-  const rect = { x: centerX - w / 2, y: centerY - h / 2, w, h };
   return {
-    x: rect.x - w / 4 - width * 0.05,
-    y: rect.y - h * 0.65 - height * 0.03,
+    x: centerX - w / 2 - w / 4 - width * 0.05,
+    y: clamp(height - sceneH * targetFromBottom + extraDrop, height * 0.06, height - h - 8),
     w,
     h,
   };
 }
 
-function getCookingSceneSource(width: number, height: number) {
+// Returns the art, its true aspect, AND the target-from-bottom fraction
+// calibrated for THAT specific file — the caller has to crop the art itself
+// (see the bottom-anchored background in the render below), and has to
+// place the bowl using whichever fraction matches what's actually on screen
+// (see the constants above).
+function getCookingScene(width: number, height: number) {
+  const WIDE = {
+    source: neliWorldAssets.rooms.cookingTable,
+    aspect: 1920 / 1080,
+    targetFromBottom: TARGET_FROM_BOTTOM,
+    edgeFromBottom: COUNTER_EDGE_FROM_BOTTOM_WIDE,
+  };
+  const STANDARD = {
+    aspect: 2048 / 1536,
+    targetFromBottom: TARGET_FROM_BOTTOM,
+    edgeFromBottom: COUNTER_EDGE_FROM_BOTTOM_STANDARD,
+  };
   const isLandscape = width > height;
   if (isLandscape) {
-    return width / height > 1.45 ? neliWorldAssets.rooms.cookingTable : neliWorldAssets.rooms.cookingTableTabletLandscape;
+    return width / height > 1.45
+      ? WIDE
+      : { ...STANDARD, source: neliWorldAssets.rooms.cookingTableTabletLandscape };
   }
-  return height / width > 1.4 ? neliWorldAssets.rooms.cookingTable : neliWorldAssets.rooms.cookingTableTabletPortrait;
+  return height / width > 1.4
+    ? WIDE
+    : { ...STANDARD, source: neliWorldAssets.rooms.cookingTableTabletPortrait };
 }
 
 function renderIngredientArt(ingredient: Ingredient, size: number) {
@@ -463,6 +535,7 @@ export default function CookingGame() {
   const { lang, addStars } = useContext(AppContext);
   const { reset: resetNav } = useNav();
   const { width, height } = useLandscapeDimensions();
+  const insets = useSafeAreaInsets();
   const { speakFarsiOnly, speakInLang, stop } = useSpeech();
   const stageRef = useRef<View>(null);
   const [recipeIdx, setRecipeIdx] = useState(0);
@@ -477,21 +550,75 @@ export default function CookingGame() {
   const [bowlAdd, setBowlAdd] = useState<{ id: number; color: string } | null>(null);
   const [stageOrigin, setStageOrigin] = useState({ x: 0, y: 0 });
   const [recipeRowBottom, setRecipeRowBottom] = useState(0);
+  // Straight from TopBar rather than a hard-coded 90, which matched neither a
+  // phone (70) nor a tablet (~98). onLayout on a wrapper reported 0 here, so
+  // this takes the number from the source.
+  const headerHeight = topBarHeight(height, insets.top, { topInset: 10 });
 
   const recipe = RECIPES[recipeIdx];
   const current = recipe.steps[step];
   const isFa = lang === 'fa' || lang === 'ar';
-  const sceneSource = getCookingSceneSource(width, height);
+  const scene = getCookingScene(width, height);
+  // Cover, but anchored to the BOTTOM instead of the centre. The counter and
+  // table run along the bottom edge of this art, and a centred cover on a
+  // 2.2:1 phone crops roughly a fifth of the height off each end — taking the
+  // table with it, leaving ingredients to be dropped onto nothing. Overflow
+  // now goes off the top, where there is only ceiling.
+  const sceneW = Math.max(width, height * scene.aspect);
+  const sceneH = sceneW / scene.aspect;
   const textFont = (weight: 'regular' | 'bold' | 'black') => (isFa ? ff('fa', weight) : ff(lang, weight));
   const menuFont = (weight: 'regular' | 'bold' | 'black' = 'bold') => ff('fa', weight);
   const showRecipeThumb = Math.min(width, height) >= 600;
   const recipeRowHeight = showRecipeThumb ? 60 : 38;
   const ingredientSize = Math.max(52, Math.min(108, Math.round(Math.min(width, height) * 0.102)));
-  const target = useMemo(() => getTargetRect(width, height, recipe), [height, recipe, width]);
-  const slots = useMemo(() => getCounterSlots(width, height, target, recipe.steps.length, recipe.vessel), [height, recipe.steps.length, recipe.vessel, target, width]);
-  const chefWidth = Math.min(width * 0.308, height * 0.462);
-  const chefHeight = chefWidth * 1.22;
+  // The chef stays full-size in the common case — its size (and the
+  // bowl-to-chef gap, a fixed 0.60 multiplier of this height) is exactly as
+  // designed. TopBar is normal-flow (not absolute), so it and `stage`'s own
+  // 8pt marginTop push `stage` down by `headerHeight + 8` before target.y=0
+  // even starts — target.y is already stage-local, and the recipe row's
+  // bottom edge in that same local space is `recipeRowHeight - stageMarginTop`.
+  const stageMarginTop = 8;
+  const isLandscapeScene = width > height;
+  const chefWidthNatural = Math.min(width * 0.308, height * 0.462);
+  const chefHeightNatural = chefWidthNatural * 1.22;
+  const tabRowBottomLocal = recipeRowHeight - stageMarginTop;
+  // Where the counter's front edge sits, in the same stage-local pseudo-space
+  // as naturalTargetY below — see COUNTER_EDGE_FROM_BOTTOM_WIDE. Used only to
+  // size chefShrink, never as a hard position cap: capping target.y directly
+  // used to tuck the chef's own head under the header on the shortest
+  // phones, trading a floating bowl for a decapitated chef.
+  const edgeY = height - sceneH * scene.edgeFromBottom - (headerHeight + stageMarginTop);
+  const targetHNatural = isLandscapeScene ? height * 0.16 : height * 0.14;
+  const maxTargetYFromEdge = edgeY - targetHNatural * 1.006 - EDGE_MARGIN;
+  const requiredTargetYNatural = tabRowBottomLocal + chefHeightNatural * 0.60;
+  // Shrinks the chef just enough to close the gap between "clears the
+  // header" and "leaves the bowl on the counter" when those two disagree —
+  // floored so the chef never gets implausibly small on the most extreme
+  // phones; past that floor the header wins, since a visible chef matters
+  // more than an exact counter line.
+  const chefShrink = requiredTargetYNatural > maxTargetYFromEdge
+    ? clamp((maxTargetYFromEdge - tabRowBottomLocal) / (chefHeightNatural * 0.60), 0.78, 1)
+    : 1;
+  const chefWidth = chefWidthNatural * chefShrink;
+  const chefHeight = chefHeightNatural * chefShrink;
   const chefFrameHeight = chefHeight * 0.74;
+  // On a short landscape phone the counter (bowl + ingredients) sits close
+  // enough to the top that the chef's hat would land behind the
+  // header/recipe-tab row. Drop the whole counter group down by the same
+  // amount — preserving every existing on-counter relationship — just far
+  // enough that the chef clears the recipe row, not merely the header.
+  const naturalTargetY = height - sceneH * scene.targetFromBottom;
+  const requiredTargetY = tabRowBottomLocal + chefHeight * 0.60;
+  const extraDrop = Math.max(0, requiredTargetY - naturalTargetY);
+  const target = useMemo(() => getTargetRect(width, height, sceneH, recipe, scene.targetFromBottom, extraDrop), [height, recipe, sceneH, width, scene.targetFromBottom, extraDrop]);
+  // The ingredient row is anchored to the bowl itself (see getCounterSlots),
+  // so it only needs its own ceiling to keep off the bottom "next step" pill
+  // (`styles.prompt`, positioned independently of the counter) on the
+  // shortest phones.
+  const ingredientCardH = Math.min(isLandscapeScene ? 92 : 80, Math.max(64, Math.floor(height * 0.09)));
+  const nextPillTopLocal = (height - 18 - 44) - (headerHeight + stageMarginTop);
+  const maxIngredientLineY = nextPillTopLocal - ingredientCardH * 1.02 - 8;
+  const slots = useMemo(() => getCounterSlots(width, height, target, recipe.steps.length, recipe.vessel, ingredientSize, maxIngredientLineY), [height, recipe.steps.length, recipe.vessel, target, width, ingredientSize, maxIngredientLineY]);
 
   const say = (fa: string, en: string) => {
     stop();
@@ -629,21 +756,26 @@ export default function CookingGame() {
 
   return (
     <View style={styles.root}>
-      <ImageBackground source={sceneSource} style={styles.scene} resizeMode="cover">
+      <View style={styles.scene}>
+        <Image
+          source={scene.source}
+          style={{ position: 'absolute', width: sceneW, height: sceneH, left: (width - sceneW) / 2, top: height - sceneH }}
+          resizeMode="stretch"
+        />
         <View style={[styles.sceneWash, done && styles.sceneWashDone]} />
         <TopBar title="Cooking" titleFa="آشپزی" showClose dark topInset={10} onBack={() => resetNav({ name: 'Home' })} />
 
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={[styles.recipeRow, { height: recipeRowHeight }]}
+          style={[styles.recipeRow, { top: headerHeight, height: recipeRowHeight }]}
           contentContainerStyle={styles.recipeRowContent}
           onLayout={event => {
             const { y, height: rowHeight } = event.nativeEvent.layout;
             setRecipeRowBottom(y + rowHeight);
           }}
         >
-          {RECIPES.map((item, index) => (
+          {RECIPES.map((item, index) => (VISIBLE_RECIPE_IDS.has(item.id) ? (
             <TouchableOpacity
               key={item.id}
               style={[styles.recipeTab, index === recipeIdx && { backgroundColor: item.color }]}
@@ -670,7 +802,7 @@ export default function CookingGame() {
                 {isFa ? item.fa : item.en}
               </Text>
             </TouchableOpacity>
-          ))}
+          ) : null))}
         </ScrollView>
         <View ref={stageRef} style={styles.stage} onLayout={refreshStageOrigin}>
           <View
@@ -789,11 +921,6 @@ export default function CookingGame() {
             })()
           ) : null}
 
-          <View style={[styles.progressPill, wrong && styles.progressPillWrong]}>
-            <Text style={[styles.progressText, { fontFamily: textFont('bold') }, dir(isFa ? 'fa' : lang)]}>
-              {step}/{recipe.steps.length}
-            </Text>
-          </View>
         </View>
 
         <View style={[styles.prompt, done && styles.promptDone]}>
@@ -821,7 +948,7 @@ export default function CookingGame() {
           />
         ) : null}
 
-      </ImageBackground>
+      </View>
       <PopperCelebration
         visible={showCelebration}
         onComplete={() => setShowCelebration(false)}
@@ -836,8 +963,9 @@ const styles = StyleSheet.create({
   sceneWash: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(54, 31, 14, 0.06)' },
   sceneWashDone: { backgroundColor: 'rgba(255,255,255,0.40)' },
   recipeRow: {
+    // `top` is set inline from the TopBar's measured height, so the tabs sit
+    // flush under it at any screen size rather than at a fixed offset.
     position: 'absolute',
-    top: 90,
     left: 0,
     right: 0,
     zIndex: 50,
@@ -854,6 +982,8 @@ const styles = StyleSheet.create({
   recipeRowContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    flexGrow: 1,
     gap: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -1046,26 +1176,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 1 },
   },
-  progressPill: {
-    position: 'absolute',
-    top: 12,
-    right: 16,
-    minWidth: 72,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-  },
-  progressPillWrong: {
-    transform: [{ rotate: '-3deg' }],
-  },
-  progressText: {
-    color: '#0F766E',
-    fontSize: 14,
-    textAlign: 'center',
-  },
   doneRow: {
     position: 'absolute',
     left: 16,
@@ -1104,3 +1214,4 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 });
+

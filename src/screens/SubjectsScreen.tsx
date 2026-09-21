@@ -24,7 +24,7 @@ function subjectImage(id: string) {
     transport: neliWorldAssets.ui.gamepad,
     school: neliWorldAssets.ui.book,
     sports: neliWorldAssets.ui.play,
-    house: neliWorldAssets.rooms.livingRoom,
+    house: neliWorldAssets.rooms.livingRoomWide,
     cooking: neliWorldAssets.kitchen.pan,
     culture: neliWorldAssets.ui.star,
     songs: neliWorldAssets.ui.voice,

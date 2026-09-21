@@ -14,13 +14,25 @@ function pickRoomBackground(variants: RoomVariantSet, width: number, height: num
   const aspect = width / height;
   const largestSide = Math.max(width, height);
 
-  if (largestSide >= 1400) {
-    return variants.master ?? variants.premium ?? variants.universal ?? variants.phone ?? variants.tabletPortrait ?? variants.tabletLandscape;
+  // Pick by SHAPE first, then by resolution. These are drawn with cover(), so
+  // whatever doesn't match the screen's aspect gets cropped — and a landscape
+  // phone at 2.2:1 handed the 16:9 art loses ~20% of its HEIGHT, which is
+  // where floors, tables and counters sit. The `phone` variants are
+  // 2796x1290 (2.17) — landscape-shaped, and were unreachable in landscape
+  // because this branch only ever returned `universal`.
+  if (isLandscape) {
+    if (aspect >= 1.95) {
+      return variants.phone ?? variants.universal ?? variants.premium ?? variants.master ?? variants.tabletLandscape;
+    }
+    if (aspect <= 1.48 && variants.tabletLandscape) return variants.tabletLandscape;
+    if (largestSide >= 1400) {
+      return variants.master ?? variants.premium ?? variants.universal ?? variants.tabletLandscape;
+    }
+    return variants.universal ?? variants.premium ?? variants.master ?? variants.tabletLandscape;
   }
 
-  if (isLandscape) {
-    if (aspect <= 1.48 && variants.tabletLandscape) return variants.tabletLandscape;
-    return variants.universal ?? variants.premium ?? variants.phone ?? variants.tabletPortrait ?? variants.tabletLandscape;
+  if (largestSide >= 1400) {
+    return variants.master ?? variants.premium ?? variants.universal ?? variants.phone ?? variants.tabletPortrait ?? variants.tabletLandscape;
   }
 
   if (aspect >= 0.68 && variants.tabletPortrait) return variants.tabletPortrait;
@@ -126,6 +138,27 @@ const yardBackgrounds = {
   master: require('../../assets/neli-world/backgrounds/Yard/outside_yard_scene_master_8000x4500.webp'),
 } as const;
 
+// The jungle set has no ultra-wide "phone" landscape variant, only a
+// landscape/tabletLandscape pair and a separate portrait/tabletPortrait pair.
+// pickRoomBackground's `phone` key does double duty (ultra-wide landscape
+// fallback AND narrow-portrait fallback), which would misuse the portrait
+// asset in landscape here — so jungle gets its own picker mirroring the
+// thresholds FeedAnimalsGame already ships with, instead of the shared helper.
+const jungleBackgrounds = {
+  landscape: require('../../assets/neli-world/backgrounds/Jungle/jungle_landscape_3840x2160.webp'),
+  tabletLandscape: require('../../assets/neli-world/backgrounds/Jungle/jungle_tablet_landscape_2732x2048.webp'),
+  portrait: require('../../assets/neli-world/backgrounds/Jungle/jungle_phone_portrait_1080x1920.webp'),
+  tabletPortrait: require('../../assets/neli-world/backgrounds/Jungle/jungle_tablet_portrait_1668x2224.webp'),
+} as const;
+
+function pickJungleBackground(width: number, height: number) {
+  const isLandscape = width >= height;
+  if (isLandscape) {
+    return width / height > 1.45 ? jungleBackgrounds.landscape : jungleBackgrounds.tabletLandscape;
+  }
+  return height / width > 1.4 ? jungleBackgrounds.portrait : jungleBackgrounds.tabletPortrait;
+}
+
 export const roomBackgroundVariants = {
   bathroom: bathroomSceneBackgrounds,
   brushTeethBathroom: brushTeethRoomBackgrounds,
@@ -139,6 +172,10 @@ export const roomBackgroundPickers = {
   bedroom: (width: number, height: number) => pickRoomBackground(bedroomBackgrounds.dressUp, width, height),
   talkPlay: (width: number, height: number) => pickRoomBackground(livingRoomBackgrounds, width, height),
   kitchen: (width: number, height: number) => pickRoomBackground(kitchenBackgrounds.landscape, width, height),
+  kitchenCheerful: (width: number, height: number) => pickRoomBackground(kitchenBackgrounds.brightAndCheerful, width, height),
+  garden: (width: number, height: number) => pickRoomBackground(yardBackgrounds, width, height),
+  splash: (width: number, height: number) => pickRoomBackground(yardBackgrounds, width, height),
+  feedAnimalsJungle: (width: number, height: number) => pickJungleBackground(width, height),
 } as const;
 
 export const neliWorldAssets = {
@@ -373,6 +410,16 @@ export const neliWorldAssets = {
     splashLandscape: yardBackgrounds.universal,
     splashPortrait: yardBackgrounds.phone,
     studyRoom: bedroomBackgrounds.final.universal,
+    // Widest available variant of each set, for short/wide banner cards
+    // (fixed-height, full-width panels) where `cover` needs a panoramic
+    // source to avoid cropping most of the vertical content away — see
+    // CLAUDE.md's "art anchored differently" note. Not a per-device pick;
+    // these panels are always wider-than-tall regardless of screen size.
+    gardenWide: yardBackgrounds.phone,
+    kitchenWide: kitchenBackgrounds.landscape.phone,
+    bedroomWide: bedroomBackgrounds.final.phone,
+    bathroomWide: bathroomSceneBackgrounds.phone,
+    livingRoomWide: livingRoomBackgrounds.phone,
   },
   puzzle: {
     solarSystem: require('../../assets/neli-world/puzzle/Solarsystem/solarsystem.webp'),

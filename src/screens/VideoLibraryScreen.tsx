@@ -202,7 +202,7 @@ function ShowArt({ kind, color, accent, characterId }: { kind: SceneKind; color:
 
   if (kind === 'breakfast') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.cookingTable} style={styles.scene} imageStyle={styles.sceneImage}>
+      <ImageBackground source={neliWorldAssets.rooms.kitchenWide} style={styles.scene} imageStyle={styles.sceneImage}>
         <Image source={neliWorldAssets.foods.egg} style={styles.showFood} resizeMode="contain" />
         <Image source={neliWorldAssets.kitchen.plate} style={styles.showPlate} resizeMode="contain" />
       </ImageBackground>
@@ -211,7 +211,7 @@ function ShowArt({ kind, color, accent, characterId }: { kind: SceneKind; color:
 
   if (kind === 'haftsin') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.garden} style={styles.scene} imageStyle={styles.sceneImage}>
+      <ImageBackground source={neliWorldAssets.rooms.gardenWide} style={styles.scene} imageStyle={styles.sceneImage}>
         <Image source={neliWorldAssets.persianFoods.sabziPolo} style={styles.showFood} resizeMode="contain" />
         <Image source={neliWorldAssets.foods.apple} style={styles.showSmall} resizeMode="contain" />
       </ImageBackground>
@@ -220,7 +220,7 @@ function ShowArt({ kind, color, accent, characterId }: { kind: SceneKind; color:
 
   if (kind === 'family' || kind === 'play') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.garden} style={styles.scene} imageStyle={styles.sceneImage}>
+      <ImageBackground source={neliWorldAssets.rooms.gardenWide} style={styles.scene} imageStyle={styles.sceneImage}>
         <CharacterAvatar characterId={characterId} size={122} />
         <Image source={neliWorldAssets.animals.rabbit} style={styles.showSmall} resizeMode="contain" />
       </ImageBackground>

@@ -11,16 +11,17 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Ellipse, G, Line, Path, Polygon, Polyline, Rect } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-import TopBar from '../components/TopBar';
+import TopBar, { topBarHeight } from '../components/TopBar';
 import { ALPHABETS, EXAMPLE_IMAGE_BY_ID } from './VideoShowsScreen';
 import { FARSI_LETTER_BY_ID } from '../data/farsiLetters';
 import { ALPHABET_EXAMPLE_ASSETS } from '../assets/alphabetExampleAssets';
 import { useNav } from '../store/NavContext';
 import { useSpeech } from '../hooks/useSpeech';
 import { ALPHABET_AUDIO_ID_OVERRIDE, FALLBACK_LETTER_NAME_FA as GLOBAL_FALLBACK_LETTER_NAME_FA, makeAlphabetAudioKey, playFaAudio, playFaAudioOrSpeak, stopFaAudio } from '../utils/faAudio';
-import { Audio } from 'expo-av';
+import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { characterAssets } from '../assets/characterAssets';
 import { ff } from '../theme/fonts';
@@ -54,7 +55,7 @@ const FALLBACK_LETTER_NAME_FA: Partial<Record<string, string>> = {
 // pace — safe to speed up because the sequence below always waits for each
 // clip to finish before revealing the next thing, so nothing gets cut off.
 const TRAIN_SPEECH_RATE = 1.2;
-// Speeds up recorded name/example clips themselves (expo-av playback
+// Speeds up recorded name/example clips themselves (expo-audio playback
 // rate), on top of the TTS-only rate above — this is what makes the
 // bulk of letters (which use recorded audio, not TTS) noticeably
 // quicker, since that recording length is what drives how long the
@@ -415,8 +416,7 @@ function ExampleIcon({ item }: { item: AlphabetItem }) {
   }
 }
 
-function getTrainTarget(length: number, activeIndex: number, width: number) {
-  const carWidth = getCarWidth(width);
+function getTrainTarget(length: number, activeIndex: number, carWidth: number, width: number) {
   const step = carWidth * 0.9;
   const viewportCenter = width * 0.5;
   return viewportCenter - carWidth * 0.5 - (length - 1) * step + activeIndex * step;
@@ -425,6 +425,7 @@ function getTrainTarget(length: number, activeIndex: number, width: number) {
 function useTrainMotion(
   length: number,
   activeIndex: number,
+  carWidth: number,
   width: number,
   enabled: boolean,
   initialOffset: number,
@@ -434,7 +435,7 @@ function useTrainMotion(
   const hasEntered = useRef(false);
 
   useEffect(() => {
-    const target = getTrainTarget(length, activeIndex, width);
+    const target = getTrainTarget(length, activeIndex, carWidth, width);
     if (!enabled) {
       hasEntered.current = false;
       offset.setValue(initialOffset);
@@ -447,7 +448,7 @@ function useTrainMotion(
         onInitialArrival?.();
       }
     });
-  }, [activeIndex, enabled, initialOffset, length, offset, onInitialArrival, width]);
+  }, [activeIndex, carWidth, enabled, initialOffset, length, offset, onInitialArrival, width]);
 
   return offset;
 }
@@ -638,17 +639,43 @@ export default function AlphabetTrainScreen() {
   const introTurn = useRef(new Animated.Value(0)).current;
   const mainTrainOpacity = useRef(new Animated.Value(0)).current;
 
+  // Same phone/tablet split as TABLET_MIN_EDGE in App.tsx (shortest edge —
+  // height, in this landscape-locked screen). On phones (iPhones, Pixel 7,
+  // etc.) the bottom prev/play/next bar competes with the train for the
+  // same short strip of vertical space, so it's hidden there and kept only
+  // on tablets, which have the room for it.
+  const isPhone = Math.min(width, height) < 600;
+  const insets = useSafeAreaInsets();
   const trainItems = useMemo(() => ALPHABETS, []);
-  const carWidth = getCarWidth(width);
+
+  // The revealed example art (roofArtStage, below) floats a fixed 42px
+  // above the wagon regardless of car size, and the engine's painted
+  // bottom (its wheels) sits 34 + carHeight*1.33 below the row's top (see
+  // the vertical-fit math further down, by the trainTop calculation) — so
+  // on a short phone screen the full-size, width-driven car can be too
+  // tall to fit the example art under the TopBar *and* the wheels above
+  // the bottom edge at once. Shrink the car just enough to make both fit;
+  // tablets have room to spare and are never affected.
+  const EXAMPLE_ART_TOP_OFFSET = 42;
+  const TOPBAR_GAP = 8;
+  const TRAIN_BOTTOM_MARGIN = 16;
+  const ENGINE_ALIGN_OFFSET = 34;
+  const ENGINE_BOTTOM_DROP = 1.33;
+  const topBarBottom = topBarHeight(height, insets.top, { topInset: 10 });
+  const minTrainTop = topBarBottom + EXAMPLE_ART_TOP_OFFSET + TOPBAR_GAP;
+  const rawCarWidth = getCarWidth(width);
+  const maxCarHeight = Math.max(90, (height - TRAIN_BOTTOM_MARGIN - ENGINE_ALIGN_OFFSET - minTrainTop) / ENGINE_BOTTOM_DROP);
+  const carWidth = Math.min(rawCarWidth, maxCarHeight * 16 / 9);
+
   const wagonOverlap = carWidth * 0.1;
   const introCarWidth = carWidth * 0.48;
   const introOverlap = introCarWidth * 0.1;
   const introStep = introCarWidth - introOverlap;
   const introEngineWidth = introCarWidth * 9 / 16 * 1.5 * (1535 / 1024);
   const introTrainWidth = INTRO_WAGON_COUNT * introStep + introEngineWidth;
-  const mainTrainStartOffset = getTrainTarget(trainItems.length, 0, width) - width - carWidth * 0.8;
+  const mainTrainStartOffset = getTrainTarget(trainItems.length, 0, carWidth, width) - width - carWidth * 0.8;
   const markMainTrainEntered = useCallback(() => setMainTrainEntered(true), []);
-  const offset = useTrainMotion(trainItems.length, index, width, introDone, mainTrainStartOffset, markMainTrainEntered);
+  const offset = useTrainMotion(trainItems.length, index, carWidth, width, introDone, mainTrainStartOffset, markMainTrainEntered);
   useEffect(() => {
     speakRef.current = speakFarsiOnly;
     stopRef.current = stop;
@@ -689,35 +716,38 @@ export default function AlphabetTrainScreen() {
     // moment the Animated.sequence below finishes, which is also when the
     // big train fades in and starts revealing letters. Track the Sound
     // instance in a local (not state) so this can't retrigger the effect.
-    let introSound: Audio.Sound | undefined;
+    let introPlayer: AudioPlayer | undefined;
     let introSoundStopped = false;
     const stopIntroSound = () => {
       if (introSoundStopped) return;
       introSoundStopped = true;
-      const soundToStop = introSound;
-      if (soundToStop) {
-        void soundToStop
-          .stopAsync()
-          .catch(() => {})
-          .then(() => soundToStop.unloadAsync())
-          .catch(() => {});
+      const playerToStop = introPlayer;
+      if (playerToStop) {
+        try {
+          playerToStop.pause();
+        } catch {}
+        try {
+          playerToStop.remove();
+        } catch {}
       }
     };
-    void (async () => {
-      try {
-        const { sound } = await Audio.Sound.createAsync(TRAIN_INTRO_VOICE, { shouldPlay: true });
-        if (introSoundStopped) {
-          // The intro already finished (or this effect re-ran) before the
-          // clip finished loading — don't let it start playing now.
-          void sound.unloadAsync();
-          return;
-        }
-        introSound = sound;
-        sound.setOnPlaybackStatusUpdate(status => {
-          if (status.isLoaded && status.didJustFinish) void sound.unloadAsync();
+    try {
+      const player = createAudioPlayer(TRAIN_INTRO_VOICE);
+      if (introSoundStopped) {
+        // The intro already finished (or this effect re-ran) before the
+        // clip finished loading — don't let it start playing now.
+        try { player.remove(); } catch {}
+      } else {
+        introPlayer = player;
+        player.play();
+        const subscription = player.addListener('playbackStatusUpdate', status => {
+          if (status.isLoaded && status.didJustFinish) {
+            subscription.remove();
+            try { player.remove(); } catch {}
+          }
         });
-      } catch {}
-    })();
+      }
+    } catch {}
 
     Animated.sequence([
       Animated.timing(introBottomX, {
@@ -798,7 +828,8 @@ export default function AlphabetTrainScreen() {
             // Also speeds up the recorded clip itself (not just the TTS
             // fallback) — shouldCorrectPitch keeps the voice sounding
             // natural instead of sped-up/chipmunky.
-            playbackStatus: { rate: TRAIN_AUDIO_PLAYBACK_RATE, shouldCorrectPitch: true },
+            playbackRate: TRAIN_AUDIO_PLAYBACK_RATE,
+            shouldCorrectPitch: true,
           },
         ),
         AUDIO_TIMEOUT_MS,
@@ -827,7 +858,8 @@ export default function AlphabetTrainScreen() {
             awaitFinish: true,
             rate: 0.95,
             pitch: 1.14,
-            playbackStatus: { rate: TRAIN_AUDIO_PLAYBACK_RATE, shouldCorrectPitch: true },
+            playbackRate: TRAIN_AUDIO_PLAYBACK_RATE,
+            shouldCorrectPitch: true,
           },
         ),
         AUDIO_TIMEOUT_MS,
@@ -868,6 +900,18 @@ export default function AlphabetTrainScreen() {
   const leadSmokeId = trainItems[trainItems.length - 1]?.id;
   const introBottomY = height * 0.64;
   const introTopY = height * 0.22;
+
+  // The engine (trainHeadBody) renders taller than its wagon and is pushed
+  // further down again by a translateY (see engineWrap/trainHeadBody in
+  // styles below), so its painted bottom edge — the wheels — sits well
+  // below where `top: '38%'` alone would suggest, and the revealed example
+  // art floats above the wagon by EXAMPLE_ART_TOP_OFFSET regardless of car
+  // size. carWidth was already shrunk (above) so both extremes can fit —
+  // this just picks the top offset within the range that fit was solved
+  // for, favoring the original ~38%-of-screen position when there's slack.
+  const engineBottomReach = ENGINE_ALIGN_OFFSET + (carWidth * 9 / 16) * ENGINE_BOTTOM_DROP;
+  const maxTrainTop = height - TRAIN_BOTTOM_MARGIN - engineBottomReach;
+  const trainTop = Math.max(minTrainTop, Math.min(height * 0.38, maxTrainTop));
   const introTurnOpacity = introTurn.interpolate({ inputRange: [0, 0.25, 0.85, 1], outputRange: [0, 1, 1, 0] });
   const introTopOpacity = introTurn.interpolate({ inputRange: [0, 0.75, 1], outputRange: [0, 0, 1] });
   const introBottomOpacity = introTurn.interpolate({ inputRange: [0, 0.95, 1], outputRange: [1, 1, 0] });
@@ -947,7 +991,7 @@ export default function AlphabetTrainScreen() {
         </>
       ) : null}
 
-      <Animated.View style={[styles.trainStage, { opacity: mainTrainOpacity, transform: [{ translateX: offset }, { translateY: Animated.add(trainBob, skyShift) }] }]}>
+      <Animated.View style={[styles.trainStage, { top: trainTop, opacity: mainTrainOpacity, transform: [{ translateX: offset }, { translateY: Animated.add(trainBob, skyShift) }] }]}>
         {[...trainItems].reverse().map((item) => {
           const sourceIndex = trainItems.findIndex(trainItem => trainItem.id === item.id);
           return (
@@ -986,21 +1030,23 @@ export default function AlphabetTrainScreen() {
         </View>
       </Animated.View>
 
-      <View style={styles.controls}>
-        <TouchableOpacity style={styles.controlBtn} onPress={() => moveTo(index - 1)} activeOpacity={0.82}>
-          <Image source={neliWorldAssets.ui.back} style={styles.controlIcon} resizeMode="contain" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.playBtn}
-          onPress={() => setPlaying(current => !current)}
-          activeOpacity={0.82}
-        >
-          <Image source={playing ? neliWorldAssets.ui.pause : neliWorldAssets.ui.play} style={styles.playIcon} resizeMode="contain" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.controlBtn} onPress={() => moveTo(index + 1)} activeOpacity={0.82}>
-          <Image source={neliWorldAssets.ui.next} style={styles.controlIcon} resizeMode="contain" />
-        </TouchableOpacity>
-      </View>
+      {!isPhone ? (
+        <View style={styles.controls}>
+          <TouchableOpacity style={styles.controlBtn} onPress={() => moveTo(index - 1)} activeOpacity={0.82}>
+            <Image source={neliWorldAssets.ui.back} style={styles.controlIcon} resizeMode="contain" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.playBtn}
+            onPress={() => setPlaying(current => !current)}
+            activeOpacity={0.82}
+          >
+            <Image source={playing ? neliWorldAssets.ui.pause : neliWorldAssets.ui.play} style={styles.playIcon} resizeMode="contain" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.controlBtn} onPress={() => moveTo(index + 1)} activeOpacity={0.82}>
+            <Image source={neliWorldAssets.ui.next} style={styles.controlIcon} resizeMode="contain" />
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       {showEndOverlay && <TrainEndOverlay onGo={close} />}
     </View>

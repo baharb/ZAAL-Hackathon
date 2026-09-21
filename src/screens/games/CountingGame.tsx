@@ -1,8 +1,8 @@
 import React, { useContext, useState } from 'react';
-import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import TopBar from '../../components/TopBar';
-import { neliWorldAssets } from '../../assets/neliWorldAssets';
+import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAssets';
 import { characterAssets } from '../../assets/characterAssets';
 import { AppContext } from '../../store/AppContext';
 import { useNav } from '../../store/NavContext';
@@ -55,7 +55,17 @@ export default function CountingGame() {
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState<boolean | null>(null);
   const [countedItems, setCountedItems] = useState<number[]>([]);
+  const { width, height } = useWindowDimensions();
   const isFa = lang === 'fa' || lang === 'ar';
+  // Nothing here scaled off screen size at all — the question pill was an
+  // absolute overlay at a fixed top while objectGarden (below it) centered
+  // itself in the full content height independently, the same overlap
+  // pattern fixed elsewhere in this pass. The owl's flat 340x420 also had
+  // no ceiling, so on a short phone it rendered almost entirely above the
+  // visible area (bottom:66 anchors its bottom, and a 420pt-tall image is
+  // taller than the whole screen). Scale everything below the tablet
+  // breakpoint; untouched above it.
+  const heightScale = Math.min(1, height / 620);
 
   const tapItem = (index: number) => {
     if (countedItems.includes(index)) return;
@@ -90,27 +100,38 @@ export default function CountingGame() {
 
   return (
     <View style={styles.root}>
-      <ImageBackground source={neliWorldAssets.rooms.garden} style={styles.scene} imageStyle={styles.sceneImage}>
+      <ImageBackground source={roomBackgroundPickers.garden(width, height)} style={styles.scene} imageStyle={styles.sceneImage}>
         <View style={styles.sceneWash} />
         <View style={styles.skyGlow} />
         <TopBar title="Counting" titleFa="بشمار" showClose dark onBack={() => resetNav({ name: 'Main', tab: 'Games' })} />
 
         <View style={styles.content}>
-          <View style={styles.questionPill}>
+          <View style={[styles.questionPill, { marginBottom: Math.round(14 * heightScale) }]}>
             <Text style={[styles.kicker, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
               {isFa ? 'چند تا می‌بینی؟' : 'How many do you see?'}
             </Text>
           </View>
 
-          <Image source={characterAssets.aidin.poses.thinking} style={styles.owl} resizeMode="contain" />
+          <Image
+            source={characterAssets.aidin.poses.thinking}
+            style={[styles.owl, { width: Math.round(340 * heightScale), height: Math.round(420 * heightScale) }]}
+            resizeMode="contain"
+          />
 
-          <View style={styles.objectGarden}>
+          <View
+            style={[
+              styles.objectGarden,
+              { minWidth: Math.max(260, Math.round(390 * heightScale)), minHeight: Math.max(130, Math.round(220 * heightScale)), gap: Math.max(8, Math.round(18 * heightScale)) },
+            ]}
+          >
             {Array.from({ length: round.count }).map((_, i) => {
               const counted = countedItems.includes(i);
+              const itemSize = Math.max(52, Math.round(82 * heightScale));
+              const imageSize = Math.max(44, Math.round(70 * heightScale));
               return (
                 <TouchableOpacity
                   key={`${round.set.name}-${i}`}
-                  style={styles.countItem}
+                  style={[styles.countItem, { width: itemSize, height: itemSize }]}
                   onPress={() => tapItem(i)}
                   activeOpacity={counted ? 1 : 0.82}
                 >
@@ -118,9 +139,12 @@ export default function CountingGame() {
                     source={round.set.image}
                     style={[
                       styles.countImage,
+                      { width: imageSize, height: imageSize },
                       {
                         transform: [
-                          ...objectTransforms[i % objectTransforms.length],
+                          ...objectTransforms[i % objectTransforms.length].map(t =>
+                            'translateY' in t ? { translateY: t.translateY * heightScale } : t,
+                          ),
                           ...(counted ? [{ scale: 1.15 }] : []),
                         ],
                       },
@@ -201,8 +225,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   questionPill: {
-    position: 'absolute',
-    top: 10,
     alignSelf: 'center',
     borderRadius: 28,
     backgroundColor: 'rgba(255,255,255,0.9)',

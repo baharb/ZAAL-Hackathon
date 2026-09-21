@@ -25,7 +25,10 @@ export interface DetectedContact {
   value: string;
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Local part, domain, then a genuinely alphabetic TLD of 2+ characters.
+// The previous pattern accepted anything after the dot, so "me@gmail.c"
+// and "me@gmail.123" passed and the verification mail vanished.
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)*\.[A-Za-z]{2,}$/;
 // Require an explicit country code (leading + or 00) — guessing a default
 // country code for a Farsi-language app with a global diaspora audience
 // would silently send codes to the wrong country.

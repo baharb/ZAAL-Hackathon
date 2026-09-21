@@ -1,5 +1,6 @@
 import React, { useContext, useRef, useState } from 'react';
-import { Animated, Image, ImageBackground, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Animated, Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import LangBar from '../components/LangBar';
 import CharacterAvatar from '../components/CharacterAvatar';
@@ -9,14 +10,12 @@ import { useNav } from '../store/NavContext';
 import { dir, ff } from '../theme/fonts';
 import { useResponsive } from '../theme/responsive';
 
-const STATUS_H = Platform.OS === 'ios' ? 44 : (StatusBar.currentHeight ?? 24);
-
 const AGE_GROUPS = [
-  { range: [0, 2], label: '0-2', labelFa: '۰-۲', title: 'Baby World', titleFa: 'دنیای کودک', desc: 'Soft sounds and first words', descFa: 'صداهای آرام و اولین کلمات', color: '#69D2FF', room: neliWorldAssets.rooms.bedroom, art: neliWorldAssets.characters.neli },
-  { range: [2, 4], label: '2-4', labelFa: '۲-۴', title: 'Tiny Explorer', titleFa: 'کاوشگر کوچولو', desc: 'Tap, listen, and repeat', descFa: 'لمس کن، گوش بده، تکرار کن', color: '#FF8FC7', room: neliWorldAssets.rooms.garden, art: neliWorldAssets.animals.rabbit },
-  { range: [5, 6], label: '5-6', labelFa: '۵-۶', title: 'Little Learner', titleFa: 'یادگیرنده کوچک', desc: 'Letters, words, and games', descFa: 'حروف، کلمه ها و بازی', color: '#FFD764', room: neliWorldAssets.rooms.studyRoom, art: neliWorldAssets.ui.book },
-  { range: [7, 9], label: '7-9', labelFa: '۷-۹', title: 'Super Student', titleFa: 'دانش آموز قهرمان', desc: 'Phrases and challenges', descFa: 'جمله ها و چالش ها', color: '#57D68D', room: neliWorldAssets.rooms.bedroom, art: neliWorldAssets.ui.trophy },
-  { range: [10, 12], label: '10-12', labelFa: '۱۰-۱۲', title: 'Persian Star', titleFa: 'ستاره فارسی', desc: 'Culture, stories, and practice', descFa: 'فرهنگ، داستان و تمرین', color: '#A98BFF', room: neliWorldAssets.rooms.kitchen, art: neliWorldAssets.persianFoods.sabziPolo },
+  { range: [0, 2], label: '0-2', labelFa: '۰-۲', title: 'Baby World', titleFa: 'دنیای کودک', desc: 'Soft sounds and first words', descFa: 'صداهای آرام و اولین کلمات', color: '#69D2FF', room: neliWorldAssets.rooms.bedroomWide, art: neliWorldAssets.characters.neli },
+  { range: [2, 4], label: '2-4', labelFa: '۲-۴', title: 'Tiny Explorer', titleFa: 'کاوشگر کوچولو', desc: 'Tap, listen, and repeat', descFa: 'لمس کن، گوش بده، تکرار کن', color: '#FF8FC7', room: neliWorldAssets.rooms.gardenWide, art: neliWorldAssets.animals.rabbit },
+  { range: [5, 6], label: '5-6', labelFa: '۵-۶', title: 'Little Learner', titleFa: 'یادگیرنده کوچک', desc: 'Letters, words, and games', descFa: 'حروف، کلمه ها و بازی', color: '#FFD764', room: neliWorldAssets.rooms.bedroomWide, art: neliWorldAssets.ui.book },
+  { range: [7, 9], label: '7-9', labelFa: '۷-۹', title: 'Super Student', titleFa: 'دانش آموز قهرمان', desc: 'Phrases and challenges', descFa: 'جمله ها و چالش ها', color: '#57D68D', room: neliWorldAssets.rooms.bedroomWide, art: neliWorldAssets.ui.trophy },
+  { range: [10, 12], label: '10-12', labelFa: '۱۰-۱۲', title: 'Persian Star', titleFa: 'ستاره فارسی', desc: 'Culture, stories, and practice', descFa: 'فرهنگ، داستان و تمرین', color: '#A98BFF', room: neliWorldAssets.rooms.kitchenWide, art: neliWorldAssets.persianFoods.sabziPolo },
 ];
 
 export default function AgeScreen() {
@@ -24,6 +23,7 @@ export default function AgeScreen() {
   const { setAge, lang } = useContext(AppContext);
   const [sel, setSel] = useState<number | null>(null);
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const { isLandscape, isTablet, horizontalPadding, contentWidth } = useResponsive();
   const ui = Math.min(width / 390, height / 844);
   const scales = AGE_GROUPS.map(() => useRef(new Animated.Value(1)).current);
@@ -45,7 +45,7 @@ export default function AgeScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={[styles.header, { paddingHorizontal: horizontalPadding, paddingTop: STATUS_H + Math.max(12, Math.round(18 * ui)), paddingBottom: Math.max(12, Math.round(18 * ui)), gap: Math.max(10, Math.round(12 * ui)) }, isLandscape && styles.headerLandscape]}>
+      <View style={[styles.header, { paddingHorizontal: horizontalPadding, paddingTop: insets.top + (isLandscape ? 10 : Math.max(12, Math.round(18 * ui))), paddingBottom: Math.max(12, Math.round(18 * ui)), gap: Math.max(10, Math.round(12 * ui)) }, isLandscape && styles.headerLandscape]}>
         <View style={{ flex: 1 }}>
           <Text style={[styles.brand, { fontFamily: ff(lang, 'bold'), fontSize: Math.max(12, Math.round(14 * ui)), marginBottom: Math.max(6, Math.round(8 * ui)) }]}>ZAAL</Text>
           <Text style={[styles.question, { fontFamily: ff(lang, 'black'), fontSize: Math.max(25, Math.round(31 * ui)), lineHeight: Math.max(30, Math.round(38 * ui)) }, dir(lang)]}>
@@ -93,8 +93,8 @@ export default function AgeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#24105A' },
-  header: { flexDirection: 'row', alignItems: 'flex-start', paddingTop: STATUS_H + 18, paddingBottom: 18, gap: 12 },
-  headerLandscape: { paddingTop: STATUS_H + 10, paddingBottom: 12 },
+  header: { flexDirection: 'row', alignItems: 'flex-start', paddingBottom: 18, gap: 12 },
+  headerLandscape: { paddingBottom: 12 },
   brand: { color: 'rgba(255,255,255,0.72)', fontSize: 14, fontWeight: '900', marginBottom: 8 },
   question: { color: '#FFFFFF', fontSize: 31, lineHeight: 38, fontWeight: '900' },
   sub: { color: 'rgba(255,255,255,0.76)', fontSize: 14, lineHeight: 21, marginTop: 7, maxWidth: 340 },

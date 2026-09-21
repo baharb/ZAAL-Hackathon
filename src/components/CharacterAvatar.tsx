@@ -20,6 +20,8 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   blink?: boolean;
   blinkPreview?: boolean;
+  blinkOffsetX?: number;
+  blinkOffsetY?: number;
 };
 
 export default function CharacterAvatar({
@@ -37,6 +39,8 @@ export default function CharacterAvatar({
   style,
   blink = true,
   blinkPreview = false,
+  blinkOffsetX = 0,
+  blinkOffsetY = 0.5,
 }: Props) {
   const safeId = neliWorldAssets.characters[characterId as keyof typeof neliWorldAssets.characters] ? characterId : 'neli';
   const characterSource = neliWorldAssets.characters[safeId as keyof typeof neliWorldAssets.characters] ?? neliWorldAssets.characters.neli;
@@ -125,7 +129,7 @@ export default function CharacterAvatar({
       <View style={[styles.wrap, style, { width: size, minHeight: showName ? neliHeight + 34 : neliHeight }]}>
         <Animated.View style={[styles.neliCharacter, { width: size, height: neliHeight, transform: [{ translateY: float }] }]}>
           {blink ? (
-            <BlinkingNeliImage size={size} height={neliHeight} preview={blinkPreview} />
+            <BlinkingNeliImage size={size} height={neliHeight} preview={blinkPreview} overlayOffsetX={blinkOffsetX} overlayOffsetY={blinkOffsetY} />
           ) : (
             <Image source={neliWorldAssets.characters.neli} style={{ width: size, height: neliHeight }} resizeMode="contain" />
           )}

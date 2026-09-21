@@ -56,6 +56,10 @@ export function NavProvider({ children }: { children: ReactNode }) {
   });
   const reset = (s: Screen) => setHistory([s]);
   const goBack = () => setHistory(p => p.length > 1 ? p.slice(0, -1) : p);
+  // TEMP QA HOOK — lets the device-size sweep jump straight to any route
+  // from the browser console instead of clicking through the whole app.
+  // Remove before shipping.
+  if (typeof window !== 'undefined') (window as any).__zaalNav = { screen, navigate, reset, goBack };
   return <NavContext.Provider value={{ screen, navigate, reset, goBack }}>{children}</NavContext.Provider>;
 }
 export function useNav() { return useContext(NavContext); }

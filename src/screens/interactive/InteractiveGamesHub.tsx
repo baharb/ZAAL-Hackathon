@@ -38,10 +38,10 @@ const GAMES: {
   { id: 'SolarPuzzle', kind: 'solar', en: 'Solar System', fa: 'منظومه خورشیدی', desc: 'Place each planet on its orbit.', descFa: 'هر سیاره را روی مدار درست بگذار.', color: '#38BDF8', soft: '#EAF7FF' },
 ];
 
-function GameIllustration({ kind, color, width, height }: { kind: Kind; color: string; width: number; height: number }) {
+function GameIllustration({ kind, color, artW, artH }: { kind: Kind; color: string; artW: number; artH: number }) {
   if (kind === 'talk') {
     return (
-      <ImageBackground source={roomBackgroundPickers.talkPlay(width, height)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
+      <ImageBackground source={roomBackgroundPickers.talkPlay(artW, artH)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
         <View style={styles.sceneWash} />
         <CharacterAvatar characterId="neli" size={BOX_CHARACTER_WIDTH} floating={false} style={styles.hubTalkNeli} />
       </ImageBackground>
@@ -49,7 +49,7 @@ function GameIllustration({ kind, color, width, height }: { kind: Kind; color: s
   }
   if (kind === 'feed') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.feedAnimalsJungle} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
+      <ImageBackground source={roomBackgroundPickers.feedAnimalsJungle(artW, artH)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
         <Image source={neliWorldAssets.animals.monkey} style={styles.hubMonkey} resizeMode="contain" />
         <Image source={neliWorldAssets.animals.rabbit} style={styles.hubAnimal} resizeMode="contain" />
         <Image source={neliWorldAssets.foods.carrot} style={styles.hubFood} resizeMode="contain" />
@@ -58,21 +58,21 @@ function GameIllustration({ kind, color, width, height }: { kind: Kind; color: s
   }
   if (kind === 'home') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.livingRoom} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
+      <ImageBackground source={roomBackgroundPickers.talkPlay(artW, artH)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
         <Image source={neliWorldAssets.ui.home} style={styles.hubIconLarge} resizeMode="contain" />
       </ImageBackground>
     );
   }
   if (kind === 'dress') {
     return (
-      <ImageBackground source={roomBackgroundPickers.bedroom(width, height)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
+      <ImageBackground source={roomBackgroundPickers.bedroom(artW, artH)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
         <CharacterAvatar characterId="neli" size={BOX_CHARACTER_WIDTH} floating={false} style={styles.hubNeli} />
       </ImageBackground>
     );
   }
   if (kind === 'cook') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.cookingTable} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
+      <ImageBackground source={roomBackgroundPickers.kitchen(artW, artH)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
         <Image source={neliWorldAssets.kitchen.pan} style={styles.hubPan} resizeMode="contain" />
         <Image source={neliWorldAssets.foods.pasta} style={styles.hubFood} resizeMode="contain" />
       </ImageBackground>
@@ -80,7 +80,7 @@ function GameIllustration({ kind, color, width, height }: { kind: Kind; color: s
   }
   if (kind === 'tooth') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.bathroom} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
+      <ImageBackground source={roomBackgroundPickers.bathroom(artW, artH)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
         <Image source={characterAssets.lila.poses.bigSmile} style={[styles.hubAnimal, { width: BOX_CHARACTER_WIDTH, height: BOX_CHARACTER_HEIGHT }]} resizeMode="contain" />
       </ImageBackground>
     );
@@ -97,7 +97,7 @@ function GameIllustration({ kind, color, width, height }: { kind: Kind; color: s
     );
   }
   return (
-    <ImageBackground source={neliWorldAssets.rooms.bathroom} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
+    <ImageBackground source={roomBackgroundPickers.bathroom(artW, artH)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
       <Image source={neliWorldAssets.bathroom.soap} style={styles.hubIconLarge} resizeMode="contain" />
     </ImageBackground>
   );
@@ -112,6 +112,12 @@ export default function InteractiveGamesHub() {
   const gap = 12;
   const columns = Math.max(2, Math.min(4, Math.floor((responsive.contentWidth - responsive.horizontalPadding * 2 + gap) / (minCardWidth + gap))));
   const cardW = (responsive.contentWidth - responsive.horizontalPadding * 2 - gap * (columns - 1)) / columns;
+  const cardH = 226;
+  // artShell fills the card minus its 6pt border on every edge — the actual
+  // box the background image covers, not the screen. Matches CLAUDE.md's
+  // "pass the real container size in" fix already applied to GamesScreen.
+  const artW = cardW - 12;
+  const artH = cardH - 12;
   const characterId = selectedCharacterId;
 
   const openGame = (id: GameId) => {
@@ -141,12 +147,12 @@ export default function InteractiveGamesHub() {
           {GAMES.map(game => (
             <TouchableOpacity
               key={game.id}
-              style={[styles.card, { width: cardW, height: 226 }]}
+              style={[styles.card, { width: cardW, height: cardH }]}
               onPress={() => openGame(game.id)}
               activeOpacity={0.88}
             >
               <View style={[styles.artShell, { backgroundColor: game.soft }]}>
-                <GameIllustration kind={game.kind} color={game.color} width={responsive.width} height={responsive.height} />
+                <GameIllustration kind={game.kind} color={game.color} artW={artW} artH={artH} />
                 <View style={styles.cardShade} />
                 <View style={styles.cardTextBand}>
                   <Text style={[styles.cardTitle, { fontFamily: ff(lang, 'black') }, dir(lang)]} numberOfLines={1}>

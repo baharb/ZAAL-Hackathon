@@ -232,7 +232,22 @@ export default function ConversationGame() {
   const isFa = lang === 'fa' || lang === 'ar';
   const isLandscape = width > height;
   const backgroundSource = roomBackgroundPickers.talkPlay(width, height);
-  const avatarSize = Math.min(Math.max(width * 0.26, 250), isLandscape ? 360 : 320) * 1.02;
+  // The prompt bubble plus 3 choice cards (a flat 96pt each) were sized for
+  // a tablet's spare height — on a short landscape phone the three didn't
+  // fit even after the bubble stopped overlapping them, so the third one
+  // needed a scroll to reach. Scale both down together below the tablet
+  // breakpoint; untouched above it.
+  const heightScale = Math.min(1, height / 620);
+  const avatarMinFloor = 200 + 50 * heightScale;
+  const avatarSize = Math.min(Math.max(width * 0.26, avatarMinFloor), isLandscape ? 360 : 320) * 1.02;
+  const choiceCardHeight = Math.round(96 * heightScale);
+  const choiceIconSize = Math.round((isLandscape ? 94 : 84) * heightScale);
+  const choiceStackGap = Math.max(4, Math.round(10 * heightScale));
+  // Below the tablet breakpoint the layout is now sized to fit without
+  // scrolling, and the step-progress dots are the first thing cut to buy
+  // back vertical room on a short phone screen.
+  const isSmallPhone = height < 620;
+  const needsScroll = !isSmallPhone;
   const choices = useMemo(() => shuffle(scene.choices), [scene.id]);
   const choiceCardWidth = useMemo(() => {
     const labels = choices.map(choice => choiceLabel(choice, lang));
@@ -340,19 +355,23 @@ export default function ConversationGame() {
     <View style={styles.root}>
       <TopBar title="Talk & Play" titleFa="گفت و گو" showClose dark topInset={10} onBack={() => reset({ name: 'Main', tab: 'Games' })} />
       <View style={styles.sceneBackground}>
-        <ImageBackground source={backgroundSource} style={styles.sceneBackdrop} resizeMode="cover">
+        <ImageBackground source={backgroundSource} style={styles.sceneBackdrop} imageStyle={styles.sceneBackdropImage} resizeMode="cover">
           <View style={styles.sceneWash} />
-          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.scrollFlex}
+            contentContainerStyle={[styles.scroll, { paddingTop: Math.round(10 * heightScale), paddingBottom: Math.round(20 * heightScale) }]}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={needsScroll}
+          >
             <View style={[styles.sceneLayout, isLandscape ? styles.sceneLayoutLandscape : styles.sceneLayoutPortrait]}>
-              <TouchableOpacity style={styles.scenePrompt} onPress={speakScene} activeOpacity={0.88}>
-                <Image source={neliWorldAssets.ui.voice} style={styles.speechIcon} resizeMode="contain" />
-                <Text style={[styles.promptBubbleText, { fontFamily: ff(lang === 'fa' || lang === 'ar' ? 'fa' : lang, 'black') }, dir(lang)]}>
-                  {promptFor(scene, lang)}
-                </Text>
-              </TouchableOpacity>
-
-              <Animated.View style={[styles.leftColumn, { transform: [{ translateY: slide }] }]}>
-                <View style={styles.choiceStack}>
+              <Animated.View style={[styles.leftColumn, { paddingVertical: Math.round(8 * heightScale), transform: [{ translateY: slide }] }]}>
+                <TouchableOpacity style={[styles.scenePrompt, { minHeight: Math.round(54 * heightScale), marginBottom: Math.round(10 * heightScale) }]} onPress={speakScene} activeOpacity={0.88}>
+                  <Image source={neliWorldAssets.ui.voice} style={styles.speechIcon} resizeMode="contain" />
+                  <Text style={[styles.promptBubbleText, { fontFamily: ff(lang === 'fa' || lang === 'ar' ? 'fa' : lang, 'black') }, dir(lang)]}>
+                    {promptFor(scene, lang)}
+                  </Text>
+                </TouchableOpacity>
+                <View style={[styles.choiceStack, { gap: choiceStackGap }]}>
                   {choices.map(choice => {
                     const isPicked = selected === choice.id;
                     const showCorrect = !!selected && choice.id === scene.answer;
@@ -363,7 +382,7 @@ export default function ConversationGame() {
                           key={choice.id}
                           style={[
                             styles.choiceCard,
-                            { width: choiceCardWidth },
+                            { width: choiceCardWidth, height: choiceCardHeight },
                             isDimmed && styles.choiceCardDimmed,
                             showCorrect && styles.choiceCardCorrect,
                             showWrong && styles.choiceCardWrong,
@@ -371,8 +390,8 @@ export default function ConversationGame() {
                         onPress={() => choose(choice)}
                         activeOpacity={0.9}
                       >
-                        <View style={styles.choiceArtWrap}>
-                          <ChoiceArt choice={choice} size={isLandscape ? 94 : 84} />
+                        <View style={[styles.choiceArtWrap, { width: Math.round(102 * heightScale) }]}>
+                          <ChoiceArt choice={choice} size={choiceIconSize} />
                         </View>
                         <View style={styles.choiceTextWrap}>
                           <Text style={[styles.choiceLabel, { fontFamily: ff(lang, 'black') }, dir(lang)]} numberOfLines={1}>
@@ -386,16 +405,18 @@ export default function ConversationGame() {
               </Animated.View>
 
               <View style={styles.rightColumn}>
-                <View style={styles.characterStage}>
+                <View style={[styles.characterStage, { minHeight: Math.round(320 * heightScale), paddingBottom: Math.round(24 * heightScale) }]}>
                   <NeliTalkCharacter size={avatarSize} />
                 </View>
               </View>
             </View>
-            <View style={styles.progressRow}>
-              {SCENES.map((s, i) => (
-                <View key={s.id} style={[styles.stepDot, i <= idx && { backgroundColor: C.yellow }, i === idx && styles.stepDotActive]} />
-              ))}
-            </View>
+            {!isSmallPhone && (
+              <View style={styles.progressRow}>
+                {SCENES.map((s, i) => (
+                  <View key={s.id} style={[styles.stepDot, i <= idx && { backgroundColor: C.yellow }, i === idx && styles.stepDotActive]} />
+                ))}
+              </View>
+            )}
           </ScrollView>
         </ImageBackground>
       </View>
@@ -414,18 +435,27 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#AEEBFF' },
   sceneBackground: { flex: 1, overflow: 'hidden' },
   sceneBackdrop: { flex: 1 },
+  // Every other room screen (CountingGame, GamesScreen tiles, ...) passes an
+  // explicit imageStyle here. Without it, react-native-web has nothing to
+  // resolve the background <img>'s box against in this nested flex layout,
+  // so it falls back to the image's own natural pixel size (thousands of px)
+  // and only a random cropped sliver is visible instead of the room.
+  sceneBackdropImage: { width: '100%', height: '100%' },
   sceneWash: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(41, 20, 77, 0.14)' },
+  // ScrollView needs `flex:1` on the component itself, not just its content
+  // container — without it, react-native-web can't resolve the ImageBackground
+  // ancestor to a definite height, so the absolutely-positioned background
+  // <img> falls back to its own natural pixel size (thousands of px) instead
+  // of filling the screen, and only a random cropped sliver of it is visible.
+  scrollFlex: { flex: 1 },
   scroll: { flexGrow: 1, paddingLeft: 4, paddingRight: 14, paddingTop: 10, paddingBottom: 20 },
   sceneLayout: { flex: 1, gap: 16, position: 'relative' },
   sceneLayoutLandscape: { flexDirection: 'row', alignItems: 'stretch', justifyContent: 'center' },
   sceneLayoutPortrait: { flexDirection: 'column' },
   scenePrompt: {
-    position: 'absolute',
-    top: 6,
-    alignSelf: 'center',
-    width: '92%',
+    alignSelf: 'stretch',
     maxWidth: 520,
-    zIndex: 25,
+    marginBottom: 10,
     minHeight: 54,
     borderRadius: 24,
     backgroundColor: 'rgba(255,255,255,0.72)',
@@ -442,7 +472,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingLeft: 40.8,
     paddingRight: 8,
-    overflow: 'hidden',
     alignItems: 'flex-start',
     justifyContent: 'center',
   },

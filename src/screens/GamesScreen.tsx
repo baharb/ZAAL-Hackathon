@@ -7,7 +7,7 @@ import { dir, ff } from '../theme/fonts';
 import { useResponsive } from '../theme/responsive';
 import CharacterAvatar from '../components/CharacterAvatar';
 import { characterAssets } from '../assets/characterAssets';
-import { neliWorldAssets, roomBackgroundPickers, roomBackgroundVariants } from '../assets/neliWorldAssets';
+import { neliWorldAssets, roomBackgroundPickers } from '../assets/neliWorldAssets';
 import { SOLAR_SYSTEM_BACKGROUND, SOLAR_SYSTEM_PLANETS } from '../assets/solarSystemPuzzle';
 import { BOX_CHARACTER_WIDTH } from '../theme/characterSizes';
 
@@ -36,19 +36,34 @@ const GAMES: Tile[] = [
   { id: 'quiz', route: { name: 'Game', gameId: 'quiz' }, en: 'Word Quiz', fa: 'مسابقه کلمه', descEn: 'See and choose', descFa: 'ببین و انتخاب کن', kind: 'quiz', color: '#38BDF8', accent: '#A855F7', group: 'learn', hidden: true },
   { id: 'colors', route: { name: 'Game', gameId: 'colormatch' }, en: 'Color Play', fa: 'بازی رنگ', descEn: 'Match playful colors', descFa: 'رنگ درست را پیدا کن', kind: 'color', color: '#EC4899', accent: '#FACC15', group: 'learn', hidden: true },
   { id: 'memory', route: { name: 'Game', gameId: 'memory' }, en: 'Memory Match', fa: 'بازی فکر', descEn: 'Find pairs', descFa: 'جفت‌ها را پیدا کن', kind: 'memory', color: '#6C4EFF', accent: '#FACC15', group: 'learn' },
-  { id: 'solarPuzzle', route: { name: 'SolarPuzzle' }, en: 'Solar System', fa: 'منظومه خورشیدی', descEn: 'Place each planet', descFa: 'هر سیاره را بگذار', kind: 'solarPuzzle', color: '#38BDF8', accent: '#EAF7FF', group: 'learn' },
+  { id: 'solarPuzzle', route: { name: 'SolarPuzzle' }, en: 'Solar System', fa: 'منظومه خورشیدی', descEn: 'Place each planet', descFa: 'هر سیاره را بگذار', kind: 'solarPuzzle', color: '#38BDF8', accent: '#EAF7FF', group: 'learn', hidden: true },
 ];
 
 const solarPlanetSource = (id: string) => SOLAR_SYSTEM_PLANETS.find(planet => planet.id === id)?.source ?? SOLAR_SYSTEM_PLANETS[0].source;
 
-function TileArt({ kind, color, accent, characterId, width, height }: { kind: Kind; color: string; accent: string; characterId: string; width: number; height: number }) {
+// The tile art is authored larger than its card on purpose — characters bleed
+// past the edge and get cropped. But it was authored in fixed pixels against a
+// ~373pt card (a 1280x800 tablet), and the card ranges from 189pt on an iPhone
+// SE to 394pt on an iPad Pro 13. At 189pt the same art is 2.75x the card
+// instead of 1.39x, which is why small screens look crowded. Scaling by the
+// real card keeps that intended 1.39x crop identical on every device.
+const TILE_REFERENCE_BOX = 373;
+
+const MEMORY_CARD_BACKS = [
+  { bg: '#38BDF8', rot: '-10deg', left: 14, top: 24 as number | 'mid' },
+  { bg: '#FACC15', rot: '10deg', right: 14, top: 34 as number | 'mid' },
+  { bg: '#F472B6', rot: '-6deg', left: 4, top: 'mid' as number | 'mid' },
+] as { bg: string; rot: string; left?: number; right?: number; top: number | 'mid' }[];
+
+function TileArt({ kind, color, accent, characterId, box }: { kind: Kind; color: string; accent: string; characterId: string; box: number }) {
+  const k = box / TILE_REFERENCE_BOX;
   if (kind === 'talk') {
     return (
-      <ImageBackground source={roomBackgroundPickers.talkPlay(width, height)} style={styles.sceneArt} imageStyle={styles.sceneArtImageCover}>
+      <ImageBackground source={roomBackgroundPickers.talkPlay(box, box)} style={styles.sceneArt} imageStyle={styles.sceneArtImageCover}>
         <View style={styles.sceneWash} />
         <CharacterAvatar
           characterId="neli"
-          size={265}
+          size={265 * k}
           talking
           talkPattern="home"
           talkMouthScale={0.6488}
@@ -57,41 +72,41 @@ function TileArt({ kind, color, accent, characterId, width, height }: { kind: Ki
           floating={false}
           blinkOffsetX={2.35}
           blinkOffsetY={7.7}
-          style={styles.sceneNeliLarge}
+          style={[styles.sceneNeliLarge, { width: 398 * k, height: 520 * k, bottom: -42 * k, transform: [{ translateX: 66 * k }, { translateY: 52 * k }] }]}
         />
       </ImageBackground>
     );
   }
   if (kind === 'dress') {
     return (
-      <ImageBackground source={roomBackgroundPickers.bedroom(width, height)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
-        <CharacterAvatar characterId={characterId} size={BOX_CHARACTER_WIDTH * 2.75} floating={false} blinkOffsetX={3.432} blinkOffsetY={8.42} style={styles.tileDressCharacter} />
+      <ImageBackground source={roomBackgroundPickers.bedroom(box, box)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
+        <CharacterAvatar characterId={characterId} size={BOX_CHARACTER_WIDTH * 2.75 * k} floating={false} blinkOffsetX={3.432} blinkOffsetY={8.42} style={[styles.tileDressCharacter, { width: 230 * k, height: 300 * k, right: 10 * k, bottom: 2 * k }]} />
       </ImageBackground>
     );
   }
   if (kind === 'tooth') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.brushTeethBathroom} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
-        <Image source={characterAssets.lila.poses.bigSmile} style={styles.sceneGiraffe} resizeMode="contain" />
+      <ImageBackground source={roomBackgroundPickers.brushTeethBathroom(box, box)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
+        <Image source={characterAssets.lila.poses.bigSmile} style={[styles.sceneGiraffe, { width: 322.9 * k, height: 409.5 * k, bottom: -55 * k }]} resizeMode="contain" />
       </ImageBackground>
     );
   }
   if (kind === 'cook') {
     return (
       <ImageBackground
-        source={roomBackgroundVariants.kitchen.brightAndCheerful.universal}
+        source={roomBackgroundPickers.kitchenCheerful(box, box)}
         style={styles.sceneArt}
         imageStyle={styles.sceneArtImage}
       >
         <View style={styles.sceneWashSoft} />
-        <Image source={characterAssets.neli.poses.cooking} style={styles.tileCookNeli} resizeMode="contain" />
+        <Image source={characterAssets.neli.poses.cooking} style={[styles.tileCookNeli, { width: 158.4 * k, height: 208.8 * k, bottom: -4 * k }]} resizeMode="contain" />
       </ImageBackground>
     );
   }
   if (kind === 'animal') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.feedAnimalsJungle} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
-        <Image source={neliWorldAssets.animals.monkey} style={styles.tileMonkey} resizeMode="contain" />
+      <ImageBackground source={roomBackgroundPickers.feedAnimalsJungle(box, box)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>
+        <Image source={neliWorldAssets.animals.monkey} style={[styles.tileMonkey, { width: 280 * k, height: 280 * k, top: -10 * k }]} resizeMode="contain" />
         <View style={styles.sceneWashSoft} />
       </ImageBackground>
     );
@@ -106,22 +121,29 @@ function TileArt({ kind, color, accent, characterId, width, height }: { kind: Ki
   if (kind === 'memory') {
     return (
       <View style={styles.memoryScene}>
-        <View style={[styles.memoryCardBack, styles.memoryCardBackOne]}>
-          <Text style={styles.memoryCardMark}>?</Text>
-        </View>
-        <View style={[styles.memoryCardBack, styles.memoryCardBackTwo]}>
-          <Text style={styles.memoryCardMark}>?</Text>
-        </View>
-        <View style={[styles.memoryCardBack, styles.memoryCardBackThree]}>
-          <Text style={styles.memoryCardMark}>?</Text>
-        </View>
-        <Image source={characterAssets.lila.poses.thinkingAlt} style={styles.memoryMascot} resizeMode="contain" />
+        {MEMORY_CARD_BACKS.map((b, i) => (
+          <View
+            key={i}
+            style={[
+              styles.memoryCardBack,
+              {
+                width: 76 * k, height: 76 * k, borderRadius: 18 * k,
+                backgroundColor: b.bg, transform: [{ rotate: b.rot }],
+                ...(b.left != null ? { left: b.left * k } : { right: b.right! * k }),
+                ...(b.top === 'mid' ? { top: '42%' as const, marginTop: -38 * k } : { top: (b.top as number) * k }),
+              },
+            ]}
+          >
+            <Text style={[styles.memoryCardMark, { fontSize: 34 * k }]}>?</Text>
+          </View>
+        ))}
+        <Image source={characterAssets.lila.poses.thinkingAlt} style={[styles.memoryMascot, { width: 336.6 * k, height: 441 * k, bottom: -32.85 * k }]} resizeMode="contain" />
       </View>
     );
   }
-  if (kind === 'color') return <View style={styles.art}>{[color, accent, '#22C55E', '#38BDF8'].map((c, i) => <View key={c} style={[styles.paintDot, { backgroundColor: c, left: 42 + (i % 2) * 38, top: 24 + Math.floor(i / 2) * 38 }]} />)}</View>;
-  if (kind === 'room') return <View style={styles.art}><View style={[styles.roof, { borderBottomColor: color }]} /><View style={styles.house} /><View style={[styles.door, { backgroundColor: accent }]} /></View>;
-  if (kind === 'tracing') return <View style={styles.art}><Image source={neliWorldAssets.ui.brush} style={styles.tileBrush} resizeMode="contain" /><Image source={neliWorldAssets.ui.book} style={styles.tileWater} resizeMode="contain" /></View>;
+  if (kind === 'color') return <View style={styles.art}>{[color, accent, '#22C55E', '#38BDF8'].map((c, i) => <View key={c} style={[styles.paintDot, { width: 30 * k, height: 30 * k, borderRadius: 15 * k, backgroundColor: c, left: (42 + (i % 2) * 38) * k, top: (24 + Math.floor(i / 2) * 38) * k }]} />)}</View>;
+  if (kind === 'room') return <View style={styles.art}><View style={[styles.roof, { borderLeftWidth: 42 * k, borderRightWidth: 42 * k, borderBottomWidth: 38 * k, borderBottomColor: color }]} /><View style={[styles.house, { width: 70 * k, height: 48 * k, borderRadius: 12 * k }]} /><View style={[styles.door, { width: 18 * k, height: 28 * k, borderRadius: 7 * k, bottom: 23 * k, backgroundColor: accent }]} /></View>;
+  if (kind === 'tracing') return <View style={styles.art}><Image source={neliWorldAssets.ui.brush} style={[styles.tileBrush, { width: 54 * k, height: 54 * k, left: 12 * k, bottom: 14 * k }]} resizeMode="contain" /><Image source={neliWorldAssets.ui.book} style={[styles.tileWater, { width: 58 * k, height: 58 * k, left: 50 * k }]} resizeMode="contain" /></View>;
   if (kind === 'firstTracing') return (
     <View style={styles.firstTracingScene}>
       <View style={styles.firstTracingBoard}>
@@ -197,25 +219,31 @@ function TileArt({ kind, color, accent, characterId, width, height }: { kind: Ki
     </ImageBackground>
   );
   if (kind === 'count') {
+    const owlW = 242.55 * k;
+    const owlH = 299.25 * k;
     return (
       <View style={styles.countingScene}>
-        <View style={styles.countingGlow} />
-        <View style={[styles.countingBadge, styles.countingBadgeOne]}>
-          <Text style={[styles.countingNumber, styles.countingNumberOne]}>۱</Text>
+        <View style={[styles.countingGlow, { width: 190 * k, height: 190 * k, borderRadius: 95 * k, right: -42 * k, top: -72 * k }]} />
+        <View style={[styles.countingBadge, { left: 11.5 * k, top: 6.5 * k, width: 61 * k, height: 61 * k, backgroundColor: '#38BDF8' }]}>
+          <Text style={[styles.countingNumber, { fontSize: 38 * k, transform: [{ rotate: '-10deg' }] }]}>۱</Text>
         </View>
-        <View style={[styles.countingBadge, styles.countingBadgeTwo]}>
-          <Text style={[styles.countingNumber, styles.countingNumberTwo]}>۲</Text>
+        <View style={[styles.countingBadge, { left: 74.5 * k, top: 39.5 * k, width: 45 * k, height: 45 * k, backgroundColor: '#A855F7' }]}>
+          <Text style={[styles.countingNumber, { fontSize: 28 * k, color: '#FFE45E', transform: [{ rotate: '8deg' }] }]}>۲</Text>
         </View>
-        <View style={[styles.countingBadge, styles.countingBadgeThree]}>
-          <Text style={[styles.countingNumber, styles.countingNumberThree]}>۳</Text>
+        <View style={[styles.countingBadge, { left: 17.5 * k, top: 86.5 * k, width: 50 * k, height: 50 * k, backgroundColor: '#FFE45E' }]}>
+          <Text style={[styles.countingNumber, { fontSize: 31 * k, color: '#1E3A8A', transform: [{ rotate: '7deg' }] }]}>۳</Text>
         </View>
-        <View style={[styles.countingBadge, styles.countingBadgeFive]}>
-          <Text style={[styles.countingNumber, styles.countingNumberFive]}>۵</Text>
+        <View style={[styles.countingBadge, { right: 12 * k, top: 6 * k, width: 42 * k, height: 42 * k, backgroundColor: '#22C55E' }]}>
+          <Text style={[styles.countingNumber, { fontSize: 26 * k, color: '#FFE45E', transform: [{ rotate: '12deg' }] }]}>۵</Text>
         </View>
-        <View style={[styles.countingBadge, styles.countingBadgeSeven]}>
-          <Text style={[styles.countingNumber, styles.countingNumberSeven]}>۷</Text>
+        <View style={[styles.countingBadge, { left: 93 * k, bottom: 35 * k, width: 38 * k, height: 38 * k, backgroundColor: '#EC4899' }]}>
+          <Text style={[styles.countingNumber, { fontSize: 24 * k, transform: [{ rotate: '-8deg' }] }]}>۷</Text>
         </View>
-        <Image source={characterAssets.aidin.poses.waving} style={styles.countingOwl} resizeMode="contain" />
+        <Image
+          source={characterAssets.aidin.poses.waving}
+          style={[styles.countingOwl, { width: owlW, height: owlH, marginLeft: -owlW / 2, marginTop: -owlH / 2 }]}
+          resizeMode="contain"
+        />
       </View>
     );
   }
@@ -253,7 +281,7 @@ export default function GamesScreen() {
               {row.map(game => (
                 <TouchableOpacity key={game.id} style={[styles.card, { width: cardSize, height: cardSize, borderRadius: Math.max(44, Math.round(48 * ui)) }]} onPress={() => navigate(game.route)} activeOpacity={0.88}>
                   <View style={[styles.thumb, { backgroundColor: '#AEEBFF', borderRadius: Math.max(44, Math.round(48 * ui)) }]}>
-                    <TileArt kind={game.kind} color={game.color} accent={game.accent} characterId={selectedCharacterId} width={width} height={height} />
+                    <TileArt kind={game.kind} color={game.color} accent={game.accent} characterId={selectedCharacterId} box={cardSize} />
                     <View style={styles.cardShade} />
                     <View style={styles.cardTextBand}>
                       <Text style={[styles.cardTitle, { fontFamily: ff(lang, 'black'), fontSize: Math.max(17.42, Math.round(18.88 * ui)) }, dir(lang), { textAlign: 'center' }]} numberOfLines={2}>{isFa ? game.fa : game.en}</Text>
@@ -609,20 +637,10 @@ const styles = StyleSheet.create({
   house: { width: 70, height: 48, borderRadius: 12, backgroundColor: '#FFFFFF' },
   door: { position: 'absolute', bottom: 23, width: 18, height: 28, borderRadius: 7 },
   countingScene: { flex: 1, width: '100%', height: '100%', backgroundColor: '#FD52D4', overflow: 'hidden' },
-  countingGlow: { position: 'absolute', width: 190, height: 190, borderRadius: 95, right: -42, top: -72, backgroundColor: '#FFE45E' },
+  countingGlow: { position: 'absolute', backgroundColor: '#FFE45E' },
   countingBadge: { position: 'absolute', borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  countingBadgeOne: { left: 11.5, top: 6.5, width: 61, height: 61, backgroundColor: '#38BDF8' },
-  countingBadgeTwo: { left: 74.5, top: 39.5, width: 45, height: 45, backgroundColor: '#A855F7' },
-  countingBadgeThree: { left: 17.5, top: 86.5, width: 50, height: 50, backgroundColor: '#FFE45E' },
-  countingBadgeFive: { right: 12, top: 6, width: 42, height: 42, backgroundColor: '#22C55E' },
-  countingBadgeSeven: { left: 93, bottom: 35, width: 38, height: 38, backgroundColor: '#EC4899' },
-  countingOwl: { position: 'absolute', width: 242.55, height: 299.25, top: '50%', left: '50%', marginLeft: -121.275, marginTop: -149.625 },
+  countingOwl: { position: 'absolute', top: '50%', left: '50%' },
   countingNumber: { fontFamily: 'Vazirmatn_800ExtraBold', color: '#FFFFFF' },
-  countingNumberOne: { fontSize: 38, transform: [{ rotate: '-10deg' }] },
-  countingNumberTwo: { fontSize: 28, color: '#FFE45E', transform: [{ rotate: '8deg' }] },
-  countingNumberThree: { fontSize: 31, color: '#1E3A8A', transform: [{ rotate: '7deg' }] },
-  countingNumberFive: { fontSize: 26, color: '#FFE45E', transform: [{ rotate: '12deg' }] },
-  countingNumberSeven: { fontSize: 24, color: '#FFFFFF', transform: [{ rotate: '-8deg' }] },
   book: { width: 68, height: 74, borderRadius: 14 },
   sun: { position: 'absolute', right: 41, top: 25, width: 32, height: 32, borderRadius: 16 },
   tileTalkCharacter: { position: 'absolute', right: 10, bottom: -10, width: 92, height: 120 },

@@ -6,7 +6,7 @@
 import { useContext, useRef } from 'react';
 import * as Speech from 'expo-speech';
 import { AppContext } from '../store/AppContext';
-import { tryPlayGeneratedFaVoice } from '../utils/faAudio';
+import { tryPlayGeneratedFaVoice, stopFaAudio } from '../utils/faAudio';
 
 export const LANG_TAG: Record<string, string> = {
   fa: 'fa-IR', en: 'en-US', fr: 'fr-FR',
@@ -32,11 +32,21 @@ async function getBestVoice(tag: string) {
   }
 }
 
+/** Whether the device can actually speak this language. Callers that have a
+ *  recorded fallback (see utils/faAudio) can use this to choose it instead of
+ *  letting TTS produce nothing. */
+export async function hasVoiceFor(tag: string): Promise<boolean> {
+  const options = await getBestVoice(tag);
+  return 'voice' in options;
+}
+
 export function useSpeech() {
   const { lang } = useContext(AppContext);
   const active = useRef(false);
 
-  const stop = () => { Speech.stop(); active.current = false; };
+  // Silences both output paths — see stopFaAudio(). Calling only Speech.stop()
+  // here left a recorded clip playing underneath the next utterance.
+  const stop = () => { Speech.stop(); void stopFaAudio(); active.current = false; };
 
   const speakSegment = async (
     text: string,
@@ -53,6 +63,22 @@ export function useSpeech() {
     }
     const voiceOptions = await getBestVoice(tag);
     if (!active.current) return false;
+
+    // iOS ships no Persian voice, and most Android builds don't either. With
+    // no fa voice installed, Speech.speak falls back to the system default and
+    // reads Arabic script as a garbled syllable — users hear a nonsense word
+    // instead of the prompt. Silence is better than noise: bail out and let
+    // the caller's onDone continue the flow.
+    //
+    // Only skip when we actually enumerated voices and found none for this
+    // language; if the lookup itself failed we still try, since some platforms
+    // speak fine without returning an identifier.
+    const missingVoice = !('voice' in voiceOptions) && (voiceCache?.length ?? 0) > 0;
+    if (missingVoice) {
+      onDone?.();
+      return false;
+    }
+
     Speech.speak(text, {
       ...voiceOptions,
       rate,
@@ -103,7 +129,7 @@ export function useSpeech() {
 
   /** Speak letter - always with stop+delay to prevent repeat bug */
   const speakLetter = (name: string, letterLang?: string) => {
-    Speech.stop(); active.current = false;
+    Speech.stop(); void stopFaAudio(); active.current = false;
     const useLang = letterLang ?? lang;
     const tag = LANG_TAG[useLang] ?? 'en-US';
     const rate = LANG_RATE[useLang] ?? 0.68;

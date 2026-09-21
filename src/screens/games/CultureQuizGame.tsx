@@ -94,14 +94,14 @@ function makeQuestion() {
 function CultureArt({ item }: { item: CultureItem }) {
   if (item.kind === 'food') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.kitchen} style={styles.artStage} imageStyle={styles.artScene}>
+      <ImageBackground source={neliWorldAssets.rooms.kitchenWide} style={styles.artStage} imageStyle={styles.artScene}>
         <Image source={neliWorldAssets.persianFoods.sabziPolo} style={styles.cultureImage} resizeMode="contain" />
       </ImageBackground>
     );
   }
   if (item.kind === 'nowruz') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.garden} style={styles.artStage} imageStyle={styles.artScene}>
+      <ImageBackground source={neliWorldAssets.rooms.gardenWide} style={styles.artStage} imageStyle={styles.artScene}>
         <Image source={neliWorldAssets.persianFoods.sabziPolo} style={[styles.cultureImage, { width: 160 }]} resizeMode="contain" />
         <Image source={neliWorldAssets.foods.apple} style={styles.cultureSmallA} resizeMode="contain" />
         <Image source={neliWorldAssets.ui.star} style={styles.cultureSmallB} resizeMode="contain" />

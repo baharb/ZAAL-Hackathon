@@ -3,7 +3,6 @@ import {
   Animated,
   Easing,
   Image,
-  ImageBackground,
   PanResponder,
   StyleSheet,
   Text,
@@ -11,15 +10,115 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAssets';
 import CharacterAvatar from '../../components/CharacterAvatar';
 import BlinkingNeliImage from '../../components/BlinkingNeliImage';
-import TopBar from '../../components/TopBar';
+import TopBar, { topBarHeight } from '../../components/TopBar';
 import { AppContext } from '../../store/AppContext';
 import { useNav } from '../../store/NavContext';
 import { getClothesAudioKey, playFaAudio, speakWithGeneratedVoice } from '../../utils/faAudio';
 import { useLandscapeDimensions } from '../../hooks/useLandscapeDimensions';
 import { dir, ff } from '../../theme/fonts';
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+// The dress-up wardrobe art (assets/neli-world/backgrounds/Bedroom-dressup) ships in
+// two compositions picked by roomBackgroundPickers.bedroom per screen aspect: a 16:9
+// "wide" set (phone/universal/premium/master — identical composition, just resized)
+// and a 16:10 "tablet" set (used when aspect <= 1.48). Both were measured pixel-by-pixel
+// (canvas color-edge scan) to find the wardrobe's outer frame box and, within that box,
+// where each shelf/cubby/rod sits as a fraction of the box — those relative fractions
+// matched within 1% between the two compositions, so one fraction table drives both.
+// The background is rendered with `cover`, so getWardrobeLayout replicates that crop
+// math to turn these fractions into on-screen pixels for whatever the device actually
+// shows, instead of the old fixed-pixel offsets that only matched one reference device.
+const WARDROBE_BOX = {
+  wide: { left: 0.0609, right: 0.4594, top: 0.125, bottom: 0.8306 },
+  tablet: { left: 0.0125, right: 0.4547, top: 0.1258, bottom: 0.8242 },
+};
+const WARDROBE_SHELF = {
+  colX: 0.1199,
+  hatCellY: [0.1511, 0.3124],
+  glassesCellY: [0.4725, 0.6454],
+  cubbyY: 0.8154,
+  cubbyX: [0.1691, 0.4878, 0.8181],
+  rodY: 0.1398,
+  hangX: [0.3603, 0.6068, 0.8532],
+  colWidthRatio: 0.196,
+  cellHeightRatio: 0.153,
+  cubbyWidthRatio: 0.306,
+  cubbyHeightRatio: 0.136,
+  hangSlotWidthRatio: 0.2465,
+};
+
+type WardrobeLayout = ReturnType<typeof getWardrobeLayout>;
+
+function getWardrobeLayout(width: number, mainHeight: number, safeTop: number) {
+  const isTabletAspect = width / mainHeight <= 1.48;
+  const imageAspect = isTabletAspect ? 1.6 : 16 / 9;
+  const screenAspect = width / mainHeight;
+  const box = isTabletAspect ? WARDROBE_BOX.tablet : WARDROBE_BOX.wide;
+  let dispW: number;
+  let dispH: number;
+  let offsetX: number;
+  if (screenAspect >= imageAspect) {
+    dispW = width;
+    dispH = width / imageAspect;
+    offsetX = 0;
+  } else {
+    dispH = mainHeight;
+    dispW = mainHeight * imageAspect;
+    offsetX = (width - dispW) / 2;
+  }
+
+  const boxPxW = (box.right - box.left) * dispW;
+  const boxPxH = (box.bottom - box.top) * dispH;
+  const colWidthPx = WARDROBE_SHELF.colWidthRatio * boxPxW;
+  const cellHeightPx = WARDROBE_SHELF.cellHeightRatio * boxPxH;
+  const cubbyWidthPx = WARDROBE_SHELF.cubbyWidthRatio * boxPxW;
+  const cubbyHeightPx = WARDROBE_SHELF.cubbyHeightRatio * boxPxH;
+  const hangSlotWidthPx = WARDROBE_SHELF.hangSlotWidthRatio * boxPxW;
+  const shelfIconSize = clamp(Math.min(colWidthPx, cellHeightPx) * 1.1, 30, 100);
+  const cubbyIconSize = clamp(Math.min(cubbyWidthPx, cubbyHeightPx) * 1.35, 30, 100);
+
+  let offsetY: number;
+  if (screenAspect >= imageAspect) {
+    // Cover, but anchored toward the bottom instead of the centre — the
+    // wardrobe/floor this art is built around sits along the bottom edge,
+    // and a centred cover on a short/wide phone crops the floor away along
+    // with the ceiling. Mirrors the bottom-anchor fix CookingGame uses for
+    // its counter/floor art for the same reason. Clamped between the two
+    // shelf rows' own bounds so that same move never pushes the top hat
+    // shelf behind the tab row, nor the bottom cubby row off the screen —
+    // floor wins only as far as both shelves stay fully on screen.
+    const bottomAnchorY = mainHeight - dispH;
+    const minY = safeTop - box.top * dispH - WARDROBE_SHELF.hatCellY[0] * boxPxH + shelfIconSize / 2;
+    const maxY = mainHeight - box.top * dispH - WARDROBE_SHELF.cubbyY * boxPxH - cubbyIconSize / 2;
+    offsetY = clamp(bottomAnchorY, Math.min(minY, maxY), Math.max(minY, maxY));
+  } else {
+    offsetY = 0;
+  }
+
+  const boxPxLeft = offsetX + box.left * dispW;
+  const boxPxTop = offsetY + box.top * dispH;
+  const toX = (fx: number) => boxPxLeft + fx * boxPxW;
+  const toY = (fy: number) => boxPxTop + fy * boxPxH;
+
+  return {
+    bg: { left: offsetX, top: offsetY, width: dispW, height: dispH },
+    hatX: toX(WARDROBE_SHELF.colX),
+    hatY: WARDROBE_SHELF.hatCellY.map(toY),
+    glassesY: WARDROBE_SHELF.glassesCellY.map(toY),
+    cubbyX: WARDROBE_SHELF.cubbyX.map(toX),
+    cubbyY: toY(WARDROBE_SHELF.cubbyY),
+    rodY: toY(WARDROBE_SHELF.rodY),
+    hangX: WARDROBE_SHELF.hangX.map(toX),
+    shelfIconSize,
+    cubbyIconSize,
+    hangIconSize: clamp(hangSlotWidthPx * 0.94, 44, 150),
+  };
+}
 
 const BODY_MAP = {
   hat: { cx: 0.5, cy: 0.08, fw: 0.54, fh: 0.26 },
@@ -63,9 +162,8 @@ type DropTarget = { x: number; y: number; w: number; h: number } | null;
 type ClosetPlacement = {
   left: number;
   top: number;
+  size: number;
   showHanger?: boolean;
-  artX?: number;
-  artY?: number;
   height?: number;
   zIndex?: number;
 };
@@ -452,50 +550,75 @@ function SwimSuitShape({ size, bodyColor, trimColor }: { size: number; bodyColor
   );
 }
 
-function RackHeader() {
-  return null;
-}
-
-function HangerGlyph() {
+function HangerGlyph({ size }: { size: number }) {
+  const w = size * 0.583;
+  const h = size * 0.458;
   return (
-    <View style={styles.hangerGlyph}>
-      <Image source={neliWorldAssets.clothes.hanger} style={styles.hangerImage} resizeMode="contain" />
+    <View style={[styles.hangerGlyph, { width: w, height: h }]}>
+      <Image source={neliWorldAssets.clothes.hanger} style={{ width: w, height: h }} resizeMode="contain" />
     </View>
   );
 }
 
-function getClosetPlacement(items: OutfitItem[], item: OutfitItem): ClosetPlacement {
-  const leftShelfTop = [-0.28, 0.62, 1.52, 2.42];
-  const hangerLeft = [1.55, 2.84, 4.12];
-  const bottomShelfLeft = [0.40, 2.08, 3.80];
+// Converts a wardrobe anchor (an exact pixel point on the shelf/rod, from
+// `getWardrobeLayout`) into the top-left `ClosetPlacement` that
+// `DraggableClothing` renders at. The item's art centers itself horizontally
+// within a `size`-wide box and sits `paddingTop` below the box's top edge
+// (see `styles.hangingItem`), so working backwards from a target center point
+// means subtracting half the icon size (and the padding) from the anchor.
+const CLOSET_ITEM_PAD_TOP = 8;
+const HANGER_GLYPH_HEIGHT = 44;
+
+function getClosetPlacement(layout: WardrobeLayout, items: OutfitItem[], item: OutfitItem): ClosetPlacement {
+  const centered = (cx: number, cy: number, size: number, extra?: Partial<ClosetPlacement>): ClosetPlacement => ({
+    left: cx - size / 2,
+    top: cy - size / 2 - CLOSET_ITEM_PAD_TOP,
+    size,
+    ...extra,
+  });
 
   const hatIndex = items.filter(piece => isHatSlot(piece.slot)).findIndex(piece => piece.slot === item.slot);
   if (hatIndex >= 0) {
-    return { left: 0.06, top: leftShelfTop[Math.min(hatIndex, 1)] ?? leftShelfTop[1], height: 1.04, zIndex: 70 };
+    const i = Math.min(hatIndex, 1);
+    return centered(layout.hatX, layout.hatY[i] ?? layout.hatY[1], layout.shelfIconSize, { height: 1.3, zIndex: 70 });
   }
 
   const sunglassesIndex = items.filter(piece => isSunglassesSlot(piece.slot)).findIndex(piece => piece.slot === item.slot);
   if (sunglassesIndex >= 0) {
-    return { left: 0.04, top: leftShelfTop[Math.min(sunglassesIndex + 2, 3)] ?? leftShelfTop[3], height: 1.02, zIndex: 60 };
+    const i = Math.min(sunglassesIndex, 1);
+    return centered(layout.hatX, layout.glassesY[i] ?? layout.glassesY[1], layout.shelfIconSize, { height: 1.3, zIndex: 60 });
   }
 
   const bottomItems = items.filter(piece => piece.slot === 'bag' || isShoesSlot(piece.slot));
   const bottomIndex = bottomItems.findIndex(piece => piece.slot === item.slot);
   if (bottomIndex >= 0) {
-    return { left: bottomShelfLeft[Math.min(bottomIndex, 2)] ?? bottomShelfLeft[2], top: 3.2, height: 1.08, zIndex: 45 };
+    const i = Math.min(bottomIndex, 2);
+    return centered(layout.cubbyX[i] ?? layout.cubbyX[2], layout.cubbyY, layout.cubbyIconSize, { height: 1.3, zIndex: 45 });
   }
 
+  // Hanger items anchor at the rod (not centered on it): the hanger glyph's
+  // hook sits at the anchor point and the garment art hangs below it.
+  const hangerTop = (cx: number, size: number, extra?: Partial<ClosetPlacement>): ClosetPlacement => ({
+    left: cx - size / 2,
+    top: layout.rodY - CLOSET_ITEM_PAD_TOP - 6,
+    size,
+    showHanger: true,
+    ...extra,
+  });
+
   if (item.slot === 'shirt') {
-    return { left: hangerLeft[2], top: 0.02, showHanger: true, height: 2.12, zIndex: 36 };
+    return hangerTop(layout.hangX[2], layout.hangIconSize, { height: 2.3, zIndex: 36 });
   }
 
   if (item.slot === 'pants' && items.some(piece => piece.slot === 'shirt')) {
-    return { left: hangerLeft[2], top: 0.99, height: 1.18, zIndex: 37 };
+    const size = layout.hangIconSize * 0.88;
+    return centered(layout.hangX[2], layout.rodY + CLOSET_ITEM_PAD_TOP + HANGER_GLYPH_HEIGHT + layout.hangIconSize * 0.62, size, { zIndex: 37 });
   }
 
   const hangerItems = items.filter(piece => !isHatSlot(piece.slot) && !isSunglassesSlot(piece.slot) && piece.slot !== 'bag' && !isShoesSlot(piece.slot) && piece.slot !== 'shirt' && piece.slot !== 'pants');
   const hangerIndex = hangerItems.findIndex(piece => piece.slot === item.slot);
-  return { left: hangerLeft[Math.min(Math.max(hangerIndex, 0), 2)] ?? hangerLeft[2], top: 0.02, showHanger: true, height: 2.18, zIndex: 35 };
+  const i = Math.min(Math.max(hangerIndex, 0), 2);
+  return hangerTop(layout.hangX[i] ?? layout.hangX[2], layout.hangIconSize, { height: 2.4, zIndex: 35 });
 }
 
   function ClothingOverlay({ item, imgSize, anim }: { item: OutfitItem; imgSize: number; anim: Animated.Value }) {
@@ -558,7 +681,6 @@ function DraggableClothing({
   landingPoint,
   onLaunch,
   onDraggingChange,
-  size,
   placement,
 }: {
   item: OutfitItem;
@@ -569,9 +691,9 @@ function DraggableClothing({
   landingPoint: { x: number; y: number };
   onLaunch: (path: FlightPath) => void;
   onDraggingChange: (dragging: boolean) => void;
-  size: number;
   placement: ClosetPlacement;
 }) {
+  const size = placement.size;
   const pan = useRef(new Animated.ValueXY()).current;
   const itemRef = useRef<View>(null);
   const isWornRef = useRef(isWorn);
@@ -669,8 +791,8 @@ function DraggableClothing({
         isWorn ? styles.hangingItemWornBack : null,
         {
           position: 'absolute',
-          left: size * placement.left,
-          top: size * placement.top,
+          left: placement.left,
+          top: placement.top,
           zIndex: isWorn ? 0 : (placement.zIndex ?? 30),
           elevation: isWorn ? 0 : (placement.zIndex ?? 30),
         },
@@ -685,17 +807,8 @@ function DraggableClothing({
         },
       ]}
       >
-          {!dragging && placement.showHanger ? <HangerGlyph /> : null}
-            <View
-            style={[
-              {
-                transform: [
-                  { translateX: size * (placement.artX ?? 0) },
-                  { translateY: size * (placement.artY ?? 0) },
-                ],
-              },
-            ]}
-          >
+          {!dragging && placement.showHanger ? <HangerGlyph size={size} /> : null}
+          <View>
             {showBodyPair ? <BodyPairClosetArt size={closetArtSize} /> : <ClothingArt slot={item.slot} size={closetArtSize} />}
           </View>
       </Animated.View>
@@ -713,8 +826,8 @@ export default function DressUpGame() {
   const { lang, addStars } = useContext(AppContext);
   const { reset: resetNav } = useNav();
   const { width, height } = useLandscapeDimensions();
+  const insets = useSafeAreaInsets();
   const isFa = lang === 'fa' || lang === 'ar';
-  const isLandscape = width > height;
 
   const [outfitIdx, setOutfitIdx] = useState(0);
   const [worn, setWorn] = useState<Record<string, boolean>>({});
@@ -735,11 +848,43 @@ export default function DressUpGame() {
   const [flight, setFlight] = useState<FlightPath | null>(null);
 
   const outfit = OUTFITS[outfitIdx];
-  const imgSize = Math.min(Math.max(width * 0.3, 250), isLandscape ? 360 : 320) * 1.03;
+
+  // TopBar isn't `large` here, so its height comes from topBarHeight with the
+  // same args — this is the "never hard-code another component's height"
+  // rule from the project's known bug class: a fixed sceneRow paddingTop used
+  // to reserve space for both the header and the tab row below it.
+  const barHeight = topBarHeight(height, insets.top, { topInset: 10 });
+  const mainHeight = height - barHeight;
+
+  // Tab row scales down from the tablet-sized reference (height 800) so it
+  // stays compact and hugs the header on short phone screens instead of
+  // eating a fixed share of a small viewport.
+  const tabK = clamp(height / 800, 0.5, 1);
+  const tabShellTop = Math.max(4, 10 * tabK);
+  const tabRowPadV = Math.max(4, 9 * tabK);
+  const tabRowPadH = Math.max(8, 12 * tabK);
+  const tabPadV = Math.max(4, 7 * tabK);
+  const tabPadH = Math.max(7, 11 * tabK);
+  const tabFontSize = Math.max(9, 11 * tabK);
+  const tabMinWidth = Math.max(60, 94 * tabK);
+  const tabGap = Math.max(4, 8 * tabK);
+  const tabBarHeight = tabShellTop + tabRowPadV * 2 + tabPadV * 2 + tabFontSize * 1.25 + 6;
+  const sceneRowPaddingTop = tabBarHeight + 8;
+  const sceneRowPaddingBottom = 14;
+
+  const sceneAvailHeight = mainHeight - sceneRowPaddingTop - sceneRowPaddingBottom;
+  const imgSize = clamp(sceneAvailHeight / 1.32, 150, 360);
   const imgHeight = imgSize * 1.22;
   const neliVisualSize = imgSize * 1.07;
   const neliVisualHeight = neliVisualSize * 1.22;
-  const clothingSize = Math.max(76, Math.min(isLandscape ? width * 0.078 : width * 0.15, 96));
+  const wardrobeLayout = React.useMemo(
+    () => getWardrobeLayout(width, mainHeight, sceneRowPaddingTop),
+    [width, mainHeight, sceneRowPaddingTop],
+  );
+  // Same tablet-reference scaling as the tab row: the gap between Neli's
+  // feet and the bottom of the screen shrinks on short phones so she reads
+  // as standing on the room's floor instead of floating above it.
+  const neliBottom = 14 * clamp(height / 800, 0.3, 1);
   const outfitHatItems = outfit.items.filter(item => isHatSlot(item.slot));
   const outfitDressItems = outfit.items.filter(item => isDressSlot(item.slot));
   const outfitSunglassesItems = outfit.items.filter(item => isSunglassesSlot(item.slot));
@@ -749,20 +894,6 @@ export default function DressUpGame() {
   const selectedDressSlot = selectedExclusiveSlots.dress;
   const selectedSunglassesSlot = selectedExclusiveSlots.sunglasses;
   const selectedShoesSlot = selectedExclusiveSlots.shoes;
-  const wornCount =
-    outfit.items.filter(item => !isHatSlot(item.slot) && !isDressSlot(item.slot) && !isSunglassesSlot(item.slot) && !isShoesSlot(item.slot) && !isBodyPairSlot(item.slot) && worn[item.slot]).length +
-    (selectedHatSlot ? 1 : 0) +
-    (selectedDressSlot ? 1 : 0) +
-    (selectedSunglassesSlot ? 1 : 0) +
-    (selectedShoesSlot ? 1 : 0) +
-    (outfitBodyPairItems.length > 0 && (worn.shirt || worn.pants) ? 1 : 0);
-  const neededCount =
-    outfit.items.length -
-    Math.max(0, outfitHatItems.length - 1) -
-    Math.max(0, outfitDressItems.length - 1) -
-    Math.max(0, outfitSunglassesItems.length - 1) -
-    Math.max(0, outfitShoesItems.length - 1) -
-    Math.max(0, outfitBodyPairItems.length - 1);
 
   const getAnim = (slot: string) => {
     if (!anims.current[slot]) anims.current[slot] = new Animated.Value(0);
@@ -914,9 +1045,14 @@ export default function DressUpGame() {
     <View style={styles.root}>
       <TopBar title="Dress Up" titleFa="لباس بپوشون" showClose dark topInset={10} onBack={() => resetNav({ name: 'Main', tab: 'Games' })} />
 
-      <ImageBackground source={roomBackgroundPickers.bedroom(width, height)} style={styles.main} imageStyle={styles.roomImage} resizeMode="cover">
-          <View style={styles.tabShell}>
-          <View style={styles.tabRow}>
+      <View style={styles.main}>
+          <Image
+            source={roomBackgroundPickers.bedroom(width, mainHeight)}
+            style={[styles.roomImage, wardrobeLayout.bg]}
+            resizeMode="stretch"
+          />
+          <View style={[styles.tabShell, { top: tabShellTop }]}>
+          <View style={[styles.tabRow, { gap: tabGap, paddingHorizontal: tabRowPadH, paddingVertical: tabRowPadV }]}>
             {OUTFITS.map((set, index) => {
               const active = index === outfitIdx;
               return (
@@ -924,6 +1060,7 @@ export default function DressUpGame() {
                   key={set.name}
                   style={[
                     styles.tab,
+                    { minWidth: tabMinWidth, paddingHorizontal: tabPadH, paddingVertical: tabPadV },
                     active && { backgroundColor: set.accent, borderColor: '#FFFFFF', shadowOpacity: 0.18 },
                   ]}
                   onPress={() => {
@@ -932,7 +1069,7 @@ export default function DressUpGame() {
                   }}
                   activeOpacity={0.9}
                 >
-                  <Text style={[styles.tabTxt, { fontFamily: ff(lang, 'black'), color: active ? '#25105C' : '#FFFFFF' }, dir(lang)]}>
+                  <Text style={[styles.tabTxt, { fontSize: tabFontSize, fontFamily: ff(lang, 'black'), color: active ? '#25105C' : '#FFFFFF' }, dir(lang)]}>
                     {isFa ? set.nameFa : set.name}
                   </Text>
                 </TouchableOpacity>
@@ -941,56 +1078,52 @@ export default function DressUpGame() {
           </View>
         </View>
 
-        <View style={styles.sceneRow}>
-          <View
-            style={[
-              styles.closet,
-              draggingSlot ? styles.closetDragging : null,
-              { maxWidth: isLandscape ? width * 0.48 : width * 0.46, marginLeft: width * 0.05 },
-            ]}
-          >
-            <RackHeader />
-            <View style={[styles.closetItems, { width: clothingSize * 5.8, height: clothingSize * 5.25, marginTop: height * 0.01 }]}>
-              {outfit.items.map(item => {
-                const isSelectedHat = isHatSlot(item.slot) && selectedHatSlot === item.slot;
-                const isSelectedDress = isDressSlot(item.slot) && selectedDressSlot === item.slot;
-                const isSelectedSunglasses = isSunglassesSlot(item.slot) && selectedSunglassesSlot === item.slot;
-                const isSelectedShoes = isShoesSlot(item.slot) && selectedShoesSlot === item.slot;
-                if (item.slot === 'pants' && outfitBodyPairItems.some(pair => pair.slot === 'shirt')) {
-                  return null;
-                }
-                const isInactive = isHatSlot(item.slot)
-                  ? isSelectedHat
-                  : isDressSlot(item.slot)
-                    ? isSelectedDress
-                    : isSunglassesSlot(item.slot)
-                      ? isSelectedSunglasses
-                      : isShoesSlot(item.slot)
-                        ? isSelectedShoes
-                        : !!worn[item.slot];
+        {/* Absolute overlay anchored to `main`'s own coordinate space (not
+            sceneRow's padded one) so item positions computed from
+            wardrobeLayout land exactly where the background art's shelves
+            render, regardless of paddingTop/paddingHorizontal below. */}
+        <View
+          style={[styles.closetOverlay, { zIndex: draggingSlot ? 250 : 30, elevation: draggingSlot ? 250 : 30 }]}
+          pointerEvents="box-none"
+        >
+          {outfit.items.map(item => {
+            const isSelectedHat = isHatSlot(item.slot) && selectedHatSlot === item.slot;
+            const isSelectedDress = isDressSlot(item.slot) && selectedDressSlot === item.slot;
+            const isSelectedSunglasses = isSunglassesSlot(item.slot) && selectedSunglassesSlot === item.slot;
+            const isSelectedShoes = isShoesSlot(item.slot) && selectedShoesSlot === item.slot;
+            if (item.slot === 'pants' && outfitBodyPairItems.some(pair => pair.slot === 'shirt')) {
+              return null;
+            }
+            const isInactive = isHatSlot(item.slot)
+              ? isSelectedHat
+              : isDressSlot(item.slot)
+                ? isSelectedDress
+                : isSunglassesSlot(item.slot)
+                  ? isSelectedSunglasses
+                  : isShoesSlot(item.slot)
+                    ? isSelectedShoes
+                    : !!worn[item.slot];
 
-                return (
-                  <DraggableClothing
-                    key={item.slot}
-                    item={item}
-                    isWorn={isInactive}
-                    isFa={isFa}
-                    lang={lang}
-                    targetRef={neliTargetRef}
-                    landingPoint={getLandingPoint(item.slot, imgSize)}
-                    onLaunch={launchFlight}
-                    onDraggingChange={(dragging) => setDraggingSlot(dragging ? item.slot : null)}
-                    size={clothingSize}
-                    placement={getClosetPlacement(outfit.items, item)}
-                  />
-                );
-              })}
-            </View>
-          </View>
+            return (
+              <DraggableClothing
+                key={item.slot}
+                item={item}
+                isWorn={isInactive}
+                isFa={isFa}
+                lang={lang}
+                targetRef={neliTargetRef}
+                landingPoint={getLandingPoint(item.slot, imgSize)}
+                onLaunch={launchFlight}
+                onDraggingChange={(dragging) => setDraggingSlot(dragging ? item.slot : null)}
+                placement={getClosetPlacement(wardrobeLayout, outfit.items, item)}
+              />
+            );
+          })}
+        </View>
 
               <View
                 ref={neliStageRef}
-                style={[styles.neliStage, { width: imgSize, height: imgHeight }]}
+                style={[styles.neliStage, { width: imgSize, height: imgHeight, right: 12, bottom: neliBottom }]}
                 onLayout={syncNeliTarget}
               >
                 <Animated.View style={{ width: imgSize, height: imgHeight, transform: [{ scale: neliScale }] }}>
@@ -1045,12 +1178,7 @@ export default function DressUpGame() {
                   })}
                 </Animated.View>
               </View>
-        </View>
-
-        <View style={styles.progressBubble}>
-          <Text style={[styles.progressText, { fontFamily: ff(lang, 'bold') }]}>{wornCount}/{neededCount}</Text>
-        </View>
-      </ImageBackground>
+      </View>
 
       {flight ? (
         <Animated.View
@@ -1091,14 +1219,23 @@ export default function DressUpGame() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#25105C' },
-  main: { flex: 1, overflow: 'visible' },
-  roomImage: { width: '100%', height: '100%' },
+  // Bottom-anchoring the room art (see getWardrobeLayout) means it commonly
+  // overflows past the top of this box on wide phones — clip it here so
+  // that overflow never paints over TopBar, which is a sibling rendered
+  // before this View, not a child of it.
+  main: { flex: 1, overflow: 'hidden' },
+  roomImage: { position: 'absolute' },
   tabShell: {
     position: 'absolute',
     top: 10,
     left: 14,
     right: 14,
-    zIndex: 20,
+    // Above closetOverlay's resting zIndex (30) so a hanger item that lands
+    // near the top of the rod on a short screen renders under the tab bar,
+    // not over it. Still below the overlay's dragging zIndex (250) so an
+    // item actively being dragged can still fly across the tab bar.
+    zIndex: 100,
+    elevation: 100,
     alignItems: 'center',
   },
   tabRow: {
@@ -1133,26 +1270,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tabTxt: { fontSize: 11 },
-  sceneRow: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 14, paddingTop: 70, gap: 10 },
-  closet: {
-    flex: 1,
-    alignSelf: 'stretch',
-    borderRadius: 24,
-    borderWidth: 0,
-    backgroundColor: 'transparent',
-    paddingHorizontal: 8,
-    paddingTop: 18,
-    paddingBottom: 8,
-    overflow: 'visible',
-  },
-  closetItems: {
-    position: 'relative',
-    flexDirection: 'row',
-    flexWrap: 'nowrap',
-    justifyContent: 'center',
-    alignContent: 'center',
-    gap: 3,
-    paddingBottom: 28,
+  closetOverlay: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
     overflow: 'visible',
   },
   hangingItem: {
@@ -1170,21 +1293,9 @@ const styles = StyleSheet.create({
   hangingItemDragging: { zIndex: 999, elevation: 999 },
   hatFront: { zIndex: 60, elevation: 60, position: 'relative' },
   hangingItemWorn: { opacity: 0.52 },
-  hangerGlyph: { width: 56, height: 44, alignItems: 'center', justifyContent: 'flex-start' },
-  hangerImage: { width: 56, height: 44 },
-  closetDragging: { zIndex: 200, elevation: 0 },
-  neliStage: { alignItems: 'center', justifyContent: 'flex-end', overflow: 'visible', zIndex: 3, elevation: 3 },
+  hangerGlyph: { alignItems: 'center', justifyContent: 'flex-start' },
+  neliStage: { position: 'absolute', alignItems: 'center', justifyContent: 'flex-end', overflow: 'visible', zIndex: 3, elevation: 3 },
   dressBlinkImage: { position: 'absolute', zIndex: 41, elevation: 41 },
-  progressBubble: {
-    position: 'absolute',
-    right: 14,
-    bottom: 12,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  progressText: { color: '#25105C', fontSize: 12, fontWeight: '900' },
   doneCard: {
     position: 'absolute',
     left: 18,

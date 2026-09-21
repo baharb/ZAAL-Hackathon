@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZAAL Device Bench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Vazirmatn:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --ground:#f5f2f9; --surface:#fff; --sunken:#ebe6f2;
+    --line:#ded6e9; --line-strong:#c8bcd8;
+    --ink:#231d2c; --dim:#6d6479;
+    --accent:#6B21A8; --accent-ink:#fff; --accent-wash:#f0e6fa;
+    --ok:#1c7a52; --warn:#a4530c; --bezel:#2a2333;
+    --shadow:0 1px 2px rgba(35,29,44,.07), 0 8px 24px -12px rgba(35,29,44,.18);
+    --display:"Fredoka","Trebuchet MS",sans-serif;
+    --body:"Vazirmatn",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --mono:ui-monospace,"Cascadia Mono","Consolas",monospace;
+    color-scheme:light dark;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#16121c; --surface:#201a29; --sunken:#1a1520;
+      --line:#332a40; --line-strong:#4a3e5c;
+      --ink:#ece7f3; --dim:#9b90ab;
+      --accent:#b985ec; --accent-ink:#1d1226; --accent-wash:#2b1f3a;
+      --ok:#5fd3a0; --warn:#e5a45f; --bezel:#0d0a12;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -12px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#16121c; --surface:#201a29; --sunken:#1a1520;
+    --line:#332a40; --line-strong:#4a3e5c;
+    --ink:#ece7f3; --dim:#9b90ab;
+    --accent:#b985ec; --accent-ink:#1d1226; --accent-wash:#2b1f3a;
+    --ok:#5fd3a0; --warn:#e5a45f; --bezel:#0d0a12;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -12px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--ground); color:var(--ink); font-family:var(--body); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased}
+  img{max-width:100%}
+  .wrap{padding:0 16px; max-width:1600px; margin:0 auto}
+
+  .mast{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; padding-block:22px 14px}
+  .mast h1{font-family:var(--display); font-weight:600; font-size:clamp(20px,3.2vw,27px); margin:0; letter-spacing:-.01em; text-wrap:balance}
+  .mast p{margin:0; color:var(--dim); font-size:13px; max-width:58ch}
+
+  .bar{position:sticky; top:0; z-index:30; background:var(--ground); border-block:1px solid var(--line); margin-bottom:20px}
+  .bar-in{max-width:1600px; margin:0 auto; padding:10px 16px; display:flex; gap:10px 14px; align-items:center; flex-wrap:wrap}
+  .field{display:flex; align-items:center; gap:7px; min-width:0}
+  .field>label{font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--dim); font-weight:700; white-space:nowrap}
+  input[type=url]{font-family:var(--mono); font-size:12.5px; color:var(--ink); background:var(--surface); border:1px solid var(--line-strong); border-radius:6px; padding:7px 9px; width:min(250px,52vw)}
+  input[type=url]:focus-visible,button:focus-visible,input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  button{font-family:var(--body); font-size:12.5px; font-weight:500; color:var(--ink); background:var(--surface); border:1px solid var(--line-strong); border-radius:6px; padding:7px 12px; cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:700}
+  button.on{background:var(--accent-wash); border-color:var(--accent); font-weight:700}
+  .seg{display:flex}
+  .seg button{border-radius:0; margin-left:-1px; padding:7px 10px}
+  .seg button:first-child{border-radius:6px 0 0 6px; margin-left:0}
+  .seg button:last-child{border-radius:0 6px 6px 0}
+  input[type=range]{width:120px; accent-color:var(--accent)}
+  .scaleval{font-family:var(--mono); font-size:12px; color:var(--dim); width:38px}
+  .status{margin-left:auto; display:flex; align-items:center; gap:7px; font-size:12px; color:var(--dim); white-space:nowrap}
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--line-strong); flex:none}
+  .dot.live{background:var(--ok)} .dot.wait{background:var(--warn)}
+
+  .note{background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:8px; padding:12px 14px; margin-bottom:22px; font-size:12.5px; color:var(--dim)}
+  .note strong{color:var(--ink); font-weight:700}
+  .note code{font-family:var(--mono); font-size:11.5px; background:var(--sunken); padding:2px 5px; border-radius:4px; color:var(--ink); user-select:all}
+  .note ol{margin:8px 0 0; padding-left:18px} .note li{margin-bottom:3px}
+
+  .group{margin-bottom:30px}
+  .group-head{display:flex; align-items:center; gap:10px; margin-bottom:14px}
+  .group-head h2{font-family:var(--display); font-weight:500; font-size:13px; text-transform:uppercase; letter-spacing:.12em; color:var(--dim); margin:0}
+  .group-head .rule{flex:1; height:1px; background:var(--line)}
+  .group-head .count{font-family:var(--mono); font-size:11px; color:var(--dim)}
+  .rack{display:flex; flex-wrap:wrap; gap:26px 22px; align-items:flex-start}
+
+  .card{display:flex; flex-direction:column; gap:7px}
+  .cap{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; max-width:100%}
+  .cap h3{font-family:var(--body); font-weight:700; font-size:12.5px; margin:0}
+  .cap .px{font-family:var(--mono); font-size:11px; color:var(--dim); font-variant-numeric:tabular-nums}
+  .cap .ar{font-family:var(--mono); font-size:10px; font-weight:700; background:var(--sunken); color:var(--dim); border-radius:3px; padding:1px 4px}
+  .cap .ar.wide{background:var(--accent-wash); color:var(--accent)}
+
+  .screen{position:relative; overflow:hidden; background:var(--bezel); border-radius:9px; box-shadow:var(--shadow)}
+  .stage{position:absolute; top:0; left:0; width:calc(var(--w)*1px); height:calc(var(--h)*1px); transform:scale(var(--s)); transform-origin:0 0}
+  .stage iframe{width:100%; height:100%; border:0; display:block; background:#fff}
+  .ph{position:absolute; inset:0; display:grid; place-content:center; gap:4px; text-align:center; color:#8c7fa0; background:var(--bezel)}
+  .ph .glyph{font-family:var(--display); font-size:20px; opacity:.5}
+  .ph .msg{font-size:11px; letter-spacing:.04em}
+  .insets{position:absolute; inset:0; pointer-events:none; display:none}
+  .insets.show{display:block}
+  .insets i{position:absolute; display:block; background:repeating-linear-gradient(45deg,rgba(255,90,90,.34) 0 6px,rgba(255,90,90,.12) 6px 12px); border:1px solid rgba(255,90,90,.55)}
+
+  footer{border-top:1px solid var(--line); margin-top:10px; padding-block:18px 28px; color:var(--dim); font-size:12px}
+  footer code{font-family:var(--mono); font-size:11.5px; background:var(--sunken); padding:2px 5px; border-radius:4px; color:var(--ink)}
+  @media (max-width:520px){ .status{margin-left:0; width:100%} .field:has(input[type=url]){width:100%} input[type=url]{width:100%} }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="mast">
+    <h1>ZAAL Device Bench</h1>
+    <p>Your live Expo web build at real device pixels, landscape-locked to match the app.</p>
+  </div>
+</div>
+
+<div class="bar">
+  <div class="bar-in">
+    <div class="field">
+      <label for="url">Dev server</label>
+      <input type="url" id="url" value="http://localhost:8082" spellcheck="false">
+    </div>
+    <div class="seg" role="group" aria-label="Common ports">
+      <button data-port="8081">:8081</button>
+      <button data-port="8082">:8082</button>
+      <button data-port="19006">:19006</button>
+    </div>
+    <button class="primary" id="connect">Connect</button>
+    <button id="reload">Reload all</button>
+
+    <div class="field">
+      <label for="scale">Scale</label>
+      <input type="range" id="scale" min="20" max="100" step="5" value="40">
+      <span class="scaleval" id="scaleval">40%</span>
+    </div>
+
+    <div class="seg" role="group" aria-label="Orientation">
+      <button id="land" class="on">Landscape</button>
+      <button id="port">Portrait</button>
+    </div>
+
+    <button id="safe">Safe areas</button>
+
+    <div class="status"><span class="dot" id="dot"></span><span id="statustext">Idle</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="note">
+    <strong>Open this file directly from disk</strong> (double-click it, or drag it into Chrome) — not through a hosted page, which is not allowed to embed <code>localhost</code>.
+    <ol>
+      <li>Run <code>npm run web</code> in the project folder.</li>
+      <li>Read the port Expo prints — it uses <code>8081</code> unless something already has it, then <code>8082</code>. Pick it above or type the full URL.</li>
+      <li>Press <strong>Connect</strong>. The port and URL are remembered next time.</li>
+    </ol>
+  </div>
+
+  <div id="racks"></div>
+
+  <footer>
+    Web preview won't reproduce native safe-area insets, <code>expo-audio</code>, <code>expo-speech</code>, <code>expo-haptics</code>, or the Android navigation bar — do one emulator pass on a phone AVD before shipping. The red hatching approximates notch and home-indicator insets in landscape.
+  </footer>
+</div>
+
+<script>
+var DEVICES = [
+  {n:"iPhone SE (3rd)",   w:375,  h:667,  g:"phone",  ins:{l:0, r:0, t:0,  b:0}},
+  {n:"Galaxy S23",        w:360,  h:780,  g:"phone",  ins:{l:0, r:0, t:24, b:0}},
+  {n:"iPhone 16",         w:393,  h:852,  g:"phone",  ins:{l:59,r:59,t:0,  b:21}},
+  {n:"Pixel 7",           w:412,  h:915,  g:"phone",  ins:{l:24,r:0, t:24, b:0}},
+  {n:"iPhone 16 Pro Max", w:440,  h:956,  g:"phone",  ins:{l:62,r:62,t:0,  b:21}},
+  {n:"iPad mini 6",       w:744,  h:1133, g:"tablet", ins:{l:0, r:0, t:24, b:20}},
+  {n:'iPad 10.2"',        w:810,  h:1080, g:"tablet", ins:{l:0, r:0, t:20, b:0}},
+  {n:"iPad Pro 11",       w:834,  h:1194, g:"tablet", ins:{l:0, r:0, t:24, b:20}},
+  {n:"Galaxy Tab S9",     w:800,  h:1280, g:"tablet", ins:{l:0, r:0, t:24, b:0}},
+  {n:"iPad Pro 13",       w:1024, h:1366, g:"tablet", ins:{l:0, r:0, t:24, b:20}}
+];
+
+var state = {landscape:true, scale:0.40, safe:false, url:"", connected:false};
+var urlEl = document.getElementById("url");
+try{ var saved = localStorage.getItem("zaal.devurl"); if(saved) urlEl.value = saved; }catch(e){}
+
+var racks = document.getElementById("racks");
+
+function groupBlock(title, list){
+  var g = document.createElement("section"); g.className = "group";
+  var head = document.createElement("div"); head.className = "group-head";
+  head.innerHTML = '<h2></h2><span class="rule"></span><span class="count"></span>';
+  head.querySelector("h2").textContent = title;
+  head.querySelector(".count").textContent = list.length + " sizes";
+  g.appendChild(head);
+  var rack = document.createElement("div"); rack.className = "rack";
+  list.forEach(function(d){ rack.appendChild(cardFor(d)); });
+  g.appendChild(rack); racks.appendChild(g);
+}
+
+function cardFor(d){
+  var card = document.createElement("article"); card.className = "card";
+  var cap = document.createElement("div"); cap.className = "cap";
+  cap.innerHTML = '<h3></h3><span class="px"></span><span class="ar"></span>';
+  cap.querySelector("h3").textContent = d.n;
+  card.appendChild(cap);
+
+  var screen = document.createElement("div"); screen.className = "screen";
+  var stage = document.createElement("div"); stage.className = "stage";
+  var frame = document.createElement("iframe");
+  frame.title = d.n + " preview";
+  stage.appendChild(frame);
+
+  var insets = document.createElement("div"); insets.className = "insets";
+  insets.innerHTML = '<i class="il"></i><i class="ir"></i><i class="it"></i><i class="ib"></i>';
+  stage.appendChild(insets);
+  screen.appendChild(stage);
+
+  var ph = document.createElement("div"); ph.className = "ph";
+  ph.innerHTML = '<div class="glyph">ZAAL</div><div class="msg">not connected</div>';
+  screen.appendChild(ph);
+  card.appendChild(screen);
+
+  d._screen = screen; d._stage = stage; d._frame = frame; d._ph = ph; d._insets = insets; d._cap = cap;
+  frame.addEventListener("load", function(){
+    if(!state.connected) return;
+    ph.hidden = true;
+    setStatus("live", "Loaded");
+  });
+  return card;
+}
+
+function dims(d){ return state.landscape ? {w:d.h, h:d.w} : {w:d.w, h:d.h}; }
+function insetFor(d){
+  if(!state.landscape) return d.ins;
+  return {l:d.ins.t, r:d.ins.b, t:0, b:(d.ins.l || d.ins.r) ? 21 : 0};
+}
+
+function render(){
+  DEVICES.forEach(function(d){
+    var m = dims(d), s = state.scale;
+    d._stage.style.setProperty("--w", m.w);
+    d._stage.style.setProperty("--h", m.h);
+    d._stage.style.setProperty("--s", s);
+    d._screen.style.width  = Math.round(m.w * s) + "px";
+    d._screen.style.height = Math.round(m.h * s) + "px";
+
+    var ratio = m.w / m.h;
+    d._cap.querySelector(".px").textContent = m.w + " × " + m.h;
+    var ar = d._cap.querySelector(".ar");
+    ar.textContent = ratio.toFixed(2);
+    ar.className = "ar" + (ratio >= 2 ? " wide" : "");
+
+    var ins = insetFor(d), el = d._insets;
+    el.classList.toggle("show", state.safe);
+    var L = el.querySelector(".il"), R = el.querySelector(".ir"), T = el.querySelector(".it"), B = el.querySelector(".ib");
+    L.style.cssText = "left:0;top:0;bottom:0;width:" + ins.l + "px;" + (ins.l ? "" : "display:none");
+    R.style.cssText = "right:0;top:0;bottom:0;width:" + ins.r + "px;" + (ins.r ? "" : "display:none");
+    T.style.cssText = "left:0;right:0;top:0;height:" + ins.t + "px;" + (ins.t ? "" : "display:none");
+    B.style.cssText = "left:0;right:0;bottom:0;height:" + ins.b + "px;" + (ins.b ? "" : "display:none");
+  });
+}
+
+function setStatus(kind, text){
+  document.getElementById("dot").className = "dot" + (kind === "live" ? " live" : kind === "wait" ? " wait" : "");
+  document.getElementById("statustext").textContent = text;
+}
+
+function connect(){
+  var raw = urlEl.value.trim();
+  if(!raw) return;
+  state.url = raw.replace(/\/+$/, "");
+  state.connected = true;
+  try{ localStorage.setItem("zaal.devurl", state.url); }catch(e){}
+  setStatus("wait", "Connecting…");
+  DEVICES.forEach(function(d){
+    d._ph.hidden = false;
+    d._frame.src = state.url + (state.url.indexOf("?") > -1 ? "&" : "?") + "_bench=" + Date.now();
+  });
+  setTimeout(function(){
+    if(!DEVICES.some(function(d){ return d._ph.hidden; }))
+      setStatus("wait", "No response — check the port");
+  }, 6000);
+}
+
+document.getElementById("connect").addEventListener("click", connect);
+document.getElementById("reload").addEventListener("click", connect);
+urlEl.addEventListener("keydown", function(e){ if(e.key === "Enter") connect(); });
+
+Array.prototype.forEach.call(document.querySelectorAll("[data-port]"), function(b){
+  b.addEventListener("click", function(){
+    urlEl.value = "http://localhost:" + b.getAttribute("data-port");
+    connect();
+  });
+});
+
+var scale = document.getElementById("scale");
+scale.addEventListener("input", function(){
+  state.scale = Number(scale.value) / 100;
+  document.getElementById("scaleval").textContent = scale.value + "%";
+  render();
+});
+
+var landBtn = document.getElementById("land"), portBtn = document.getElementById("port");
+landBtn.addEventListener("click", function(){ state.landscape = true; landBtn.classList.add("on"); portBtn.classList.remove("on"); render(); });
+portBtn.addEventListener("click", function(){ state.landscape = false; portBtn.classList.add("on"); landBtn.classList.remove("on"); render(); });
+
+var safeBtn = document.getElementById("safe");
+safeBtn.addEventListener("click", function(){ state.safe = !state.safe; safeBtn.classList.toggle("on", state.safe); render(); });
+
+groupBlock("Phones",  DEVICES.filter(function(d){ return d.g === "phone"; }));
+groupBlock("Tablets", DEVICES.filter(function(d){ return d.g === "tablet"; }));
+render();
+connect();
+</script>
+</body>
+</html>

@@ -523,7 +523,7 @@ export default function SolarSystemPuzzleGame() {
 
   return (
     <View style={styles.root}>
-      <ImageBackground source={SOLAR_SYSTEM_BACKGROUND} style={styles.bg} resizeMode="cover">
+      <ImageBackground source={SOLAR_SYSTEM_BACKGROUND} style={styles.bg} imageStyle={styles.bgImage} resizeMode="cover">
         <View style={styles.bgWash} />
       </ImageBackground>
 
@@ -621,6 +621,10 @@ const styles = StyleSheet.create({
   bg: {
     ...StyleSheet.absoluteFillObject,
   },
+  // Without an explicit imageStyle, react-native-web can leave the background
+  // <img> unsized in some nested-flex layouts, so it falls back to its own
+  // huge natural pixel size and only a random cropped sliver shows.
+  bgImage: { width: '100%', height: '100%' },
   bgWash: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(3, 10, 32, 0.10)',

@@ -18,7 +18,7 @@ import { ff } from '../theme/fonts';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { getPaintingColorAudioKey, playFaAudio, speakWithGeneratedVoice } from '../utils/faAudio';
 type Point = { x: number; y: number };
-type Stroke = { points: Point[]; color: string; size: number };
+type Stroke = { id: number; points: Point[]; color: string; size: number };
 
 type PaintingScene = {
   id: string;
@@ -37,7 +37,7 @@ type Crayon = {
   sprite: any;
 };
 
-const CRAYONS: Crayon[] = [
+const CRAYONS_FULL: Crayon[] = [
   { color: '#F43F1D', label: 'Red', labelFa: 'قرمز', sprite: require('../../assets/neli-world/painting/crayons/crayon_red.webp') },
   { color: '#FF7A1A', label: 'Orange', labelFa: 'نارنجی', sprite: require('../../assets/neli-world/painting/crayons/crayon_orange.webp') },
   { color: '#FFB020', label: 'Amber', labelFa: 'کهربایی', sprite: require('../../assets/neli-world/painting/crayons/crayon_amber.webp') },
@@ -55,6 +55,18 @@ const CRAYONS: Crayon[] = [
   { color: '#9E9E9E', label: 'Gray', labelFa: 'خاکستری', sprite: require('../../assets/neli-world/painting/crayons/crayon_gray.webp') },
   { color: '#263238', label: 'Black', labelFa: 'مشکی', sprite: require('../../assets/neli-world/painting/crayons/crayon_black.webp') },
 ];
+
+// Phones in landscape have ~360-440pt of height (the short edge — see
+// CLAUDE.md), and 16 crayons packed into that forced crayonColumnHeight's
+// 360pt floor down to ~22.5pt of vertical space each, well under the ~44pt
+// touch target they need — reported as crayons overlapping with no room to
+// tap them individually. Cutting near-duplicate hues down to one
+// representative each (Amber/Lime/Teal/Aqua/Indigo/Rose folded into their
+// nearest sibling, Gray dropped outright) keeps the same left-to-right
+// rainbow order while roughly halving the count, giving each remaining
+// crayon comfortable spacing on a short screen. Tablets keep the full set.
+const COMPACT_LABELS = new Set(['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Pink', 'Brown', 'Black']);
+const CRAYONS_COMPACT: Crayon[] = CRAYONS_FULL.filter(c => COMPACT_LABELS.has(c.label));
 
 const BRUSH_SIZES = [17, 26, 36] as const;
 const BRUSH_ICONS = {
@@ -346,8 +358,22 @@ const ORDERED_PAINTINGS = [...PAINTINGS].sort((a, b) => {
   return Number(a.id) - Number(b.id);
 });
 
-function pathFromPoints(points: Point[]) {
-  if (!points.length) return '';
+// Only the first N paintings (in ORDERED_PAINTINGS order) show in the picker
+// for now — the rest are saved for a future version. Raise this number (or
+// remove the slice(0, VISIBLE_PAINTING_COUNT) below) to bring them back;
+// nothing else needs to change, every painting is still fully in PAINTINGS.
+const VISIBLE_PAINTING_COUNT = 8;
+
+function pathFromPoints(points: Point[] | undefined) {
+  // Confirmed via a captured device stack trace: this was the exact crash
+  // site behind a reported white screen — a stroke in `strokes` whose
+  // `.points` was undefined threw "Cannot read property 'length' of
+  // undefined" here, unmounting the whole tree (this screen has no error
+  // boundary of its own; App.tsx's root one now catches it, but this is the
+  // actual fix). paintAt() builds every stroke so it always has `.points`,
+  // but this guard is the direct fix for the confirmed crash line,
+  // independent of how a stroke got here.
+  if (!points || !points.length) return '';
   const [first, ...rest] = points;
   return `M ${first.x.toFixed(1)} ${first.y.toFixed(1)} ${rest.map(pt => `L ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(' ')}`;
 }
@@ -357,6 +383,7 @@ function CrayonButton({
   selected,
   onPress,
   index,
+  total,
   top,
   height,
   sprite,
@@ -365,6 +392,7 @@ function CrayonButton({
   selected: boolean;
   onPress: () => void;
   index: number;
+  total: number;
   top: number;
   height: number;
   sprite: any;
@@ -373,10 +401,17 @@ function CrayonButton({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.9}
-      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+      // The crayon rail's own visible/touchable area is clipped (by
+      // paintStage's overflow:hidden) to roughly x:0–106. This hitSlop
+      // extends the tappable area to x=138 to cover the crayon's visible
+      // tip, right at that boundary — isControlArea/paintBounds's leftGap
+      // (140) is set just past this reach on purpose, so the canvas never
+      // becomes paintable inside a crayon's hitSlop. If this right value
+      // ever changes, bump leftGap in both those places to match.
+      hitSlop={{ top: 6, bottom: 6, left: 6, right: 32 }}
       style={[
         styles.crayonTap,
-        { top, zIndex: selected ? 999 : CRAYONS.length - index, height },
+        { top, zIndex: selected ? 999 : total - index, height },
         selected && styles.crayonTapSelected,
       ]}
     >
@@ -443,6 +478,11 @@ export default function ColoringScreen() {
   const { reset } = useNav();
   const { width, height } = useWindowDimensions();
   const isFa = lang === 'fa' || lang === 'ar';
+  // Landscape-locked screen, so height is the short edge (see CLAUDE.md's
+  // TABLET_MIN_EDGE convention) — a phone gets the trimmed crayon list so
+  // each one has room to be tapped; a tablet has the height for all 16.
+  const isPhone = height < 600;
+  const CRAYONS = isPhone ? CRAYONS_COMPACT : CRAYONS_FULL;
 
   const [mode, setMode] = useState<'pick' | 'paint'>('pick');
   const [sceneIdx, setSceneIdx] = useState(0);
@@ -454,16 +494,50 @@ export default function ColoringScreen() {
     w: Math.max(width - 12, 320),
     h: Math.max(height - 120, 360),
   });
-  const currentStroke = useRef<Stroke | null>(null);
+  // evt.nativeEvent.locationX/Y are relative to whichever view is CURRENTLY
+  // handling the touch — and that can change mid-gesture near a boundary
+  // between sibling views (the crayon rail vs. the canvas), causing the
+  // reported x/y to suddenly jump by the offset between those views'
+  // coordinate spaces. Reported as a stray line appearing near the canvas
+  // edge, and as the drawn point not tracking the finger. gestureState's
+  // x0/y0/moveX/moveY are screen-absolute and never jump; stageOrigin
+  // converts that to a coordinate local to paintStage, measured once per
+  // layout via measureInWindow (paintStage doesn't move once laid out).
+  const stageRef = useRef<View>(null);
+  const stageOrigin = useRef({ x: 0, y: 0 });
+  // Only ever holds an id (or null) — never a stroke object. Earlier
+  // versions of this code kept the in-progress stroke as a mutable object on
+  // this ref, shared/aliased with the copy living in `strokes` state; that
+  // caused strokes to intermittently lose their data (fields coming back
+  // undefined) or vanish entirely on touch release, confirmed via a live
+  // device log showing a stroke's own properties wiped without the array
+  // shrinking. Keeping only an id here means the ref can never alias
+  // anything React re-renders from — all stroke data lives exclusively in
+  // `strokes` state, read and written only through functional setState
+  // updates.
+  const activeStrokeId = useRef<number | null>(null);
+  const nextStrokeId = useRef(0);
   const selectedColorRef = useRef(selectedColor);
   const brushSizeRef = useRef(brushSize);
 
   const scene = ORDERED_PAINTINGS[sceneIdx];
   const canvasWidth = stageSize.w;
   const canvasHeight = stageSize.h;
-  const sceneSource = Image.resolveAssetSource(scene.image);
+  // On native, require() gives a numeric asset id that needs resolving to
+  // {uri, width, height}. On web, Metro's asset transform already returns
+  // that resolved object directly — and react-native-web's Image doesn't
+  // implement resolveAssetSource at all, so calling it unconditionally
+  // crashed this screen on every web render (blank/black screen).
+  const sceneSource = typeof scene.image === 'number' ? Image.resolveAssetSource(scene.image) : scene.image;
   const paintBounds = useMemo(() => {
-    const leftGap = 128;
+    // Must stay >= the crayon rail's effective touch reach (visible rail
+    // extends to x=106, plus CrayonButton's own right hitSlop of 32 = 138)
+    // — see isControlArea's leftGap below, which needs the same value. Set
+    // lower than that and the canvas becomes paintable inside the crayons'
+    // hitSlop, so a tap near a crayon's tip races between selecting the
+    // crayon and starting a paint stroke instead — reported as crayon taps
+    // intermittently not registering.
+    const leftGap = 140;
     const rightGap = 124;
     const sourceW = sceneSource.width || 1;
     const sourceH = sceneSource.height || 1;
@@ -502,7 +576,7 @@ export default function ColoringScreen() {
 
   const clearPainting = useCallback(() => {
     setStrokes([]);
-    currentStroke.current = null;
+    activeStrokeId.current = null;
     setPointer(prev => ({ ...prev, visible: false }));
   }, []);
   const speakCrayon = useCallback((crayon: Crayon) => {
@@ -521,7 +595,7 @@ export default function ColoringScreen() {
   const selectCrayon = useCallback((crayon: Crayon) => {
     setSelectedColor(crayon.color);
     selectedColorRef.current = crayon.color;
-    currentStroke.current = null;
+    activeStrokeId.current = null;
     setPointer(prev => ({ ...prev, visible: false }));
     speakCrayon(crayon);
   }, [speakCrayon]);
@@ -540,14 +614,16 @@ export default function ColoringScreen() {
   }, [reset]);
 
   const closePainting = useCallback(() => {
-    currentStroke.current = null;
+    activeStrokeId.current = null;
     setPointer(prev => ({ ...prev, visible: false }));
     setMode('pick');
   }, []);
 
   const isControlArea = useCallback(
     (x: number, y: number) => {
-      const leftGap = 128;
+      // Keep in sync with paintBounds's leftGap above — both must agree on
+      // where the crayon rail's touch reach ends and the canvas begins.
+      const leftGap = 140;
       const rightGap = 124;
       if (x < leftGap) return true;
       if (x > canvasWidth - rightGap) return true;
@@ -574,24 +650,44 @@ export default function ColoringScreen() {
 
       setPointer({ visible: true, x: localX, y: localY });
 
-      if (!currentStroke.current) {
-        currentStroke.current = {
+      if (activeStrokeId.current == null) {
+        const id = nextStrokeId.current++;
+        activeStrokeId.current = id;
+        const stroke: Stroke = {
+          id,
           points: [{ x: localX, y: localY }],
           color: selectedColorRef.current,
           size: brushSizeRef.current,
         };
-        setStrokes(prev => [...prev, currentStroke.current!]);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setStrokes(prev => [...prev, stroke]);
+        // Reported to crash the app on both iOS and Android as soon as the
+        // user starts dragging to paint — this is the only native-module
+        // call in that immediate touch-start path, and unlike every other
+        // Haptics call in this codebase (which fire from a plain onPress),
+        // this one fires synchronously from inside PanResponder's gesture
+        // callback. setTimeout moves it off that callback onto a normal task,
+        // and try/catch means a failed buzz never takes the screen down.
+        setTimeout(() => {
+          try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          } catch {
+            // ignore
+          }
+        }, 0);
         return;
       }
 
-      const last = currentStroke.current.points[currentStroke.current.points.length - 1];
-      if (Math.hypot(localX - last.x, localY - last.y) < 1.5) return;
-
-      currentStroke.current.points = [...currentStroke.current.points, { x: localX, y: localY }];
+      // Reads and writes strokes only through this functional update — never
+      // through an external ref — so there is nothing here that can go stale
+      // or get aliased between renders. See the comment on activeStrokeId.
       setStrokes(prev => {
+        const idx = prev.findIndex(s => s.id === activeStrokeId.current);
+        if (idx === -1) return prev;
+        const stroke = prev[idx]!;
+        const last = stroke.points.length ? stroke.points[stroke.points.length - 1]! : undefined;
+        if (last && Math.hypot(localX - last.x, localY - last.y) < 1.5) return prev;
         const next = [...prev];
-        next[next.length - 1] = { ...currentStroke.current! };
+        next[idx] = { ...stroke, points: [...stroke.points, { x: localX, y: localY }] };
         return next;
       });
     },
@@ -601,47 +697,49 @@ export default function ColoringScreen() {
   const pan = useMemo(
     () =>
       PanResponder.create({
-        onStartShouldSetPanResponderCapture: evt =>
-          mode === 'paint' &&
-          isPaintablePoint(evt.nativeEvent.locationX, evt.nativeEvent.locationY) &&
-          !isControlArea(evt.nativeEvent.locationX, evt.nativeEvent.locationY),
-        onMoveShouldSetPanResponderCapture: evt =>
-          mode === 'paint' &&
-          isPaintablePoint(evt.nativeEvent.locationX, evt.nativeEvent.locationY) &&
-          !isControlArea(evt.nativeEvent.locationX, evt.nativeEvent.locationY),
-        onStartShouldSetPanResponder: evt =>
-          mode === 'paint' &&
-          isPaintablePoint(evt.nativeEvent.locationX, evt.nativeEvent.locationY) &&
-          !isControlArea(evt.nativeEvent.locationX, evt.nativeEvent.locationY),
-        onMoveShouldSetPanResponder: evt =>
-          mode === 'paint' &&
-          isPaintablePoint(evt.nativeEvent.locationX, evt.nativeEvent.locationY) &&
-          !isControlArea(evt.nativeEvent.locationX, evt.nativeEvent.locationY),
-        onPanResponderGrant: evt => {
-          if (
-            isControlArea(evt.nativeEvent.locationX, evt.nativeEvent.locationY) ||
-            !isPaintablePoint(evt.nativeEvent.locationX, evt.nativeEvent.locationY)
-          ) {
-            return;
-          }
-          currentStroke.current = null;
-          paintAt(evt.nativeEvent.locationX, evt.nativeEvent.locationY);
+        // No *Capture handlers here on purpose. The crayon buttons and the
+        // Clear/Pages buttons are children of this same View (the crayon
+        // rail sits inside paintStage), and Capture-phase handlers run
+        // before any descendant gets a chance to claim the touch itself —
+        // they "cut in line" ahead of the crayons' own TouchableOpacity
+        // responder negotiation. Reported as crayon taps intermittently not
+        // registering; the non-Capture variants below only claim the
+        // responder for a touch a child didn't already want, which is the
+        // standard-recommended shape for a PanResponder that wraps touchable
+        // children instead of covering the whole screen.
+        onStartShouldSetPanResponder: (evt, gestureState) => {
+          const x = gestureState.x0 - stageOrigin.current.x;
+          const y = gestureState.y0 - stageOrigin.current.y;
+          return mode === 'paint' && isPaintablePoint(x, y) && !isControlArea(x, y);
         },
-        onPanResponderMove: evt => {
-          if (
-            isControlArea(evt.nativeEvent.locationX, evt.nativeEvent.locationY) ||
-            !isPaintablePoint(evt.nativeEvent.locationX, evt.nativeEvent.locationY)
-          ) {
+        onMoveShouldSetPanResponder: (evt, gestureState) => {
+          const x = gestureState.moveX - stageOrigin.current.x;
+          const y = gestureState.moveY - stageOrigin.current.y;
+          return mode === 'paint' && isPaintablePoint(x, y) && !isControlArea(x, y);
+        },
+        onPanResponderGrant: (evt, gestureState) => {
+          const x = gestureState.x0 - stageOrigin.current.x;
+          const y = gestureState.y0 - stageOrigin.current.y;
+          if (isControlArea(x, y) || !isPaintablePoint(x, y)) {
             return;
           }
-          paintAt(evt.nativeEvent.locationX, evt.nativeEvent.locationY);
+          activeStrokeId.current = null;
+          paintAt(x, y);
+        },
+        onPanResponderMove: (evt, gestureState) => {
+          const x = gestureState.moveX - stageOrigin.current.x;
+          const y = gestureState.moveY - stageOrigin.current.y;
+          if (isControlArea(x, y) || !isPaintablePoint(x, y)) {
+            return;
+          }
+          paintAt(x, y);
         },
         onPanResponderRelease: () => {
-          currentStroke.current = null;
+          activeStrokeId.current = null;
           setPointer(prev => ({ ...prev, visible: false }));
         },
         onPanResponderTerminate: () => {
-          currentStroke.current = null;
+          activeStrokeId.current = null;
           setPointer(prev => ({ ...prev, visible: false }));
         },
       }),
@@ -653,7 +751,7 @@ export default function ColoringScreen() {
       <View style={[styles.root, { backgroundColor: '#18D8CE' }]}>
         <TopBar title="Painting" titleFa="نقاشی" showClose dark onBack={closeGallery} />
         <ScrollView contentContainerStyle={styles.gallery} showsVerticalScrollIndicator={false}>
-          {ORDERED_PAINTINGS.map((item, index) => (
+          {ORDERED_PAINTINGS.slice(0, VISIBLE_PAINTING_COUNT).map((item, index) => (
             <TouchableOpacity
               key={item.id}
               activeOpacity={0.9}
@@ -680,6 +778,7 @@ export default function ColoringScreen() {
 
       <View style={styles.paintStageOuter}>
         <View
+          ref={stageRef}
           style={styles.paintStage}
           {...pan.panHandlers}
           onLayout={event => {
@@ -687,6 +786,13 @@ export default function ColoringScreen() {
             if (w > 0 && h > 0) {
               setStageSize({ w, h });
             }
+            // Re-measure on every layout pass, not just once — orientation
+            // changes, keyboard, or anything else that moves this view on
+            // screen would otherwise leave stageOrigin stale and every touch
+            // coordinate silently wrong.
+            stageRef.current?.measureInWindow((x, y) => {
+              stageOrigin.current = { x, y };
+            });
           }}
         >
           <View
@@ -715,6 +821,7 @@ export default function ColoringScreen() {
                   color={crayon.color}
                   selected={selectedColor === crayon.color}
                   index={index}
+                  total={CRAYONS.length}
                   top={index * crayonRowStep}
                   height={crayonTapHeight}
                   sprite={crayon.sprite}
@@ -730,12 +837,12 @@ export default function ColoringScreen() {
           </View>
 
           <Svg width={canvasWidth} height={canvasHeight} style={StyleSheet.absoluteFill} pointerEvents="none">
-            {strokes.map((stroke, index) => {
+            {strokes.map(stroke => {
               const d = pathFromPoints(stroke.points);
               if (!d) return null;
               return (
                 <Path
-                  key={`stroke-${index}`}
+                  key={stroke.id}
                   d={d}
                   stroke={stroke.color}
                   strokeWidth={Math.max(stroke.size * 0.72, 5)}

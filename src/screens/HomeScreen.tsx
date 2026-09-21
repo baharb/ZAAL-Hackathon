@@ -92,7 +92,33 @@ function buildQuickAccessItems(rowSlots: number): SmallItem[] {
   return items;
 }
 
+// Every fixed dimension in the art below was tuned against a ~230pt card, and
+// none of it shrank with the card. On a small phone the card falls to ~150pt
+// and the art spilled past the edges, where overflow:'hidden' cropped it —
+// lila alone is authored at 255x333, wider AND taller than the card. Scaling
+// by the real card size keeps the same composition and keeps it inside.
+const ART_REFERENCE_SIZE = 230;
+
+type Bubble = { ch: string; bg: string; rot: string; left?: number; right?: number; top?: number; bottom?: number };
+const ALPHA_BUBBLES: Bubble[] = [
+  { ch: 'ا', bg: '#8E6BFF', rot: '-9deg', left: 12, top: 16 },
+  { ch: 'ب', bg: '#16C2E8', rot: '7deg', right: 30, top: 50 },
+  { ch: 'پ', bg: '#F97316', rot: '9deg', left: 74, top: 6 },
+  { ch: 'ت', bg: '#FF2E93', rot: '-12deg', right: 10, bottom: 56 },
+  { ch: 'ث', bg: '#FFD400', rot: '10deg', left: 28, bottom: 12 },
+];
+
+const COOK_INGREDIENTS = [
+  { source: neliWorldAssets.foods.tomato, w: 46, rot: '-16deg', left: 16, top: 8 },
+  { source: neliWorldAssets.foods.herbs, w: 58, rot: '13deg', right: 40, top: 16 },
+  { source: neliWorldAssets.foods.eggplant, w: 34, rot: '11deg', left: 24, top: 94 },
+  { source: neliWorldAssets.foods.blueberries, w: 34, rot: '-9deg', right: 10, top: 88 },
+  { source: neliWorldAssets.foods.carrot, w: 42, rot: '15deg', right: 26, top: 177 },
+  { source: neliWorldAssets.foods.bellPepper, w: 38, rot: '-12deg', left: 34, top: 161 },
+] as { source: number; w: number; rot: string; left?: number; right?: number; top: number }[];
+
 function BigCardArt({ art, size }: { art: BigCard['art']; size: number }) {
+  const k = size / ART_REFERENCE_SIZE;
   if (art === 'gamesHub') {
     return (
       <View style={[styles.sceneFill, styles.gamesHubScene]}>
@@ -171,22 +197,28 @@ function BigCardArt({ art, size }: { art: BigCard['art']; size: number }) {
   if (art === 'alphabetHub') {
     return (
       <View style={[styles.sceneFill, styles.videoAlphabetScene]}>
-        <View style={[styles.alphaBubble, styles.alphaBubbleOne]}>
-          <Text style={styles.alphaBubbleText}>ا</Text>
-        </View>
-        <View style={[styles.alphaBubble, styles.alphaBubbleTwo]}>
-          <Text style={styles.alphaBubbleText}>ب</Text>
-        </View>
-        <View style={[styles.alphaBubble, styles.alphaBubbleThree]}>
-          <Text style={styles.alphaBubbleText}>پ</Text>
-        </View>
-        <View style={[styles.alphaBubble, styles.alphaBubbleFour]}>
-          <Text style={styles.alphaBubbleText}>ت</Text>
-        </View>
-        <View style={[styles.alphaBubble, styles.alphaBubbleFive]}>
-          <Text style={styles.alphaBubbleText}>ث</Text>
-        </View>
-        <Image source={characterAssets.lila.poses.thinkingAlt} style={styles.bigCardLila} resizeMode="contain" />
+        {ALPHA_BUBBLES.map(b => (
+          <View
+            key={b.ch}
+            style={[
+              styles.alphaBubble,
+              {
+                width: 72 * k, height: 72 * k, borderRadius: 24 * k,
+                backgroundColor: b.bg,
+                transform: [{ rotate: b.rot }],
+                ...(b.left != null ? { left: b.left * k } : { right: b.right! * k }),
+                ...(b.top != null ? { top: b.top * k } : { bottom: b.bottom! * k }),
+              },
+            ]}
+          >
+            <Text style={[styles.alphaBubbleText, { fontSize: 30 * k }]}>{b.ch}</Text>
+          </View>
+        ))}
+        <Image
+          source={characterAssets.lila.poses.thinkingAlt}
+          style={{ width: 255 * k, height: 333 * k }}
+          resizeMode="contain"
+        />
       </View>
     );
   }
@@ -199,13 +231,23 @@ function BigCardArt({ art, size }: { art: BigCard['art']; size: number }) {
   }
   return (
     <View style={[styles.sceneFill, styles.cookScene]}>
-      <Image source={neliWorldAssets.foods.tomato} style={[styles.cookIngredient, styles.cookIngredientOne]} resizeMode="contain" />
-      <Image source={neliWorldAssets.foods.herbs} style={[styles.cookIngredient, styles.cookIngredientTwo]} resizeMode="contain" />
-      <Image source={neliWorldAssets.foods.eggplant} style={[styles.cookIngredient, styles.cookIngredientThree]} resizeMode="contain" />
-      <Image source={neliWorldAssets.foods.blueberries} style={[styles.cookIngredient, styles.cookIngredientFour]} resizeMode="contain" />
-      <Image source={neliWorldAssets.foods.carrot} style={[styles.cookIngredient, styles.cookIngredientFive]} resizeMode="contain" />
-      <Image source={neliWorldAssets.foods.bellPepper} style={[styles.cookIngredient, styles.cookIngredientSix]} resizeMode="contain" />
-      <Image source={characterAssets.neli.poses.cooking} style={styles.cookNeli} resizeMode="contain" />
+      {COOK_INGREDIENTS.map((item, i) => (
+        <Image
+          key={i}
+          source={item.source}
+          style={[
+            styles.cookIngredient,
+            {
+              width: item.w * k, height: item.w * k,
+              transform: [{ rotate: item.rot }],
+              top: item.top * k,
+              ...(item.left != null ? { left: item.left * k } : { right: item.right! * k }),
+            },
+          ]}
+          resizeMode="contain"
+        />
+      ))}
+      <Image source={characterAssets.neli.poses.cooking} style={{ width: 190 * k, height: 248 * k }} resizeMode="contain" />
     </View>
   );
 }
@@ -274,11 +316,21 @@ export default function HomeScreen() {
   const smallColumns = Math.max(1, Math.floor((smallRowWidth + smallGap) / (smallTileW + smallGap)));
   const quickAccessItems = buildQuickAccessItems(smallColumns);
 
+  // In landscape the screen's height IS its shortest edge, so this is the
+  // standard 600dp tablet breakpoint (matching TABLET_MIN_EDGE in App.tsx):
+  // iPad mini 744, iPad 10.2 810, Galaxy Tab S9 800 — every phone tops out at
+  // 440. On a phone the four game cards already fill the screen, and the quick
+  // access row below them is reachable only by scrolling, so drop it there and
+  // let the cards be the whole page.
+  const showQuickAccess = height >= 600;
+  // The caption band was a flat 54pt — over a third of a small card.
+  const bandHeight = Math.max(34, Math.round(54 * (bigCardSize / 230)));
+
   return (
     <View style={styles.root}>
       <TopBar title="ZAAL" titleFa="زال" dark showBack={false} large />
       <ScrollView contentContainerStyle={[styles.scroll, { paddingHorizontal: bigGap }]} showsVerticalScrollIndicator={false}>
-        <View style={[styles.bigCards, { gap: cardGap }]}>
+        <View style={[styles.bigCards, !showQuickAccess && styles.bigCardsOnly, { gap: cardGap }]}>
           {BIG_CARDS.map(item => (
             <TouchableOpacity
               key={item.en}
@@ -288,8 +340,8 @@ export default function HomeScreen() {
             >
               <View style={[styles.bigCardArtWrap, { borderRadius: bigCardRadius }]}>
                 <BigCardArt art={item.art} size={bigCardSize} />
-                <View style={styles.cardShade} />
-                <View style={styles.cardTextBand}>
+                <View style={[styles.cardShade, { height: bandHeight }]} />
+                <View style={[styles.cardTextBand, { height: bandHeight }]}>
                   <Text style={[styles.bigCardTitle, { fontFamily: ff(lang, 'black'), fontSize: Math.max(11, Math.round(12 * ui)) }, dir(lang), { textAlign: 'center' }]}>
                     {isFa ? item.fa : item.en}
                   </Text>
@@ -299,6 +351,8 @@ export default function HomeScreen() {
           ))}
         </View>
 
+        {showQuickAccess && (
+        <>
         <View style={[styles.smallHeaderRow, { justifyContent: 'flex-end', marginTop: Math.max(14, Math.round(20 * ui)) }]}>
           <Text style={[styles.sectionTitle, { fontFamily: ff(lang, 'black'), fontSize: Math.max(12, Math.round(13 * ui)) }, dir(lang)]}>
             {isFa ? 'دسترسی سریع' : 'Quick access'}
@@ -337,6 +391,8 @@ export default function HomeScreen() {
             <Text style={styles.smallCardMoreText}>...</Text>
           </TouchableOpacity>
         </View>
+        </>
+        )}
       </ScrollView>
     </View>
   );
@@ -344,8 +400,14 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#2B1268' },
-  scroll: { paddingHorizontal: 14, paddingBottom: 34 },
-  bigCards: { flexDirection: 'row', justifyContent: 'center', marginTop: 22, marginBottom: 34 },
+  // flexGrow lets the container fill the viewport so justifyContent can
+  // centre the content vertically when it's shorter than the screen — a
+  // tall iPad (1024pt) otherwise leaves a block of dead purple below the
+  // quick-access row. When content does exceed the height it simply
+  // scrolls as before. Vertical padding is symmetric so 'centre' is true.
+  scroll: { paddingHorizontal: 14, paddingVertical: 26, flexGrow: 1, justifyContent: 'center' },
+  bigCards: { flexDirection: 'row', justifyContent: 'center', marginBottom: 34 },
+  bigCardsOnly: { marginBottom: 0 },
   bigCard: { borderRadius: 26, overflow: 'hidden', backgroundColor: '#AEEBFF', shadowColor: '#170736', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 16, elevation: 9 },
   bigCardArtWrap: { flex: 1, overflow: 'hidden' },
   cardShade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 54, backgroundColor: 'rgba(37,16,92,0.62)' },

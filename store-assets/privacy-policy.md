@@ -24,7 +24,15 @@ ZAAL is designed for children, and is used under a parent or guardian's supervis
 
 ## Your choices
 
-You can stop using ZAAL and delete it at any time; all locally-stored progress is removed with the app. To request deletion of the contact record described above, email bahar.bahreman@gmail.com.
+You can stop using ZAAL and delete it at any time; all locally-stored progress (your child's age group, language, stars, badges, stickers, and lesson progress) is removed automatically the moment the app is uninstalled, since none of it is ever sent to us.
+
+### Requesting account deletion
+
+To delete your ZAAL parent account and the contact record described above, email **bahar.bahreman@gmail.com** with the subject line "Delete my ZAAL account," sent from (or naming) the same email address or phone number you used to set up the account.
+
+- **What we delete:** the verification record tied to your email/phone (held by Supabase, our backend provider, on our behalf) and any parent-settings passcode associated with it.
+- **What's not affected:** locally-stored app progress on your device isn't something we hold, so there's nothing on our side to delete beyond the contact record above; simply deleting the app removes that data from your device.
+- **Timeline:** we will process deletion requests within 30 days. Some minimal information may be retained briefly beyond that for fraud prevention or legal compliance before final removal.
 
 ## Changes to this policy
 

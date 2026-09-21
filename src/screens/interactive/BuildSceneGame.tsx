@@ -14,9 +14,9 @@ type ObjectKind = 'bed' | 'lamp' | 'pot' | 'plate' | 'towel' | 'soap';
 type ObjectItem = { id: ObjectKind; fa: string; en: string; room: RoomId; color: string; image?: any };
 
 const ROOMS: Record<RoomId, { fa: string; en: string; color: string; accent: string; image: any }> = {
-  bedroom: { fa: 'اتاق خواب', en: 'Bedroom', color: '#A855F7', accent: '#FDE68A', image: neliWorldAssets.rooms.bedroom },
-  kitchen: { fa: 'آشپزخانه', en: 'Kitchen', color: '#FB923C', accent: '#22C55E', image: neliWorldAssets.rooms.kitchen },
-  bathroom: { fa: 'حمام', en: 'Bathroom', color: '#38BDF8', accent: '#6C4EFF', image: neliWorldAssets.rooms.bathroom },
+  bedroom: { fa: 'اتاق خواب', en: 'Bedroom', color: '#A855F7', accent: '#FDE68A', image: neliWorldAssets.rooms.bedroomWide },
+  kitchen: { fa: 'آشپزخانه', en: 'Kitchen', color: '#FB923C', accent: '#22C55E', image: neliWorldAssets.rooms.kitchenWide },
+  bathroom: { fa: 'حمام', en: 'Bathroom', color: '#38BDF8', accent: '#6C4EFF', image: neliWorldAssets.rooms.bathroomWide },
 };
 
 const OBJECTS: ObjectItem[] = [

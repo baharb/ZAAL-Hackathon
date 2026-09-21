@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ZAAL header size across devices</title>
+<style>
+  :root{
+    --purple:#2D1B69; --purple-light:#3d2a85; --cream:#FFF8EC; --ink:#2C175D;
+    --muted:#6B6183; --accent:#FF7A1A; --line:#e7e1f2;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:32px 20px 60px; background:var(--cream); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  h1{font-size:22px; margin:0 0 4px;}
+  p.lede{color:var(--muted); font-size:14px; max-width:640px; line-height:1.5; margin:0 0 28px;}
+  .row{display:flex; align-items:flex-end; gap:28px; flex-wrap:wrap; margin-bottom:36px;}
+  .device{display:flex; flex-direction:column; align-items:center; gap:8px;}
+  .frame{
+    position:relative; background:#fff; border-radius:6px; overflow:hidden;
+    box-shadow:0 2px 10px rgba(44,23,80,0.18); border:1px solid var(--line);
+  }
+  .header{
+    position:absolute; top:0; left:0; right:0; background:var(--purple);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .header .btn{
+    position:absolute; left:8px; top:50%; transform:translateY(-50%);
+    background:rgba(255,255,255,0.14); border-radius:999px;
+  }
+  .header .title{color:#fff; font-weight:800; letter-spacing:0.5px; text-align:center;}
+  .header .sub{color:#fff; opacity:0.75; text-align:center;}
+  .header .right{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    background:rgba(255,255,255,0.14); border-radius:999px;
+  }
+  .body-fill{
+    position:absolute; left:0; right:0; bottom:0; background:
+      repeating-linear-gradient(135deg, #f1ecdf, #f1ecdf 10px, #ece5d4 10px, #ece5d4 20px);
+  }
+  .pct-badge{
+    position:absolute; top:4px; right:4px; background:var(--accent); color:#fff;
+    font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px; z-index:5;
+  }
+  .caption{text-align:center;}
+  .caption .name{font-weight:700; font-size:13px;}
+  .caption .dims{font-size:11px; color:var(--muted);}
+  .caption .stat{font-size:12px; color:var(--accent); font-weight:700; margin-top:2px;}
+  .legend{
+    display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:var(--muted);
+    border-top:1px solid var(--line); padding-top:14px; margin-top:6px;
+  }
+  .legend b{color:var(--ink);}
+  .section-title{font-size:15px; font-weight:700; margin:0 0 14px; padding-top:8px; border-top:1px solid var(--line);}
+  code{background:#efe8f8; padding:1px 5px; border-radius:4px; font-size:12px;}
+</style>
+</head>
+<body>
+
+<h1>ZAAL top-bar height, phone vs. tablet</h1>
+<p class="lede">
+  Scaled from the actual <code>TopBar.tsx</code> formula — <code>buttonSize = clamp(width*0.08, 56, 72)</code>,
+  header height = paddingTop + buttonSize + paddingBottom — applied to each device's real landscape logical
+  points (not physical pixels). All frames below are drawn at the same points-to-pixel scale, so sizes are
+  directly comparable. Purple = header. Orange badge = header height as a % of total screen height.
+</p>
+
+<div class="section-title">Standard header (used on most screens)</div>
+<div class="row" id="row-standard"></div>
+
+<div class="section-title">Large header (Home / section title screens)</div>
+<div class="row" id="row-large"></div>
+
+<div class="legend">
+  <span><b>iPhone SE</b> 667×375pt</span>
+  <span><b>iPhone 14</b> 844×390pt</span>
+  <span><b>iPhone 14 Pro Max</b> 932×430pt</span>
+  <span><b>Pixel 6 (Android phone)</b> 851×393dp</span>
+  <span><b>Android tablet</b> (yours) ~1280×800dp</span>
+</div>
+
+<script>
+const DEVICES = [
+  { name: 'iPhone SE',        w: 667,  h: 375 },
+  { name: 'iPhone 14',        w: 844,  h: 390 },
+  { name: 'iPhone 14 Pro Max',w: 932,  h: 430 },
+  { name: 'Pixel 6 (Android)',w: 851,  h: 393 },
+  { name: 'Android tablet',   w: 1280, h: 800 },
+];
+
+const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
+function computeHeader(width, large) {
+  const buttonSize = clamp(width * 0.08, 56, 72);
+  const iconSize = clamp(width * 0.064, 44, 62);
+  const titleSize = large ? clamp(width * 0.07, 32, 48) : 18;
+  const titleSubSize = large ? clamp(width * 0.024, 14, 17) : 11;
+  const paddingTop = large ? 16 : 0;         // insets.top assumed 0 in landscape (typical)
+  const paddingBottom = large ? 18 : 8;
+  const contentHeight = Math.max(buttonSize, iconSize);
+  const headerHeight = paddingTop + contentHeight + paddingBottom;
+  return { buttonSize, iconSize, titleSize, titleSubSize, headerHeight };
+}
+
+function renderRow(containerId, large) {
+  const container = document.getElementById(containerId);
+  const SCALE = 0.34; // px per pt, shared across all devices for true comparison
+
+  DEVICES.forEach(d => {
+    const { buttonSize, headerHeight } = computeHeader(d.w, large);
+    const pct = (headerHeight / d.h * 100).toFixed(0);
+
+    const frameW = d.w * SCALE;
+    const frameH = d.h * SCALE;
+    const headerH = headerHeight * SCALE;
+    const btn = buttonSize * SCALE;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'device';
+    wrap.innerHTML = `
+      <div class="frame" style="width:${frameW}px; height:${frameH}px;">
+        <div class="pct-badge">${pct}% of screen</div>
+        <div class="body-fill" style="top:${headerH}px;"></div>
+        <div class="header" style="height:${headerH}px;">
+          <div class="btn" style="width:${btn*0.72}px; height:${btn*0.72}px;"></div>
+          <div>
+            <div class="title" style="font-size:${large ? Math.max(9, 14*SCALE*1.4) : Math.max(7, 18*SCALE)}px;">${large ? 'ZAAL' : 'Games'}</div>
+            ${large ? `<div class="sub" style="font-size:${Math.max(6, 11*SCALE*1.4)}px;">زاال</div>` : ''}
+          </div>
+          <div class="right" style="width:${btn*0.72}px; height:${btn*0.72}px;"></div>
+        </div>
+      </div>
+      <div class="caption">
+        <div class="name">${d.name}</div>
+        <div class="dims">${d.w}×${d.h}pt landscape</div>
+        <div class="stat">header ≈ ${headerHeight.toFixed(0)}pt</div>
+      </div>
+    `;
+    container.appendChild(wrap);
+  });
+}
+
+renderRow('row-standard', false);
+renderRow('row-large', true);
+</script>
+
+</body>
+</html>

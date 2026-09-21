@@ -1,10 +1,58 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import { characterAssets } from '../assets/characterAssets';
 import { AppContext, isRTL, Lang, LANGUAGES } from '../store/AppContext';
 import { useNav } from '../store/NavContext';
 import { dir, ff } from '../theme/fonts';
 import { DetectedContact, detectContact, isIranianPhone, sendVerificationCode, verifyCode, SendCodeError, VerifyCodeError } from '../services/accountActivation';
+
+const KEY_TAP = require('../../assets/audio/key-tap.wav');
+
+type Country = { code: string; dial: string; name: string };
+
+// Dial codes the parents of this app actually have. Iran first, then the
+// countries the Iranian diaspora is concentrated in. Each name is written in
+// the country's own language, the way a picker like this normally reads.
+const COUNTRIES: Country[] = [
+  { code: 'US', dial: '+1', name: 'United States' },
+  { code: 'IR', dial: '+98', name: 'ایران' },
+  { code: 'CA', dial: '+1', name: 'Canada' },
+  { code: 'GB', dial: '+44', name: 'United Kingdom' },
+  { code: 'DE', dial: '+49', name: 'Deutschland' },
+  { code: 'FR', dial: '+33', name: 'France' },
+  { code: 'NL', dial: '+31', name: 'Nederland' },
+  { code: 'SE', dial: '+46', name: 'Sverige' },
+  { code: 'NO', dial: '+47', name: 'Norge' },
+  { code: 'DK', dial: '+45', name: 'Danmark' },
+  { code: 'ES', dial: '+34', name: 'España' },
+  { code: 'IT', dial: '+39', name: 'Italia' },
+  { code: 'CH', dial: '+41', name: 'Schweiz' },
+  { code: 'AT', dial: '+43', name: 'Österreich' },
+  { code: 'BE', dial: '+32', name: 'België' },
+  { code: 'TR', dial: '+90', name: 'Türkiye' },
+  { code: 'AE', dial: '+971', name: 'الإمارات' },
+  { code: 'QA', dial: '+974', name: 'قطر' },
+  { code: 'OM', dial: '+968', name: 'عُمان' },
+  { code: 'GE', dial: '+995', name: 'საქართველო' },
+  { code: 'AM', dial: '+374', name: 'Հայաստան' },
+  { code: 'AU', dial: '+61', name: 'Australia' },
+  { code: 'NZ', dial: '+64', name: 'New Zealand' },
+  { code: 'JP', dial: '+81', name: '日本' },
+  { code: 'MY', dial: '+60', name: 'Malaysia' },
+];
+
+// Default to +1. SMS can't reach +98 at all (see errIranSms), so opening on
+// Iran would start most parents in a dead end; the diaspora this app serves
+// is largely on North American numbers anyway.
+const DEFAULT_DIAL = 'US';
+const defaultCountry = (): Country =>
+  COUNTRIES.find(c => c.code === DEFAULT_DIAL) ?? COUNTRIES[0];
+
+// A national number is written with a trunk "0" in most of the world
+// (09121234567) but E.164 never carries it, so strip it as they type.
+const toNational = (raw: string) => raw.replace(/\D/g, '').replace(/^0+/, '');
 
 type Step = 'contact' | 'code' | 'password';
 
@@ -43,20 +91,16 @@ const TX: Record<string, Partial<Record<Lang, string>>> = {
     fr: 'Définissez votre code parental', es: 'Configura tu contraseña de padres',
   },
   passwordSubtitle: {
-    fa: 'برای اطمینان، سال تولدتان را یک‌بار دیگر وارد کنید. این عدد از این پس رمز ورود به تنظیمات والدین خواهد بود.',
-    en: 'For security, please enter your birth year one more time. From now on, this will be your passcode for parent settings.',
-    fr: 'Par sécurité, saisissez à nouveau votre année de naissance. Ce sera désormais votre code d’accès aux paramètres parentaux.',
-    es: 'Por seguridad, ingresa tu año de nacimiento una vez más. A partir de ahora, este será tu código de acceso a los ajustes de padres.',
+    fa: 'سال تولدتان را وارد کنید. این عدد از این پس رمز ورود به تنظیمات والدین خواهد بود.',
+    en: 'Enter your birth year. From now on, this will be your passcode for parent settings.',
+    fr: 'Saisissez votre année de naissance. Ce sera désormais votre code d’accès aux paramètres parentaux.',
+    es: 'Ingresa tu año de nacimiento. A partir de ahora, este será tu código de acceso a los ajustes de padres.',
   },
   contactPlaceholder: {
     fa: 'ایمیل یا شماره تلفن (با کد کشور، مثلاً +1...)',
     en: 'Email or phone number (with country code, e.g. +1...)',
     fr: 'E-mail ou numéro de téléphone (avec indicatif, ex. +1...)',
     es: 'Correo o número de teléfono (con código de país, ej. +1...)',
-  },
-  birthYearPlaceholder: {
-    fa: 'سال تولد والد (مثلاً 1990)', en: 'Parent birth year (e.g. 1990)',
-    fr: 'Année de naissance du parent (ex. 1990)', es: 'Año de nacimiento del padre/madre (ej. 1990)',
   },
   sendCode: { fa: 'ارسال کد', en: 'Send Code', fr: 'Envoyer le code', es: 'Enviar código' },
   confirmCode: { fa: 'تایید کد', en: 'Confirm Code', fr: 'Confirmer le code', es: 'Confirmar código' },
@@ -79,6 +123,13 @@ const TX: Record<string, Partial<Record<Lang, string>>> = {
     fr: 'Vos informations de connexion sont stockées uniquement sur cet appareil.',
     es: 'Tus datos de acceso se guardan solo en este dispositivo.',
   },
+  tabEmail: { fa: 'ایمیل', en: 'Email', fr: 'E-mail', es: 'Correo' },
+  tabPhone: { fa: 'شماره تلفن', en: 'Phone', fr: 'Téléphone', es: 'Teléfono' },
+  emailPlaceholder: { fa: 'ایمیل شما', en: 'Your email', fr: 'Votre e-mail', es: 'Tu correo' },
+  phonePlaceholder: { fa: 'شماره تلفن', en: 'Phone number', fr: 'Numéro de téléphone', es: 'Número de teléfono' },
+  countryLabel: { fa: 'کشور', en: 'Country', fr: 'Pays', es: 'País' },
+  chooseCountry: { fa: 'کشور را انتخاب کنید', en: 'Choose your country', fr: 'Choisissez votre pays', es: 'Elige tu país' },
+  useEmailInstead: { fa: 'به جای آن از ایمیل استفاده کنید', en: 'Use email instead', fr: 'Utiliser un e-mail', es: 'Usar correo' },
   languageLabel: { fa: 'زبان', en: 'Language', fr: 'Langue', es: 'Idioma' },
   errInvalidContact: {
     fa: 'ایمیل یا شماره تلفن معتبر وارد کنید (شماره باید با + و کد کشور باشد).',
@@ -117,12 +168,6 @@ const TX: Record<string, Partial<Record<Lang, string>>> = {
   errPasswordIncomplete: {
     fa: 'سال تولدتان را کامل، در ۴ رقم، وارد کنید.', en: 'Please enter your full 4-digit birth year.',
     fr: 'Saisissez votre année de naissance complète (4 chiffres).', es: 'Ingresa tu año de nacimiento completo (4 dígitos).',
-  },
-  errPasswordMismatch: {
-    fa: 'این عدد باید همان سال تولدی باشد که در مرحله اول وارد کردید.',
-    en: 'This must match the birth year you entered in the first step.',
-    fr: 'Ce nombre doit correspondre à l’année de naissance saisie à la première étape.',
-    es: 'Este número debe coincidir con el año de nacimiento del primer paso.',
   },
   errSaveFailed: {
     fa: 'ذخیره رمز عبور انجام نشد. دوباره تلاش کنید.', en: 'We couldn’t save your passcode. Please try again.',
@@ -242,31 +287,49 @@ function LanguageDropdown({ lang, onSelect, rtl }: { lang: Lang; onSelect: (l: L
 
   return (
     <View style={[styles.langWrap, rtl ? { alignSelf: 'flex-start' } : { alignSelf: 'flex-end' }]}>
-      <TouchableOpacity
-        style={styles.langButton}
-        onPress={() => setOpen(o => !o)}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.langFlag}>{current.flag}</Text>
+      <TouchableOpacity style={styles.langButton} onPress={() => setOpen(true)} activeOpacity={0.8}>
         <Text style={[styles.langButtonText, { fontFamily: ff(lang, 'bold') }]}>{current.nativeLabel}</Text>
-        <Text style={styles.langChevron}>{open ? '▲' : '▼'}</Text>
+        <Text style={styles.langChevron}>▼</Text>
       </TouchableOpacity>
-      {open && (
-        <View style={[styles.langMenu, rtl ? { left: 0 } : { right: 0 }]}>
-          {LANGUAGES.map(language => (
-            <TouchableOpacity
-              key={language.code}
-              style={[styles.langMenuItem, language.code === lang && styles.langMenuItemActive]}
-              onPress={() => { onSelect(language.code); setOpen(false); }}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.langFlag}>{language.flag}</Text>
-              <Text style={[styles.langMenuText, { fontFamily: ff(language.code, 'bold') }]}>{language.nativeLabel}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+      {/* A Modal rather than an absolutely-positioned menu: inside a
+          ScrollView an absolute menu is painted under later siblings (the
+          title) and clipped by the scroll container. A modal always sits on
+          top and can never be cut off. */}
+      <PickerSheet visible={open} title={t(lang, 'languageLabel')} lang={lang} onClose={() => setOpen(false)}>
+        {LANGUAGES.map(language => (
+          <TouchableOpacity
+            key={language.code}
+            style={[styles.sheetRow, { flexDirection: 'row' }, language.code === lang && styles.sheetRowActive]}
+            onPress={() => { onSelect(language.code); setOpen(false); }}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.sheetLabel, { fontFamily: ff(language.code, 'bold') }]}>{language.nativeLabel}</Text>
+          </TouchableOpacity>
+        ))}
+      </PickerSheet>
     </View>
+  );
+}
+
+/** Centred sheet used by both pickers. Rendered in a Modal so it floats above
+ *  the form instead of fighting the ScrollView for stacking order. */
+function PickerSheet({
+  visible, title, lang, onClose, children, scroll,
+}: {
+  visible: boolean; title: string; lang: Lang; onClose: () => void;
+  children: React.ReactNode; scroll?: boolean;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity style={styles.sheet} activeOpacity={1} onPress={() => {}}>
+          <Text style={[styles.sheetTitle, { fontFamily: ff(lang, 'black') }]}>{title}</Text>
+          {scroll
+            ? <ScrollView style={styles.sheetScroll} keyboardShouldPersistTaps="handled">{children}</ScrollView>
+            : children}
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
   );
 }
 
@@ -274,15 +337,31 @@ export default function AccountSetupScreen() {
   const { activateAccount, settingsLang, setSettingsLang } = useContext(AppContext);
   const { reset } = useNav();
   const { width, height } = useWindowDimensions();
+  // Lay out from the shape we actually got, not from an assumed
+  // orientation: phones land here in portrait, tablets stay landscape,
+  // and either can be any size.
+  const portrait = height > width;
   const compact = height < 600;
+  // A landscape phone gives ~360-440pt of height for the whole card, so
+  // the vertical rhythm that suits a tablet has to tighten right down.
+  const short = height < 470;
   const lang = settingsLang;
   const rtl = isRTL(lang);
   const textDir = dir(lang);
 
   const [step, setStep] = useState<Step>('contact');
-  const [contact, setContact] = useState('');
+  const [mode, setMode] = useState<'email' | 'phone'>('email');
+  const [email, setEmail] = useState('');
+  const [country, setCountry] = useState<Country>(defaultCountry);
+  const [national, setNational] = useState('');
+  const [countryOpen, setCountryOpen] = useState(false);
+
+  // One canonical value for the rest of the flow, assembled from whichever
+  // half of the form is showing. Everything downstream (detectContact,
+  // sendVerificationCode, verifyCode) keeps working unchanged.
+  const contact = mode === 'email' ? email.trim() : `${country.dial}${national}`;
+  const iranSms = mode === 'phone' && country.dial === '+98';
   const [detected, setDetected] = useState<DetectedContact | null>(null);
-  const [birthYear, setBirthYear] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -308,10 +387,10 @@ export default function AccountSetupScreen() {
     }, 1000);
   };
 
-  const validateBirthYear = () => {
-    const birthYearNum = Number(birthYear);
+  const validateBirthYear = (value: string) => {
+    const birthYearNum = Number(value);
     const currentYear = new Date().getFullYear();
-    return /^\d{4}$/.test(birthYear) && birthYearNum >= currentYear - 100 && birthYearNum <= currentYear - 13;
+    return /^\d{4}$/.test(value) && birthYearNum >= currentYear - 100 && birthYearNum <= currentYear - 13;
   };
 
   const sendCode = async () => {
@@ -322,10 +401,6 @@ export default function AccountSetupScreen() {
     }
     if (found.channel === 'sms' && isIranianPhone(found.value)) {
       setError(t(lang, 'errIranSms'));
-      return;
-    }
-    if (!validateBirthYear()) {
-      setError(t(lang, 'errInvalidBirthYear'));
       return;
     }
     setBusy(true);
@@ -347,6 +422,7 @@ export default function AccountSetupScreen() {
     if (!detected || cooldown > 0) return;
     setBusy(true);
     setError('');
+    setCode('');
     try {
       await sendVerificationCode(detected);
       startCooldown();
@@ -381,14 +457,14 @@ export default function AccountSetupScreen() {
       setError(t(lang, 'errPasswordIncomplete'));
       return;
     }
-    if (password !== birthYear) {
-      setError(t(lang, 'errPasswordMismatch'));
+    if (!validateBirthYear(password)) {
+      setError(t(lang, 'errInvalidBirthYear'));
       return;
     }
     setBusy(true);
     setError('');
     try {
-      const birthYearNum = Number(birthYear);
+      const birthYearNum = Number(password);
       await activateAccount(contact.trim(), password, birthYearNum);
       reset({ name: 'Home' });
     } catch {
@@ -396,6 +472,52 @@ export default function AccountSetupScreen() {
     } finally {
       setBusy(false);
     }
+  };
+
+  // A phone number here has to carry its country code — the verification API
+  // rejects a bare national number — and people reliably leave the + off. So
+  // the moment what they're typing reads as a number rather than an email, a
+  // single leading + is pinned in place and can't be deleted or duplicated.
+  // Anything containing a letter or @ is left completely alone.
+  // One short tick per character added — the same Light impact the rest of
+  // the app uses on tap, plus a quiet blip. Deliberately silent on delete, so
+  // holding backspace doesn't machine-gun.
+  const tapPlayer = useRef<AudioPlayer | null>(null);
+  useEffect(() => {
+    try {
+      const player = createAudioPlayer(KEY_TAP);
+      player.volume = 0.22;
+      tapPlayer.current = player;
+    } catch {
+      // Sound is a nice-to-have; never let it break the sign-in form.
+    }
+    return () => {
+      try { tapPlayer.current?.remove(); } catch {}
+      tapPlayer.current = null;
+    };
+  }, []);
+
+  const tick = (before: string, after: string) => {
+    if (after.length <= before.length) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    // Separate try blocks: seekTo() throws on a player that hasn't finished
+    // loading, and sharing one block meant play() was skipped entirely.
+    const player = tapPlayer.current;
+    if (!player) return;
+    try { player.seekTo(0); } catch {}
+    try { player.play(); } catch {}
+  };
+
+  // Parsed on every keystroke so the button can stay disabled until what's
+  // typed is actually a reachable email or a +country phone number.
+  const parsedContact = useMemo(() => detectContact(contact), [contact]);
+
+  const onEmailChange = (raw: string) => { tick(email, raw); setEmail(raw); setError(''); };
+  const onNationalChange = (raw: string) => {
+    const next = toNational(raw);
+    tick(national, next);
+    setNational(next);
+    setError('');
   };
 
   const backToContact = () => {
@@ -426,47 +548,141 @@ export default function AccountSetupScreen() {
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.sun} />
       <View style={styles.cloud} />
-      <View style={[styles.shell, { width: Math.min(width - 36, 980), minHeight: Math.min(height - 32, 570), flexDirection: rtl ? 'row-reverse' : 'row' }]}>
-        <View style={styles.artPane}>
-          <Image source={characterAssets.neli.poses.waving} style={[styles.character, compact && styles.characterCompact]} resizeMode="contain" />
-          <Text style={[styles.artTitle, { fontFamily: ff(lang, 'black') }, textDir]}>{t(lang, 'welcomeTitle')}</Text>
-          <Text style={[styles.artCopy, { fontFamily: ff(lang, 'regular') }, textDir]}>{t(lang, 'welcomeCopy')}</Text>
+      <View
+        style={[
+          styles.shell,
+          portrait
+            ? { width: Math.min(width - 24, 520), maxHeight: height - 24, flexDirection: 'column' }
+            : { width: Math.min(width - 36, 980), minHeight: Math.min(height - 32, 570), maxHeight: height - 20, flexDirection: rtl ? 'row-reverse' : 'row' },
+        ]}
+      >
+        <View
+          style={[
+            styles.artPane,
+            portrait && styles.artPanePortrait,
+            portrait && { flexDirection: rtl ? 'row-reverse' : 'row' },
+          ]}
+        >
+          <Image
+            source={characterAssets.neli.poses.waving}
+            style={[
+              styles.character,
+              portrait ? styles.characterPortrait : { height: Math.max(110, Math.min(270, height * 0.46)) },
+            ]}
+            resizeMode="contain"
+          />
+          <View style={portrait ? styles.artTextPortrait : styles.artTextLandscape}>
+            <Text style={[styles.artTitle, portrait && styles.artTitlePortrait, { fontFamily: ff(lang, 'black') }, textDir]}>{t(lang, 'welcomeTitle')}</Text>
+            <Text style={[styles.artCopy, portrait && styles.artCopyPortrait, { fontFamily: ff(lang, 'regular') }, textDir]}>{t(lang, 'welcomeCopy')}</Text>
+          </View>
         </View>
 
-        <View style={styles.formPane}>
+        <ScrollView
+          style={styles.formPane}
+          contentContainerStyle={[styles.formContent, portrait && styles.formContentPortrait, short && styles.formContentShort]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={[styles.topRow, { flexDirection: rtl ? 'row' : 'row-reverse' }]}>
-            <View style={styles.lockBadge}>
-              <Text style={styles.lockGlyph}>●</Text>
-            </View>
             <LanguageDropdown lang={lang} onSelect={setSettingsLang} rtl={rtl} />
           </View>
-          <Text style={[styles.title, { fontFamily: ff(lang, 'black') }, textDir]}>{stepCopy[step].title}</Text>
-          <Text style={[styles.subtitle, { fontFamily: ff(lang, 'regular') }, textDir]}>{stepCopy[step].subtitle}</Text>
+          <Text style={[styles.title, short && styles.titleShort, { fontFamily: ff(lang, 'black') }, textDir]}>{stepCopy[step].title}</Text>
+          <Text style={[styles.subtitle, short && styles.subtitleShort, { fontFamily: ff(lang, 'regular') }, textDir]}>{stepCopy[step].subtitle}</Text>
 
           {step === 'contact' && (
             <>
-              <TextInput
-                value={contact}
-                onChangeText={value => { setContact(value); setError(''); }}
-                placeholder={t(lang, 'contactPlaceholder')}
-                placeholderTextColor="#8B80A8"
-                autoCapitalize="none"
-                autoCorrect={false}
-                textContentType="username"
-                style={[styles.input, { fontFamily: ff(lang, 'regular') }, textDir]}
-              />
-              <TextInput
-                value={birthYear}
-                onChangeText={value => { setBirthYear(value.replace(/\D/g, '').slice(0, 4)); setError(''); }}
-                placeholder={t(lang, 'birthYearPlaceholder')}
-                placeholderTextColor="#8B80A8"
-                keyboardType="numeric"
-                maxLength={4}
-                style={[styles.input, { fontFamily: ff(lang, 'regular') }, textDir]}
-                onSubmitEditing={sendCode}
-              />
+              {/* Email and phone are different kinds of input and deserve
+                  different controls. Splitting them removes the guesswork that
+                  a single combined field forces on both sides. */}
+              <View style={[styles.tabs, short && styles.tabsShort]}>
+                {(['email', 'phone'] as const).map(m => (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.tab, short && styles.tabShort, mode === m && styles.tabActive]}
+                    onPress={() => { setMode(m); setError(''); }}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[styles.tabText, mode === m && styles.tabTextActive, { fontFamily: ff(lang, 'bold') }]}>
+                      {t(lang, m === 'email' ? 'tabEmail' : 'tabPhone')}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {mode === 'email' ? (
+                <TextInput
+                  value={email}
+                  onChangeText={onEmailChange}
+                  placeholder={t(lang, 'emailPlaceholder')}
+                  placeholderTextColor="#8B80A8"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="emailAddress"
+                  keyboardType="email-address"
+                  // An address reads left-to-right whatever the interface
+                  // language is, so this field opts out of `textDir`.
+                  style={[styles.input, styles.inputLtr, { fontFamily: ff(lang, 'regular') }]}
+                  onBlur={() => { if (email.trim() && !parsedContact) setError(t(lang, 'errInvalidContact')); }}
+                  onSubmitEditing={sendCode}
+                />
+              ) : (
+                <View style={styles.phoneRow}>
+                  <TouchableOpacity style={styles.countryButton} onPress={() => setCountryOpen(true)} activeOpacity={0.85}>
+                    <Text style={[styles.countryCode, { fontFamily: ff(lang, 'bold') }]}>{country.code}</Text>
+                    <Text style={[styles.countryDial, { fontFamily: ff(lang, 'bold') }]}>{country.dial}</Text>
+                    <Text style={styles.langChevron}>▼</Text>
+                  </TouchableOpacity>
+                  <TextInput
+                    value={national}
+                    onChangeText={onNationalChange}
+                    placeholder={t(lang, 'phonePlaceholder')}
+                    placeholderTextColor="#8B80A8"
+                    keyboardType="phone-pad"
+                    textContentType="telephoneNumber"
+                    style={[styles.input, styles.inputLtr, styles.phoneInput, { fontFamily: ff(lang, 'regular') }]}
+                    onSubmitEditing={sendCode}
+                  />
+                </View>
+              )}
+
+              <PickerSheet
+                visible={countryOpen}
+                title={t(lang, 'chooseCountry')}
+                lang={lang}
+                onClose={() => setCountryOpen(false)}
+                scroll
+              >
+                {COUNTRIES.map(c => (
+                  <TouchableOpacity
+                    key={c.code}
+                    style={[styles.sheetRow, { flexDirection: 'row' }, c.code === country.code && styles.sheetRowActive]}
+                    onPress={() => { setCountry(c); setCountryOpen(false); setError(''); }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.sheetCode, { fontFamily: ff(lang, 'bold') }]}>{c.code}</Text>
+                    <Text style={[styles.sheetLabel, { fontFamily: ff(lang, 'bold') }]}>{c.name}</Text>
+                    <Text style={[styles.sheetDial, { fontFamily: ff(lang, 'regular') }]}>{c.dial}</Text>
+                  </TouchableOpacity>
+                ))}
+              </PickerSheet>
+
+              {/* Twilio stopped delivering SMS to +98 in March 2025. Say so the
+                  moment Iran is picked, instead of after they tap Send. */}
+              {iranSms && (
+                <View style={styles.notice}>
+                  <Text style={[styles.noticeText, { fontFamily: ff(lang, 'regular') }, textDir]}>{t(lang, 'errIranSms')}</Text>
+                  <TouchableOpacity onPress={() => { setMode('email'); setError(''); }} activeOpacity={0.7}>
+                    <Text style={[styles.link, { fontFamily: ff(lang, 'bold') }]}>{t(lang, 'useEmailInstead')}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
               {error ? <Text style={[styles.error, { fontFamily: ff(lang, 'bold') }, textDir]}>{error}</Text> : null}
-              <TouchableOpacity style={styles.primaryButton} onPress={sendCode} disabled={busy} activeOpacity={0.86}>
+              <TouchableOpacity
+                style={[styles.primaryButton, (!parsedContact || iranSms) && styles.primaryButtonDisabled]}
+                onPress={sendCode}
+                disabled={busy || !parsedContact || iranSms}
+                activeOpacity={0.86}
+              >
                 {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[styles.primaryText, { fontFamily: ff(lang, 'black') }]}>{t(lang, 'sendCode')}</Text>}
               </TouchableOpacity>
             </>
@@ -477,7 +693,7 @@ export default function AccountSetupScreen() {
               <CodeCircles
                 length={6}
                 value={code}
-                onChangeText={value => { setCode(value); setError(''); }}
+                onChangeText={value => { tick(code, value); setCode(value); setError(''); }}
                 autoFocus
                 oneTimeCode
                 onSubmitEditing={confirmCode}
@@ -504,7 +720,7 @@ export default function AccountSetupScreen() {
               <CodeCircles
                 length={4}
                 value={password}
-                onChangeText={value => { setPassword(value); setError(''); }}
+                onChangeText={value => { tick(password, value); setPassword(value); setError(''); }}
                 secure
                 autoFocus
                 onSubmitEditing={finish}
@@ -518,7 +734,7 @@ export default function AccountSetupScreen() {
           )}
 
           <Text style={[styles.note, { fontFamily: ff(lang, 'regular') }]}>{t(lang, 'note')}</Text>
-        </View>
+        </ScrollView>
       </View>
     </KeyboardAvoidingView>
   );
@@ -530,17 +746,22 @@ const styles = StyleSheet.create({
   cloud: { position: 'absolute', width: 360, height: 180, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.34)', bottom: -80, left: -70 },
   shell: { borderRadius: 34, backgroundColor: '#FFFFFF', overflow: 'visible', borderWidth: 7, borderColor: 'rgba(255,255,255,0.75)', elevation: 12, shadowColor: '#174B3A', shadowOpacity: 0.18, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } },
   artPane: { width: '43%', backgroundColor: '#FFF3B0', alignItems: 'center', justifyContent: 'center', padding: 24, borderRadius: 27, overflow: 'hidden' },
+  artPanePortrait: { width: '100%', paddingVertical: 14, paddingHorizontal: 18, gap: 14, justifyContent: 'flex-start' },
   character: { width: '82%', height: 270 },
   characterCompact: { height: 200 },
+  characterPortrait: { width: 74, height: 74, flexShrink: 0 },
+  artTextLandscape: { width: '100%' },
+  artTextPortrait: { flex: 1, minWidth: 0 },
   artTitle: { color: '#321E63', fontSize: 27, textAlign: 'center' },
+  artTitlePortrait: { fontSize: 19, textAlign: 'left' },
   artCopy: { color: '#66577F', fontSize: 14, lineHeight: 23, textAlign: 'center', marginTop: 8 },
-  formPane: { flex: 1, paddingHorizontal: 42, paddingVertical: 30, justifyContent: 'center' },
-  topRow: { alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  lockBadge: { width: 66, height: 66, borderRadius: 23, backgroundColor: '#FFF0C8', alignItems: 'center', justifyContent: 'center' },
-  lockGlyph: { color: '#FF7A1A', fontSize: 34, lineHeight: 40 },
+  artCopyPortrait: { fontSize: 12.5, lineHeight: 19, textAlign: 'left', marginTop: 3 },
+  formPane: { flex: 1 },
+  formContent: { flexGrow: 1, paddingHorizontal: 42, paddingVertical: 30, justifyContent: 'center' },
+  formContentPortrait: { paddingHorizontal: 22, paddingVertical: 20 },
+  topRow: { alignItems: 'center', justifyContent: 'flex-end', marginBottom: 6 },
   langWrap: { position: 'relative', zIndex: 20 },
   langButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F4F1FA', borderWidth: 2, borderColor: '#E1D9EE', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 9, gap: 6 },
-  langFlag: { fontSize: 16 },
   langButtonText: { color: '#2C175D', fontSize: 13 },
   langChevron: { color: '#8B80A8', fontSize: 10, marginLeft: 2 },
   langMenu: { position: 'absolute', top: 46, minWidth: 150, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 2, borderColor: '#E1D9EE', paddingVertical: 6, elevation: 16, shadowColor: '#174B3A', shadowOpacity: 0.2, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, zIndex: 30 },
@@ -549,7 +770,40 @@ const styles = StyleSheet.create({
   langMenuText: { color: '#2C175D', fontSize: 14 },
   title: { color: '#2C175D', fontSize: 29 },
   subtitle: { color: '#776B91', fontSize: 14, lineHeight: 23, marginTop: 6, marginBottom: 20 },
-  input: { height: 58, borderRadius: 18, backgroundColor: '#F4F1FA', borderWidth: 2, borderColor: '#E1D9EE', paddingHorizontal: 17, color: '#2C175D', fontSize: 15, marginBottom: 13 },
+  inputLtr: { textAlign: 'left', writingDirection: 'ltr' },
+  formContentShort: { paddingHorizontal: 28, paddingVertical: 14 },
+  titleShort: { fontSize: 22 },
+  subtitleShort: { fontSize: 12.5, lineHeight: 19, marginTop: 4, marginBottom: 12 },
+  tabsShort: { marginBottom: 9, padding: 3 },
+  tabShort: { paddingVertical: 7 },
+  tabs: { flexDirection: 'row', backgroundColor: '#F4F1FA', borderRadius: 16, padding: 4, marginBottom: 14, gap: 4 },
+  tab: { flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center' },
+  tabActive: { backgroundColor: '#FFFFFF', shadowColor: '#174B3A', shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  tabText: { color: '#8B80A8', fontSize: 14 },
+  tabTextActive: { color: '#2C175D' },
+  phoneRow: { flexDirection: 'row', gap: 10 },
+  countryButton: { height: 54, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, borderRadius: 18, backgroundColor: '#F4F1FA', borderWidth: 2, borderColor: '#E1D9EE' },
+  countryCode: { color: '#8B80A8', fontSize: 12, writingDirection: 'ltr' },
+  countryDial: { color: '#2C175D', fontSize: 15, writingDirection: 'ltr' },
+  phoneInput: { flex: 1 },
+  notice: { backgroundColor: '#FFF0C8', borderRadius: 16, padding: 12, marginBottom: 12 },
+  noticeText: { color: '#7A5B12', fontSize: 12.5, lineHeight: 20 },
+  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(26,12,48,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  sheet: { width: '100%', maxWidth: 420, maxHeight: '82%', backgroundColor: '#FFFFFF', borderRadius: 24, paddingVertical: 14, paddingHorizontal: 8 },
+  sheetScroll: { flexGrow: 0 },
+  sheetTitle: { color: '#2C175D', fontSize: 16, textAlign: 'center', marginBottom: 10 },
+  sheetRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14 },
+  sheetRowActive: { backgroundColor: '#FFF0C8' },
+  // Three fixed columns, all pinned LTR: the ISO code and the dial code are
+  // Latin runs that render backwards ("98+") inside an RTL screen, and they
+  // only read as columns if every row starts and ends at the same x.
+  sheetCode: { color: '#8B80A8', fontSize: 12, width: 30, textAlign: 'left', writingDirection: 'ltr' },
+  sheetLabel: { color: '#2C175D', fontSize: 15, flex: 1, textAlign: 'left', writingDirection: 'ltr' },
+  // Pinned LTR with a fixed column width: a dial code is Latin text and
+  // renders as "98+" inside an RTL screen, and the codes only read as a
+  // column if they all end at the same x.
+  sheetDial: { color: '#8B80A8', fontSize: 13, minWidth: 52, textAlign: 'right', writingDirection: 'ltr' },
+  input: { height: 54, borderRadius: 18, backgroundColor: '#F4F1FA', borderWidth: 2, borderColor: '#E1D9EE', paddingHorizontal: 17, color: '#2C175D', fontSize: 15, marginBottom: 13 },
   fieldLabel: { color: '#2C175D', fontSize: 14, marginBottom: 10 },
   circleRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 16, position: 'relative' },
   circle: {
@@ -563,7 +817,8 @@ const styles = StyleSheet.create({
   circleDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#FFFFFF' },
   hiddenInput: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0 },
   error: { color: '#D73737', marginBottom: 8, fontSize: 12 },
-  primaryButton: { height: 59, borderRadius: 19, backgroundColor: '#FF7A1A', alignItems: 'center', justifyContent: 'center', marginTop: 3 },
+  primaryButton: { height: 54, borderRadius: 19, backgroundColor: '#FF7A1A', alignItems: 'center', justifyContent: 'center', marginTop: 3 },
+  primaryButtonDisabled: { opacity: 0.45 },
   primaryText: { color: '#FFFFFF', fontSize: 16 },
   linkRow: { marginTop: 14 },
   link: { color: '#6B21A8', textAlign: 'center', fontSize: 13, marginTop: 6 },

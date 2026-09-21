@@ -32,14 +32,14 @@ const SECTIONS: Section[] = [
 function CultureArt({ item }: { item: Section }) {
   if (item.kind === 'food') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.kitchen} style={styles.art} imageStyle={styles.artImage}>
+      <ImageBackground source={neliWorldAssets.rooms.kitchenWide} style={styles.art} imageStyle={styles.artImage}>
         <Image source={neliWorldAssets.persianFoods.sabziPolo} style={styles.assetLarge} resizeMode="contain" />
       </ImageBackground>
     );
   }
   if (item.kind === 'nowruz') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.garden} style={styles.art} imageStyle={styles.artImage}>
+      <ImageBackground source={neliWorldAssets.rooms.gardenWide} style={styles.art} imageStyle={styles.artImage}>
         <Image source={neliWorldAssets.persianFoods.sabziPolo} style={styles.assetLarge} resizeMode="contain" />
         <Image source={neliWorldAssets.foods.apple} style={styles.assetTiny} resizeMode="contain" />
       </ImageBackground>

@@ -84,7 +84,7 @@ function StoryArt({ kind, color, accent }: { kind: PageKind; color: string; acce
   }
   if (kind === 'garden' || kind === 'friend') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.garden} style={styles.artStage} imageStyle={styles.artImage}>
+      <ImageBackground source={neliWorldAssets.rooms.gardenWide} style={styles.artStage} imageStyle={styles.artImage}>
           <CharacterAvatar characterId="neli" size={140} floating={false} style={styles.bookNeli} />
         <Image source={kind === 'friend' ? neliWorldAssets.animals.rabbit : neliWorldAssets.ui.star} style={styles.bookSmall} resizeMode="contain" />
       </ImageBackground>
@@ -92,7 +92,7 @@ function StoryArt({ kind, color, accent }: { kind: PageKind; color: string; acce
   }
   if (kind === 'nowruz') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.garden} style={styles.artStage} imageStyle={styles.artImage}>
+      <ImageBackground source={neliWorldAssets.rooms.gardenWide} style={styles.artStage} imageStyle={styles.artImage}>
         <Image source={neliWorldAssets.persianFoods.sabziPolo} style={styles.bookFood} resizeMode="contain" />
         <Image source={neliWorldAssets.foods.apple} style={styles.bookSmall} resizeMode="contain" />
       </ImageBackground>
@@ -108,14 +108,14 @@ function StoryArt({ kind, color, accent }: { kind: PageKind; color: string; acce
   }
   if (kind === 'river') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.garden} style={styles.artStage} imageStyle={styles.artImage}>
+      <ImageBackground source={neliWorldAssets.rooms.gardenWide} style={styles.artStage} imageStyle={styles.artImage}>
         <Image source={neliWorldAssets.foods.water} style={styles.bookFood} resizeMode="contain" />
       </ImageBackground>
     );
   }
   if (kind === 'horse' || kind === 'hero') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.garden} style={styles.artStage} imageStyle={styles.artImage}>
+      <ImageBackground source={neliWorldAssets.rooms.gardenWide} style={styles.artStage} imageStyle={styles.artImage}>
         <Image source={neliWorldAssets.giraffe.happy} style={styles.bookNeli} resizeMode="contain" />
       </ImageBackground>
     );

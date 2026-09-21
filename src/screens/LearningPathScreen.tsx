@@ -70,7 +70,7 @@ function StepArt({ type, color, lang, onSpeakSolarPlanet }: { type: string; colo
 
   if (type === 'food' || type === 'culture') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.kitchen} style={styles.artStage} imageStyle={styles.artBg}>
+      <ImageBackground source={neliWorldAssets.rooms.kitchenWide} style={styles.artStage} imageStyle={styles.artBg}>
         <View style={styles.imageWash} />
         <Image source={map[type]} style={styles.stepImageLarge} resizeMode="contain" />
       </ImageBackground>

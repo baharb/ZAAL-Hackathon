@@ -1,60 +1,145 @@
-import { Audio } from 'expo-av';
+import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import * as Speech from 'expo-speech';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../assets/faTestAudio.generated';
 
-let currentSound: Audio.Sound | null = null;
+// A fresh native AudioPlayer used to be created (and the old one torn down)
+// on every single call — see git history. On a real device that meant a kid
+// tapping crayons fast enough could ask the native audio engine to spin up a
+// new player before the last one's teardown had finished.
+//
+// Reusing one AudioPlayer via .replace() (below) does NOT avoid that churn —
+// checked expo-audio's own source (AudioModule.web.js): replace() calls
+// remove() internally, which pauses and tears down the underlying media
+// resource and builds a new one, every single call. So the actual fix is
+// pacing: MIN_GAP_MS enforces a floor between real replace()/play() calls so
+// one call's native teardown/create cycle is never still in flight when the
+// next one starts. Confirmed via web console that firing them back-to-back
+// throws "AbortError: play() request was interrupted by a call to pause()" —
+// a rejected native promise on this exact tap sequence is a plausible crash
+// vector for the reported iOS crash. Stale calls made while waiting out the
+// gap are dropped via the loadingToken check, so a burst of taps collapses
+// to just the last color, same as the pre-existing interrupt semantics — the
+// pacing doesn't add perceptible delay to a single tap.
+const MIN_GAP_MS = 220;
+let nextAllowedAt = 0;
+let sharedPlayer: AudioPlayer | null = null;
 let loadingToken = 0;
+let onSharedPlayerFinish: (() => void) | null = null;
 
-export async function stopFaAudio() {
+function getSharedPlayer(): AudioPlayer | null {
+  if (sharedPlayer) return sharedPlayer;
+  try {
+    const player = createAudioPlayer(null);
+    player.addListener('playbackStatusUpdate', status => {
+      if (status.isLoaded && status.didJustFinish) {
+        const cb = onSharedPlayerFinish;
+        onSharedPlayerFinish = null;
+        cb?.();
+      }
+    });
+    sharedPlayer = player;
+  } catch {
+    sharedPlayer = null;
+  }
+  return sharedPlayer;
+}
+
+// Shared by stopFaAudio() and playFaAudio()'s own interrupt step. Pausing the
+// shared player is only correct when nothing is about to reuse it right
+// after — playFaAudio() is about to call replace()+play() on this exact
+// player, and pause() while a play() on the SAME player is still resolving
+// throws "AbortError: play() request was interrupted by a call to pause()"
+// (confirmed via console on web; on iOS a rejected native promise on this
+// player is a plausible crash vector, since this is the very tap sequence
+// that reportedly crashes the app). replace() already supersedes whatever
+// the player is doing, so playFaAudio() skips the pause entirely.
+async function silenceOutputs(pausePlayer: boolean) {
+  // Recorded clips and TTS are two independent output paths. Whichever one
+  // starts has to silence the other, or a tap that fires a recorded word and
+  // a spoken sentence plays both at once, on top of each other.
+  try {
+    Speech.stop();
+  } catch {
+    // ignore
+  }
   loadingToken += 1;
-  if (currentSound) {
+  onSharedPlayerFinish = null;
+  if (pausePlayer && sharedPlayer) {
     try {
-      await currentSound.stopAsync();
+      sharedPlayer.pause();
     } catch {
       // ignore
     }
-    try {
-      await currentSound.unloadAsync();
-    } catch {
-      // ignore
-    }
-    currentSound = null;
   }
 }
 
-type PlayFaAudioOptions = { interrupt?: boolean; awaitFinish?: boolean; playbackStatus?: Parameters<typeof Audio.Sound.createAsync>[1]; };
+export async function stopFaAudio() {
+  await silenceOutputs(true);
+}
+
+type PlayFaAudioOptions = {
+  interrupt?: boolean;
+  awaitFinish?: boolean;
+  volume?: number;
+  /** Playback rate (1.0 = normal speed). Pitch is auto-corrected by expo-audio unless disabled below. */
+  playbackRate?: number;
+  /** Set to false to let the pitch rise/fall with playbackRate instead of correcting it. Defaults to corrected. */
+  shouldCorrectPitch?: boolean;
+};
 
 export async function playFaAudio(key: FaTestAudioKey, options?: PlayFaAudioOptions) {
   if (options?.interrupt !== false) {
-    await stopFaAudio();
+    // Not stopFaAudio() — see silenceOutputs()'s comment. This player is
+    // about to be reloaded via replace() below, not left paused.
+    await silenceOutputs(false);
   }
   const token = ++loadingToken;
   const source = FA_TEST_AUDIO[key];
   if (!source) return false;
 
-  const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true, ...(options?.playbackStatus ?? {}) });
-  if (token !== loadingToken) {
-    try { await sound.unloadAsync(); } catch {}
+  // Wait out MIN_GAP_MS since the last real replace()/play() call — see the
+  // comment above MIN_GAP_MS for why. A newer call bumps loadingToken while
+  // this one waits, so if this call gets superseded before its turn, it just
+  // drops out here instead of touching the player.
+  const wait = nextAllowedAt - Date.now();
+  if (wait > 0) {
+    await new Promise(resolve => setTimeout(resolve, wait));
+    if (token !== loadingToken) return false;
+  }
+  nextAllowedAt = Date.now() + MIN_GAP_MS;
+
+  const player = getSharedPlayer();
+  if (!player) return false;
+
+  try {
+    player.replace(source);
+    if (options?.volume != null) player.volume = options.volume;
+    if (options?.playbackRate != null) {
+      player.setPlaybackRate(options.playbackRate, options.shouldCorrectPitch === false ? 'low' : 'high');
+    }
+  } catch {
     return false;
   }
-  currentSound = sound;
+
+  if (token !== loadingToken) return false;
+
+  try {
+    // play() is typed void, but expo-audio's web player wraps
+    // HTMLMediaElement.play(), which returns a Promise that rejects
+    // (AbortError) if something else touches the player before it settles.
+    // Promise.resolve() is a no-op on a real void return and safely swallows
+    // that rejection on web when it isn't.
+    Promise.resolve(player.play() as unknown).catch(() => {});
+  } catch {
+    return false;
+  }
+
   if (options?.awaitFinish) {
     return await new Promise<boolean>(resolve => {
-      sound.setOnPlaybackStatusUpdate(async status => {
-        if (status.isLoaded && status.didJustFinish) {
-          try { await sound.unloadAsync(); } catch {}
-          if (currentSound === sound) currentSound = null;
-          resolve(true);
-        }
-      });
+      onSharedPlayerFinish = () => resolve(true);
     });
   }
-  sound.setOnPlaybackStatusUpdate(async status => {
-    if (status.isLoaded && status.didJustFinish) {
-      try { await sound.unloadAsync(); } catch {}
-      if (currentSound === sound) currentSound = null;
-    }
-  });
+  onSharedPlayerFinish = null;
   return true;
 }
 
@@ -225,7 +310,13 @@ export async function speakWithGeneratedVoice(
   }
 
   if (options?.interrupt !== false) {
-    Speech.stop();
+    // tryPlayGeneratedFaVoice() above only stops the recorded-clip path when
+    // it actually has a clip to play (e.g. a resolvable fa/ar key). For text
+    // with no recorded clip — most painting crayon colors — it returns early
+    // and a clip started by a *previous* call (e.g. the last crayon tapped)
+    // keeps playing underneath the TTS started below. stopFaAudio() silences
+    // both paths, same as useSpeech.ts's stop(); Speech.stop() alone does not.
+    await stopFaAudio();
   }
   Speech.speak(text, {
     language,

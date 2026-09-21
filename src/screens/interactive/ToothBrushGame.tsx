@@ -1,7 +1,8 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, ImageBackground, PanResponder, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import TopBar from '../../components/TopBar';
+import TopBar, { topBarHeight } from '../../components/TopBar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppContext } from '../../store/AppContext';
 import { useNav } from '../../store/NavContext';
 import { useLandscapeDimensions } from '../../hooks/useLandscapeDimensions';
@@ -37,12 +38,17 @@ const FOAM_POINTS = [
 
 const LILA_BRUSHING = require('../../../assets/neli-world/characters/Lila/lila_big_smile_640.webp');
 const BUBBLE_IMAGE = require('../../../assets/neli-world/characters/bubbles_512.webp');
+// All art below (brush, bubbles, dirt, sparkles) is authored in fixed px
+// against the iPad mini reference, where faceSize caps at exactly 560 — see
+// `faceSize` in the component. Every fixed dimension is multiplied by
+// `artScale = faceSize / ART_REFERENCE_FACE_SIZE` before it's drawn, so
+// tablets (which hit the cap) render unchanged and phones scale down with
+// the character instead of the brush/bubbles overwhelming a smaller mouth.
+const ART_REFERENCE_FACE_SIZE = 560;
 const BRUSH_RENDER_WIDTH = 168;
 const BRUSH_RENDER_HEIGHT = Math.round(BRUSH_RENDER_WIDTH * (889 / 512));
 const BRUSH_START_RENDER_WIDTH = 112;
 const BRUSH_START_RENDER_HEIGHT = Math.round(BRUSH_START_RENDER_WIDTH * (889 / 512));
-const BRUSH_TIP_OFFSET_X = BRUSH_RENDER_WIDTH / 2;
-const BRUSH_TIP_OFFSET_Y = BRUSH_RENDER_HEIGHT / 2;
 const BRUSH_START_Y_SHIFT = 0;
 const BUBBLE_LAYOUTS = [
   { left: 0.24, top: 0.30, size: 50 },
@@ -122,6 +128,9 @@ export default function ToothBrushGame() {
   const { reset } = useNav();
   const { width, height } = useLandscapeDimensions();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  // Matches HomeScreen's tablet test: shortest edge >= 600dp in landscape.
+  const isTablet = height >= 600;
 
   const [cleaned, setCleaned] = useState<boolean[]>(Array(NUM).fill(false));
   const [done, setDone] = useState(false);
@@ -154,12 +163,55 @@ export default function ToothBrushGame() {
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sparkleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const layoutSyncTimerRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const brushMetricsRef = useRef({
+    width: BRUSH_RENDER_WIDTH,
+    height: BRUSH_RENDER_HEIGHT,
+    startHeight: BRUSH_START_RENDER_HEIGHT,
+    tipOffsetX: BRUSH_RENDER_WIDTH / 2,
+    tipOffsetY: BRUSH_RENDER_HEIGHT / 2,
+  });
   const [showSparkles, setShowSparkles] = useState(false);
   const [showEndOverlay, setShowEndOverlay] = useState(false);
   const brushRadius = 48;
   const [mouthFrame, setMouthFrame] = useState({ x: 0, y: 0, w: 0, h: 0 });
   const isLandscape = width > height;
-  const faceSize = Math.min(Math.max(width * (isLandscape ? 0.38 : 0.62), height * (isLandscape ? 0.68 : 0.54), 480) * 1.2, 560);
+  // The `480` floor inside this Math.max was meant to keep the character
+  // legible on a tablet, where width/height-scaled terms alone can land a
+  // bit small (~410-475). But Math.max applies it unconditionally — on
+  // every phone (where both terms are well under 480) it became the
+  // dominant value, pinning the character at ~560 (its height, at 1.22x,
+  // ~680) regardless of the screen only being 360-440pt tall. That's why
+  // it rendered with its head cut off behind the header. Phones already
+  // get a sensible size from the width/height terms alone; keep the floor
+  // but only high enough to matter once those terms are already close to
+  // it (i.e. on a tablet), not overriding a phone's much smaller value.
+  // (A further header-aware height cap was tried here too, but the
+  // toothbrush's start position and mouth hotspot are placed by separate
+  // faceSize-derived formulas below that assume this specific sizing —
+  // capping just this value desynced the brush from the mouth. Fixing
+  // that fully means re-deriving those formulas too; out of scope here.)
+  const rawFaceSize = Math.min(Math.max(width * (isLandscape ? 0.38 : 0.62), height * (isLandscape ? 0.68 : 0.54)) * 1.2, 560);
+  // The formula above sizes the character off screen width/height alone —
+  // it has no idea how much vertical room the header actually leaves. On a
+  // tablet that's never a problem (there's headroom to spare), but on a
+  // short phone screen it can hand back a box taller than what's left below
+  // the bar, pushing the head behind it and pinning the boots off the
+  // bottom of the screen. Phones only: cap the box height (faceSize * 1.22)
+  // to the space actually left under the bar so it never overlaps the
+  // header — the vertical anchoring below (`gameArea`'s flex-end plus the
+  // artScale-scaled translateY) keeps the same tablet-calibrated look at
+  // whatever size comes out.
+  const topBarH = topBarHeight(height, insets.top, { topInset: 10 });
+  const gameAreaAvailableH = height - topBarH - 10;
+  const faceSize = isTablet ? rawFaceSize : Math.min(rawFaceSize, gameAreaAvailableH / 1.22);
+  // faceSize caps at ART_REFERENCE_FACE_SIZE on every tablet, so artScale is
+  // exactly 1 there (unchanged look); it only shrinks below 1 on phones.
+  const artScale = faceSize / ART_REFERENCE_FACE_SIZE;
+  const brushRenderWidth = BRUSH_RENDER_WIDTH * artScale;
+  const brushRenderHeight = BRUSH_RENDER_HEIGHT * artScale;
+  const brushStartRenderHeight = BRUSH_START_RENDER_HEIGHT * artScale;
+  const brushTipOffsetX = brushRenderWidth / 2;
+  const brushTipOffsetY = brushRenderHeight / 2;
   const isFa = lang === 'fa' || lang === 'ar';
   const cleanCount = cleaned.filter(Boolean).length;
   const completed = cleanCount === NUM;
@@ -167,6 +219,16 @@ export default function ToothBrushGame() {
   const foodAreaOffsetY = (mouthFrame.h || faceSize * 0.12) * 0.5;
   const sceneSource = roomBackgroundPickers.brushTeethBathroom(width, height);
   const isPhysicalPortrait = screenHeight > screenWidth;
+
+  useEffect(() => {
+    brushMetricsRef.current = {
+      width: brushRenderWidth,
+      height: brushRenderHeight,
+      startHeight: brushStartRenderHeight,
+      tipOffsetX: brushTipOffsetX,
+      tipOffsetY: brushTipOffsetY,
+    };
+  }, [brushRenderWidth, brushRenderHeight, brushStartRenderHeight, brushTipOffsetX, brushTipOffsetY]);
 
   useEffect(() => {
     cleanedRef.current = cleaned;
@@ -264,8 +326,8 @@ export default function ToothBrushGame() {
   }, []);
 
   const clampBrushPosition = (x: number, y: number) => ({
-    x: Math.max(12, Math.min(screenWidth - BRUSH_RENDER_WIDTH - 12, x)),
-    y: Math.max(12, Math.min(screenHeight - BRUSH_RENDER_HEIGHT - 12, y)),
+    x: Math.max(12, Math.min(screenWidth - brushMetricsRef.current.width - 12, x)),
+    y: Math.max(12, Math.min(screenHeight - brushMetricsRef.current.height - 12, y)),
   });
 
   const setBrushPosition = (x: number, y: number) => {
@@ -282,7 +344,7 @@ export default function ToothBrushGame() {
     const game = gameAreaFrameRef.current;
     // Keep the brush just left of the mouth box, with the bristles starting at mouth level.
     const brushLeft = game.x + area.x - area.w * 2;
-    const brushTop = game.y + area.y + area.h * 0.46 - BRUSH_START_RENDER_HEIGHT * 0.42;
+    const brushTop = game.y + area.y + area.h * 0.46 - brushMetricsRef.current.startHeight * 0.42;
     setBrushPosition(brushLeft, brushTop);
   };
 
@@ -418,14 +480,14 @@ export default function ToothBrushGame() {
       const pageY = e.nativeEvent.pageY;
       brushTouchStartCleanCountRef.current = cleanedRef.current.filter(Boolean).length;
       lastBubblePointRef.current = { x: pageX, y: pageY, active: true };
-      setBrushPosition(pageX - BRUSH_TIP_OFFSET_X, pageY - BRUSH_TIP_OFFSET_Y);
+      setBrushPosition(pageX - brushMetricsRef.current.tipOffsetX, pageY - brushMetricsRef.current.tipOffsetY);
       markTeeth(pageX, pageY);
       scheduleBrushIdleCue();
     },
     onPanResponderMove: e => {
       const pageX = e.nativeEvent.pageX;
       const pageY = e.nativeEvent.pageY;
-      setBrushPosition(pageX - BRUSH_TIP_OFFSET_X, pageY - BRUSH_TIP_OFFSET_Y);
+      setBrushPosition(pageX - brushMetricsRef.current.tipOffsetX, pageY - brushMetricsRef.current.tipOffsetY);
       markTeeth(pageX, pageY);
       scheduleBrushIdleCue();
     },
@@ -465,10 +527,10 @@ export default function ToothBrushGame() {
 
   return (
     <View style={styles.root}>
-      <ImageBackground source={sceneSource} style={styles.scene} resizeMode="cover">
+      <ImageBackground source={sceneSource} style={styles.scene} imageStyle={styles.sceneImage} resizeMode="cover">
         <TopBar title="Brush Teeth" titleFa="مسواک بزن" showClose dark topInset={10} onBack={() => reset({ name: 'Main', tab: 'Games' })} />
 
-        {!showSparkles && !done ? (
+        {isTablet && !showSparkles && !done ? (
           <View style={styles.promptPill}>
             <Text style={[styles.progressTitle, dir(lang), { fontFamily: isFa ? ff('fa', 'black') : ff(lang, 'black') }]}>
               {isFa ? 'دندان‌های لی لا را مسواک بزن' : "Brush Lila's teeth"}
@@ -482,7 +544,7 @@ export default function ToothBrushGame() {
           onLayout={syncLayouts}
           {...pan.panHandlers}
         >
-          <Animated.View ref={lilaRef} onLayout={syncLayouts} style={[styles.lilaWrap, { transform: [{ translateY: bounce }, { scale }, { translateY: 92 }] }]}>
+          <Animated.View ref={lilaRef} onLayout={syncLayouts} style={[styles.lilaWrap, { transform: [{ translateY: bounce }, { scale }, { translateY: 92 * artScale }] }]}>
             <LilaBrushCharacter size={faceSize} brushing={brushing} />
           </Animated.View>
 
@@ -522,7 +584,7 @@ export default function ToothBrushGame() {
                       },
                     ]}
                   >
-                    <DirtyFoodBit kind={food.kind} width={food.w} height={food.h} />
+                    <DirtyFoodBit kind={food.kind} width={food.w * artScale} height={food.h * artScale} />
                   </View>
                 ))}
               </View>
@@ -553,8 +615,8 @@ export default function ToothBrushGame() {
                     {
                       left: `${bubble.left * 100}%`,
                       top: `${bubble.top * 100}%`,
-                      width: bubble.size * 2,
-                      height: bubble.size * 2,
+                      width: bubble.size * 2 * artScale,
+                      height: bubble.size * 2 * artScale,
                     },
                   ]}
                 />
@@ -587,9 +649,9 @@ export default function ToothBrushGame() {
                     {
                       left: `${sparkle.left * 100}%`,
                       top: `${sparkle.top * 100}%`,
-                      width: sparkle.size,
-                      height: sparkle.size,
-                      borderRadius: sparkle.size / 2,
+                      width: sparkle.size * artScale,
+                      height: sparkle.size * artScale,
+                      borderRadius: (sparkle.size * artScale) / 2,
                       opacity: sparklePulse.interpolate({
                         inputRange: [0, 0.4, 1],
                         outputRange: [0.15, 1, 0.05],
@@ -606,7 +668,7 @@ export default function ToothBrushGame() {
                     },
                   ]}
                 >
-                  <Text style={[styles.sparkleGlyph, { fontSize: sparkle.size }]}>{sparkle.glyph}</Text>
+                  <Text style={[styles.sparkleGlyph, { fontSize: sparkle.size * artScale }]}>{sparkle.glyph}</Text>
                 </Animated.View>
               ))}
             </View>
@@ -625,7 +687,7 @@ export default function ToothBrushGame() {
           <Animated.View
             style={[
               styles.brushFollower,
-              { width: BRUSH_RENDER_WIDTH, height: BRUSH_RENDER_HEIGHT },
+              { width: brushRenderWidth, height: brushRenderHeight },
               {
                 transform: [
                   {
@@ -646,7 +708,7 @@ export default function ToothBrushGame() {
               },
             ]}
           >
-            <ToothbrushGraphic width={BRUSH_RENDER_WIDTH} height={BRUSH_RENDER_HEIGHT} />
+            <ToothbrushGraphic width={brushRenderWidth} height={brushRenderHeight} />
           </Animated.View>
         </Animated.View>
 
@@ -661,6 +723,10 @@ export default function ToothBrushGame() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#4CD5ED' },
   scene: { flex: 1 },
+  // Without an explicit imageStyle, react-native-web can leave the background
+  // <img> unsized in some nested-flex layouts, so it falls back to its own
+  // huge natural pixel size and only a random cropped sliver shows.
+  sceneImage: { width: '100%', height: '100%' },
   promptPill: {
     alignSelf: 'center',
     minWidth: 250,

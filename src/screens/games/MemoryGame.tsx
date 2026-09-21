@@ -141,11 +141,18 @@ function letterPoolForAge(group: AgeGroupId): LetterItem[] {
   return ALPHABET_POOL;
 }
 
+// This app is landscape-only, so width is the dimension with room to
+// spare — capping at 4 columns forced up to 4 rows at the higher levels
+// (16 cards), and the cardSize floor below refused to shrink enough to
+// fit 4 rows on a short phone, so cards overlapped instead. Favor more
+// columns / fewer rows throughout; 2 rows at most keeps every level
+// fitting a short landscape screen.
 function gridColumns(cardCount: number) {
   if (cardCount <= 4) return 2;
   if (cardCount <= 6) return 3;
-  if (cardCount <= 12) return 4;
-  return 4;
+  if (cardCount <= 8) return 4;
+  if (cardCount <= 12) return 6;
+  return 8;
 }
 
 function makeDeck(pairCount: number, pool: LetterItem[]): Card[] {
@@ -192,21 +199,33 @@ function CardBack() {
   return <View style={styles.cardBack} />;
 }
 
-function StepFlash({ side, onPress, disabled }: { side: 'left' | 'right'; onPress: () => void; disabled?: boolean }) {
+function StepFlash({
+  side,
+  onPress,
+  disabled,
+  size,
+}: {
+  side: 'left' | 'right';
+  onPress: () => void;
+  disabled?: boolean;
+  size: number;
+}) {
   const icon = side === 'left' ? neliWorldAssets.ui.back : neliWorldAssets.ui.next;
+  const hitSlop = Math.round(size * 0.14);
   return (
     <TouchableOpacity
       style={[
         styles.stepFlash,
         side === 'left' ? styles.stepFlashLeft : styles.stepFlashRight,
+        { marginTop: -size / 2 },
         disabled ? styles.stepFlashDisabled : null,
       ]}
       onPress={disabled ? undefined : onPress}
       activeOpacity={0.82}
       disabled={disabled}
-      hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+      hitSlop={{ top: hitSlop, bottom: hitSlop, left: hitSlop, right: hitSlop }}
     >
-      <Image source={icon} style={styles.stepFlashIcon} resizeMode="contain" />
+      <Image source={icon} style={{ width: size, height: size }} resizeMode="contain" />
     </TouchableOpacity>
   );
 }
@@ -261,6 +280,14 @@ export default function MemoryGame() {
   const totalLevels = levelPlan.length;
   const activePairGoal = Math.min(pairCount, Math.floor(cardCount / 2));
 
+  // TABLET_MIN_EDGE (600) is the reference size the step-flash art and prompt
+  // text were authored against; short phone landscape heights (360-440) scale
+  // both down so the buttons don't sit on top of the mascot art.
+  const screenScale = Math.min(1, height / 600);
+  const stepFlashSize = Math.max(60, Math.round(112 * screenScale));
+  const promptFontSize = Math.max(15, Math.round(22 * screenScale));
+  const promptLineHeight = Math.max(20, Math.round(30 * screenScale));
+
   const compactHeight = Math.max(0, height - 118);
   const mascotWidth = Math.min(312, Math.max(216, Math.floor(width * 0.24)));
   const mascotHeight = Math.min(408, Math.max(288, mascotWidth * 1.28));
@@ -270,11 +297,11 @@ export default function MemoryGame() {
   const cardSize = Math.min(
     92,
     Math.max(
-      52,
+      44,
       Math.floor(
         Math.min(
           (gridInnerWidth - cardGap * (cols - 1)) / cols,
-          (compactHeight - 150) / rows,
+          (compactHeight - 150 - cardGap * (rows - 1)) / rows,
         ),
       ),
     ),
@@ -414,9 +441,13 @@ export default function MemoryGame() {
       />
 
       <View style={styles.content}>
-        {showPrevFlash ? <StepFlash side="left" onPress={goPrevStep} disabled={levelIndex === 0} /> : null}
-        {showNextFlash ? <StepFlash side="right" onPress={goNextStep} disabled={!levelComplete} /> : null}
-        {showRestartFlash ? <StepFlash side="right" onPress={restart} /> : null}
+        {showPrevFlash ? (
+          <StepFlash side="left" onPress={goPrevStep} disabled={levelIndex === 0} size={stepFlashSize} />
+        ) : null}
+        {showNextFlash ? (
+          <StepFlash side="right" onPress={goNextStep} disabled={!levelComplete} size={stepFlashSize} />
+        ) : null}
+        {showRestartFlash ? <StepFlash side="right" onPress={restart} size={stepFlashSize} /> : null}
 
         <View style={styles.topProgressWrap}>
           <View style={styles.progressRow}>
@@ -424,7 +455,12 @@ export default function MemoryGame() {
               <View key={`dash-${i}`} style={[styles.stepDash, i <= levelIndex ? styles.stepDashActive : null]} />
             ))}
           </View>
-          <Text style={[styles.prompt, { fontFamily: ff(lang, 'black') }]}>
+          <Text
+            style={[
+              styles.prompt,
+              { fontFamily: ff(lang, 'black'), fontSize: promptFontSize, lineHeight: promptLineHeight },
+            ]}
+          >
             {isFa ? 'حروف شبیه را پیدا کن' : 'Find the matching letters'}
           </Text>
         </View>
@@ -527,7 +563,6 @@ const styles = StyleSheet.create({
   stepFlash: {
     position: 'absolute',
     top: '50%',
-    marginTop: -56,
     zIndex: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -540,10 +575,6 @@ const styles = StyleSheet.create({
   },
   stepFlashRight: {
     right: 20,
-  },
-  stepFlashIcon: {
-    width: 112,
-    height: 112,
   },
   stage: {
     flexDirection: 'row',

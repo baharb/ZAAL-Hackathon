@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import React, { useContext, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import TopBar from '../components/TopBar';
@@ -32,6 +33,7 @@ const TX: Record<string, Record<Lang, string>> = {
   childAgeSub:      { fa: 'سن را انتخاب کن تا فعالیت‌ها مناسب‌تر شوند', en: 'Choose an age to personalize activities', fr: 'Choisissez un âge pour personnaliser les activités', es: 'Elige una edad para personalizar las actividades', ar: 'اختر العمر لتخصيص الأنشطة', zh: 'Choose an age to personalize activities', ko: 'Choose an age to personalize activities' },
   rewards:          { fa: 'جایزه ها', en: 'Rewards', fr: 'Récompenses', es: 'Recompensas', ar: 'المكافآت', zh: 'Rewards', ko: 'Rewards' },
   age:              { fa: 'ساله', en: 'Age', fr: 'ans', es: 'años', ar: 'سنوات', zh: 'Age', ko: 'Age' },
+  version:          { fa: 'نسخه', en: 'Version', fr: 'Version', es: 'Versión', ar: 'الإصدار', zh: 'Version', ko: 'Version' },
 };
 
 function t(lang: Lang, key: keyof typeof TX): string {
@@ -44,6 +46,8 @@ const SHOW_CHILD_PROFILE_BOX = false;
 const SHOW_STATS_ROW = false;
 const SHOW_CHILD_AGE_BOX = false;
 const SHOW_REWARDS_BOX = false;
+
+const APP_VERSION = Constants.expoConfig?.version ?? '';
 
 export default function ProfileScreen() {
   const {
@@ -289,6 +293,12 @@ export default function ProfileScreen() {
         </View>
         ) : null}
 
+        {!!APP_VERSION && (
+          <Text style={[styles.versionText, { fontFamily: ff(lang, 'bold'), marginTop: Math.max(4, Math.round(6 * ui)) }]}>
+            {t(lang, 'version')} {APP_VERSION}
+          </Text>
+        )}
+
       </ScrollView>
     </View>
   );
@@ -340,4 +350,5 @@ const styles = StyleSheet.create({
   rewardRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   reward: { width: 62, height: 62, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF2C7', borderWidth: 4.5, borderColor: '#FFFFFF' },
   rewardIcon: { width: 52, height: 52 },
+  versionText: { color: 'rgba(255,255,255,0.72)', fontSize: 13, textAlign: 'center' },
 });

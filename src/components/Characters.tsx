@@ -1,12 +1,12 @@
 /**
- * Lingokids-inspired SVG characters
+ * Bold cartoon SVG characters
  * Style: bold cartoon — thick shapes, solid flat colors, NO outlines, huge eyes, round proportions
- * Based on user's reference image: panda with magnifying glass (round body, big head, simple limbs)
+ * Round-bodied panda with a magnifying glass, big head, simple limbs
  */
 import React from 'react';
 import Svg, { Circle, Ellipse, Path, Rect, G } from 'react-native-svg';
 
-// ─── PANDA (like the Lingokids reference image) ──────────────────────────────
+// ─── PANDA ─────────────────────────────────────────────────────────────────
 export function PandaSVG({ size = 120, expression = 'happy' }: { size?: number; expression?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 200 220">

@@ -24,7 +24,7 @@ const ITEMS: Item[] = [
   { id: 'apple', fa: 'سیب', en: 'Apple', kind: 'apple', source: neliWorldAssets.foods.apple, color: '#EF4444', soft: '#FFE4E6' },
   { id: 'water', fa: 'آب', en: 'Water', kind: 'water', source: neliWorldAssets.foods.water, color: '#0EA5E9', soft: '#E0F2FE' },
   { id: 'sun', fa: 'خورشید', en: 'Sun', kind: 'sun', source: neliWorldAssets.ui.star, color: '#F59E0B', soft: '#FEF3C7' },
-  { id: 'house', fa: 'خانه', en: 'House', kind: 'house', source: neliWorldAssets.rooms.livingRoom, color: '#F97316', soft: '#FFEDD5' },
+  { id: 'house', fa: 'خانه', en: 'House', kind: 'house', source: neliWorldAssets.rooms.livingRoomWide, color: '#F97316', soft: '#FFEDD5' },
   { id: 'flower', fa: 'گل', en: 'Flower', kind: 'flower', source: neliWorldAssets.ui.paintbrush, color: '#EC4899', soft: '#FCE7F3' },
 ];
 
@@ -60,13 +60,21 @@ function ItemArt({ item, characterId }: { item: Item; characterId: string }) {
 export default function QuizGame() {
   const { lang, addStars, selectedCharacterId } = useContext(AppContext);
   const { speakFarsiOnly, speakInLang, stop } = useSpeech();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const [q, setQ] = useState(makeQuestion);
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [total, setTotal] = useState(0);
   const isFa = lang === 'fa' || lang === 'ar';
   const compact = width < 760;
+  // The question card's art box, paddings and text were all fixed pixels
+  // (~364pt tall of intrinsic content) against a tablet-height reference. On
+  // a landscape phone (height as low as 360) that overflowed root's
+  // `overflow:'hidden'` and silently clipped the question text off the
+  // bottom. Scale it down below the tablet breakpoint (see TABLET_MIN_EDGE
+  // in App.tsx) the same way HomeScreen scales its art.
+  const k = Math.min(1, height / 600);
+  const s = (v: number, min: number) => Math.max(min, Math.round(v * k));
 
   const speakItem = () => {
     stop();
@@ -109,27 +117,27 @@ export default function QuizGame() {
       />
 
       <View style={[styles.content, compact && styles.contentCompact]}>
-        <View style={[styles.questionCard, compact && styles.questionCardCompact]}>
-          <View style={styles.questionHeader}>
-            <View style={[styles.topicPill, { backgroundColor: q.correct.soft }]}>
-              <Text style={[styles.topicText, { color: q.correct.color, fontFamily: ff(lang, 'black') }]}>
+        <View style={[styles.questionCard, compact && styles.questionCardCompact, { paddingVertical: s(16, 8), marginVertical: s(10, 2) }]}>
+          <View style={[styles.questionHeader, { marginBottom: s(10, 4) }]}>
+            <View style={[styles.topicPill, { backgroundColor: q.correct.soft, minHeight: s(42, 28) }]}>
+              <Text style={[styles.topicText, { color: q.correct.color, fontFamily: ff(lang, 'black'), fontSize: s(15, 11) }]}>
                 {isFa ? 'ببین و بگو' : 'Look and choose'}
               </Text>
             </View>
-            <TouchableOpacity style={styles.listenButton} onPress={speakItem} activeOpacity={0.86}>
+            <TouchableOpacity style={[styles.listenButton, { height: s(42, 28) }]} onPress={speakItem} activeOpacity={0.86}>
               <Text style={styles.listenIcon}>▶</Text>
-              <Text style={[styles.listenText, { fontFamily: ff(lang, 'black') }]}>{isFa ? 'صدا' : 'Hear'}</Text>
+              <Text style={[styles.listenText, { fontFamily: ff(lang, 'black'), fontSize: s(14, 11) }]}>{isFa ? 'صدا' : 'Hear'}</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.artButton} onPress={speakItem} activeOpacity={0.92}>
+          <TouchableOpacity style={[styles.artButton, { minHeight: s(190, 80) }]} onPress={speakItem} activeOpacity={0.92}>
             <ItemArt item={q.correct} characterId={selectedCharacterId} />
           </TouchableOpacity>
 
-          <Text style={[styles.question, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
+          <Text style={[styles.question, { fontFamily: ff(lang, 'black'), fontSize: s(29, 17), lineHeight: s(37, 22), marginTop: s(12, 4) }, dir(lang)]}>
             {isFa ? 'این چیه؟' : 'What is this?'}
           </Text>
-          <Text style={[styles.listenHint, { fontFamily: ff(lang, 'bold') }]}>
+          <Text style={[styles.listenHint, { fontFamily: ff(lang, 'bold'), fontSize: s(13, 10), lineHeight: s(18, 13), marginTop: s(3, 1) }]}>
             {isFa ? 'برای شنیدن، تصویر را لمس کن' : 'Tap the picture to hear the word'}
           </Text>
         </View>
@@ -144,7 +152,7 @@ export default function QuizGame() {
                 key={opt.id}
                 style={[
                   styles.option,
-                  { backgroundColor: opt.soft },
+                  { backgroundColor: opt.soft, minHeight: s(118, 74) },
                   index % 2 === 0 ? styles.optionTiltLeft : styles.optionTiltRight,
                   !!correct && styles.correct,
                   wrong && styles.wrong,
@@ -153,12 +161,12 @@ export default function QuizGame() {
                 onPress={() => answer(opt)}
                 activeOpacity={0.88}
               >
-                <View style={[styles.optionBadge, { backgroundColor: opt.color }]}>
-                  <Image source={opt.source} style={styles.optionIcon} resizeMode="contain" />
+                <View style={[styles.optionBadge, { backgroundColor: opt.color, width: s(56, 36), height: s(56, 36), marginBottom: s(8, 3) }]}>
+                  <Image source={opt.source} style={{ width: s(44, 26), height: s(44, 26) }} resizeMode="contain" />
                 </View>
                 <View style={styles.optionTextWrap}>
-                  <Text style={[styles.optFa, { fontFamily: ff('fa', 'black') }]} numberOfLines={1}>{opt.fa}</Text>
-                  <Text style={styles.optEn} numberOfLines={1}>{opt.en}</Text>
+                  <Text style={[styles.optFa, { fontFamily: ff('fa', 'black'), fontSize: s(20, 14), lineHeight: s(27, 18) }]} numberOfLines={1}>{opt.fa}</Text>
+                  <Text style={[styles.optEn, { fontSize: s(12, 9), lineHeight: s(16, 11) }]} numberOfLines={1}>{opt.en}</Text>
                 </View>
                 {correct ? <Text style={styles.feedbackMark}>✓</Text> : null}
                 {wrong ? <Text style={styles.feedbackMark}>×</Text> : null}

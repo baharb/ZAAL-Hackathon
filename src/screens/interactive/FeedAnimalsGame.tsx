@@ -12,11 +12,11 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppContext } from '../../store/AppContext';
 import { useNav } from '../../store/NavContext';
-import { useSpeech } from '../../hooks/useSpeech';
 import { useLandscapeDimensions } from '../../hooks/useLandscapeDimensions';
-import TopBar from '../../components/TopBar';
+import TopBar, { topBarHeight } from '../../components/TopBar';
 import { dir, ff } from '../../theme/fonts';
 import { neliWorldAssets } from '../../assets/neliWorldAssets';
 import { FA_AUDIO_KEYS, playFaAudio } from '../../utils/faAudio';
@@ -73,39 +73,109 @@ function hit(rect: Rect, x: number, y: number) {
   return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
 }
 
-function getFedPlacement(target: Rect, foodSize: number, animalId: AnimalId): Rect {
+// Same per-animal formula AnimalSpot uses to size the animal image, shared
+// so the fed-food anchors below can find where the image's real top edge is.
+const ANIMAL_IMAGE_WIDTH_FRACTION: Record<AnimalId, { floor: number; ceil: number; factor: number }> = {
+  monkey: { floor: 196, ceil: 280, factor: 0.29 },
+  rabbit: { floor: 142, ceil: 192, factor: 0.186 },
+  cat: { floor: 123, ceil: 169, factor: 0.165 },
+  panda: { floor: 168, ceil: 224, factor: 0.221 },
+  bear: { floor: 165, ceil: 230, factor: 0.223 },
+  giraffe: { floor: 275, ceil: 389, factor: 0.377 },
+};
+
+const GROUNDED_ANIMAL_IDS: AnimalId[] = ['rabbit', 'cat', 'panda', 'bear', 'giraffe'];
+// Where the row of grounded animals is allowed to span — leaves room on the
+// left for the monkey's tree and a little breathing room on the right.
+const GROUNDED_ROW_START_FRACTION = 0.22;
+const GROUNDED_ROW_END_FRACTION = 0.98;
+
+function animalImageSizeRaw(animalId: AnimalId, width: number, height: number) {
+  const f = ANIMAL_IMAGE_WIDTH_FRACTION[animalId];
+  const heightScale = Math.min(1, height / 420);
+  return Math.max(f.floor, Math.min(f.ceil, width * f.factor)) * heightScale;
+}
+
+// Standing side by side on one ground line (see GROUND_FRACTION below), the
+// five grounded animals' natural sizes don't always fit the stage width
+// without overlapping — on a phone especially, the row is narrower than the
+// sum of their floors. Shrink them all together, proportionally, just enough
+// to fit with a minimum gap between each; on a tablet there's room to spare
+// and this returns 1 (no change from the floor/ceil sizing above).
+function groundedRowScale(width: number, height: number) {
+  const naturalTotal = GROUNDED_ANIMAL_IDS.reduce((sum, id) => sum + animalImageSizeRaw(id, width, height), 0);
+  const minGap = Math.max(8, width * 0.012);
+  const available = Math.max(160, width * (GROUNDED_ROW_END_FRACTION - GROUNDED_ROW_START_FRACTION) - minGap * (GROUNDED_ANIMAL_IDS.length - 1));
+  return naturalTotal > available ? Math.max(0.55, available / naturalTotal) : 1;
+}
+
+function animalImageSize(animalId: AnimalId, width: number, height: number) {
+  const raw = animalImageSizeRaw(animalId, width, height);
+  return animalId === 'monkey' ? raw : raw * groundedRowScale(width, height);
+}
+
+// x/y are fractions of the animal's own body — 0/0 near its head, 1/1 near
+// its feet. The monkey hangs top-down from its box (unchanged). Every other
+// animal now stands with its feet flush with the box's bottom edge (see
+// GROUND_FRACTION in animalSlots); boxHeight - imageSize is the image's real
+// top edge in box-relative pixels, and y is measured down from there — NOT
+// as a fraction of the fixed 150 reference box, which is what these numbers
+// were first copied from and why they all landed near each animal's feet
+// (worst for giraffe: 150*0.92 sits 36% down its own much-taller image, not
+// 92% — its mouth is near the top of a tall neck, not the bottom).
+function getFedPlacement(target: Rect, foodSize: number, animalId: AnimalId, width: number, height: number): Rect {
   const offsets: Record<AnimalId, { x: number; y: number; scale: number }> = {
     monkey: { x: 1.22, y: 1.65, scale: 1.152 },
-    rabbit: { x: 0.54, y: 1.24, scale: 1.078 },
-    cat: { x: 0.46, y: 0.66, scale: 1.553 },
-    panda: { x: 0.52, y: 0.78, scale: 1.078 },
-    bear: { x: 0.45, y: 1.23, scale: 1.00 },
-    giraffe: { x: 0.35, y: 0.96, scale: 1.10 },
+    rabbit: { x: 0.54, y: 0.65, scale: 1.078 },
+    cat: { x: 0.46, y: 0.58, scale: 1.553 },
+    panda: { x: 0.52, y: 0.52, scale: 1.078 },
+    bear: { x: 0.45, y: 0.60, scale: 1.00 },
+    giraffe: { x: 0.35, y: 0.36, scale: 1.10 },
   };
   const offset = offsets[animalId];
   const size = Math.max(42, Math.round(foodSize * offset.scale));
+  if (animalId === 'monkey') {
+    return {
+      x: target.x + target.w * offset.x - size * 0.5,
+      y: target.y + target.h * offset.y - size * 0.5,
+      w: size,
+      h: size,
+    };
+  }
+  const imageSize = animalImageSize(animalId, width, height);
+  const imageTop = target.h - imageSize;
   return {
     x: target.x + target.w * offset.x - size * 0.5,
-    y: target.y + target.h * offset.y - size * 0.5,
+    y: target.y + imageTop + imageSize * offset.y - size * 0.5,
     w: size,
     h: size,
   };
 }
 
-function getFedAnchor(animalId: AnimalId, foodSize: number) {
+function getFedAnchor(animalId: AnimalId, foodSize: number, width: number, height: number) {
   const anchors: Record<AnimalId, { x: number; y: number; scale: number }> = {
     monkey: { x: 1.20, y: 1.44, scale: 1.152 },
-    rabbit: { x: 0.54, y: 0.93, scale: 1.078 },
-    cat: { x: 0.46, y: 0.65, scale: 1.553 },
-    panda: { x: 0.52, y: 0.77, scale: 1.078 },
-    bear: { x: 0.45, y: 0.92, scale: 1.00 },
-    giraffe: { x: 0.35, y: 0.94, scale: 1.10 },
+    rabbit: { x: 0.54, y: 0.65, scale: 1.078 },
+    cat: { x: 0.46, y: 0.58, scale: 1.553 },
+    panda: { x: 0.52, y: 0.52, scale: 1.078 },
+    bear: { x: 0.45, y: 0.60, scale: 1.00 },
+    giraffe: { x: 0.35, y: 0.36, scale: 1.10 },
   };
   const anchor = anchors[animalId];
   const size = Math.max(42, Math.round(foodSize * anchor.scale));
+  if (animalId === 'monkey') {
+    return {
+      left: Math.round(110 * anchor.x - size * 0.5),
+      top: Math.round(150 * anchor.y - size * 0.5),
+      width: size,
+      height: size,
+    };
+  }
+  const imageSize = animalImageSize(animalId, width, height);
+  const imageTop = 150 - imageSize;
   return {
     left: Math.round(110 * anchor.x - size * 0.5),
-    top: Math.round(150 * anchor.y - size * 0.5),
+    top: Math.round(imageTop + imageSize * anchor.y - size * 0.5),
     width: size,
     height: size,
   };
@@ -140,142 +210,180 @@ function getFoodArtStyle(food: Food, size: number) {
   return { width, height, transform };
 }
 
+// Every animal but the monkey stands on the jungle floor, so its feet should
+// land on one consistent ground line regardless of screen size. The old
+// scheme positioned each animal's box-TOP as a fraction of height, then
+// top-aligned the image inside it (see AnimalSpot) — but the image's own
+// height is capped independently of screen height (see imageSize below), so
+// on a tall stage (a tablet, or even a merely-taller phone) the capped image
+// stopped reaching anywhere near the box's bottom and the animal read as
+// floating near the top. GROUND_FRACTION fixes the animal's box-BOTTOM to a
+// screen-relative ground line instead, and AnimalSpot bottom-aligns the
+// image inside it, so the image's actual rendered bottom — not an
+// independently-tuned offset — is what sits on the ground, at any size.
+const GROUND_FRACTION = 0.86;
+
+// Lays the five grounded animals out left to right by their actual (already
+// crowd-scaled) rendered width plus a minimum gap, so their images never
+// overlap — replacing the old per-animal x fractions, which were tuned
+// assuming each animal sat at a different height and could get away with
+// overlapping bounding boxes because they weren't visually at the same spot.
+// Any left-over room (the row didn't need to shrink) is spread evenly as
+// extra gap rather than bunched on one side.
+function groundedAnimalCenters(width: number, height: number): Record<AnimalId, number> {
+  const scale = groundedRowScale(width, height);
+  const sizes = GROUNDED_ANIMAL_IDS.map(id => animalImageSizeRaw(id, width, height) * scale);
+  const minGap = Math.max(8, width * 0.012);
+  const startX = width * GROUNDED_ROW_START_FRACTION;
+  const totalSize = sizes.reduce((sum, s) => sum + s, 0);
+  const naturalSpan = totalSize + minGap * (sizes.length - 1);
+  const slack = Math.max(0, width * GROUNDED_ROW_END_FRACTION - startX - naturalSpan);
+  const gap = minGap + slack / (sizes.length - 1);
+  let cursor = startX;
+  const centers = {} as Record<AnimalId, number>;
+  GROUNDED_ANIMAL_IDS.forEach((id, i) => {
+    centers[id] = cursor + sizes[i] * 0.5;
+    cursor += sizes[i] + gap;
+  });
+  return centers;
+}
+
 function animalSlots(width: number, height: number) {
   const isLandscape = width > height;
-  const w = 110;
-  const h = 150;
+  // w/h were a flat 110x150 regardless of screen size — tuned against a
+  // tablet's spare height. On a short landscape phone that's over half the
+  // available stage height for a single slot box, which (via the bear-rect
+  // relative food slots below) pushed fish/bamboo well past the bottom of
+  // the screen. Scale down when height is tight; unchanged above the
+  // reference so tablets render exactly as before.
+  const slotScale = Math.min(1, height / 420);
+  const w = Math.round(110 * slotScale);
+  const h = Math.round(150 * slotScale);
   const yShift = Math.round(height * 0.06);
-  const rabbitDown = Math.round(height * 0.3);
-  const catDown = Math.round(height * 0.4);
-  const rabbitRight = Math.round(width * 0.1);
-  const rabbitLeft = Math.round(width * 0.12);
-  const rabbitUp = Math.round(height * 0.19);
-  const catUp = Math.round(height * 0.09);
-  const catLeft = Math.round(width * 0.12);
-  const bearUp = Math.round(height * 0.08);
-  const bearDown = Math.round(height * 0.04);
-  const pandaDown = Math.round(height * 0.25);
-  const pandaLeft = Math.round(width * 0.19);
-  const pandaUp = Math.round(height * 0.1);
   const monkeyRight = 0;
   const monkeyUp = Math.round(height * 0.05);
-  const giraffeLeft = Math.round(width * 0.13);
-  const giraffeDown = Math.round(height * -0.05);
+  const groundY = Math.max(h + 8, Math.min(height - 8, Math.round(height * GROUND_FRACTION)));
+  const groundedY = groundY - h;
+  const centers = groundedAnimalCenters(width, height);
+  const groundedX = (id: AnimalId) => Math.round(centers[id] - w / 2);
   if (isLandscape) {
     return [
       { x: Math.max(6, Math.round(width * 0.03) + monkeyRight), y: Math.max(8, Math.round(height * 0.04)) + yShift - monkeyUp, w, h },
-      { x: Math.min(width - w - 6, Math.max(6, Math.round(width * 0.22) + rabbitRight - rabbitLeft)), y: Math.min(height - h - 8, Math.max(10, Math.round(height * 0.09)) + yShift + rabbitDown - rabbitUp), w, h },
-      { x: Math.max(6, Math.round(width * 0.42) - catLeft), y: Math.min(height - h - 8, Math.max(18, Math.round(height * 0.15)) + yShift + catDown - catUp), w, h },
-      { x: Math.max(6, Math.round(width * 0.62) - pandaLeft), y: Math.min(height - h - 8, Math.max(10, Math.round(height * 0.09)) + yShift + pandaDown - pandaUp), w, h },
-      { x: Math.max(6, Math.round(width * 0.60)), y: Math.max(18, Math.round(height * 0.16)) + yShift - bearUp + bearDown, w, h },
-      { x: Math.max(6, Math.round(width * 0.90) - giraffeLeft), y: Math.max(10, Math.round(height * 0.06)) + yShift + giraffeDown, w, h },
+      { x: groundedX('rabbit'), y: groundedY, w, h },
+      { x: groundedX('cat'), y: groundedY, w, h },
+      { x: groundedX('panda'), y: groundedY, w, h },
+      { x: groundedX('bear'), y: groundedY, w, h },
+      { x: groundedX('giraffe'), y: groundedY, w, h },
     ];
   }
   return [
     { x: Math.max(8, Math.round(width * 0.04) + monkeyRight), y: Math.max(10, Math.round(height * 0.05)) + yShift - monkeyUp, w, h },
-    { x: Math.min(width - w - 8, Math.max(8, Math.round(width - width * 0.06 - w) + rabbitRight - rabbitLeft)), y: Math.min(height - h - 8, Math.max(14, Math.round(height * 0.10)) + yShift + rabbitDown - rabbitUp), w, h },
-    { x: Math.max(8, Math.round(width * 0.08) - catLeft), y: Math.min(height - h - 8, Math.max(14, Math.round(height * 0.38)) + yShift + catDown - catUp), w, h },
-    { x: Math.max(8, Math.round(width - width * 0.08 - w) - pandaLeft), y: Math.min(height - h - 8, Math.max(14, Math.round(height * 0.38)) + yShift + pandaDown - pandaUp), w, h },
-    { x: Math.max(8, Math.round(width * 0.3 - w / 2)), y: Math.max(14, Math.round(height * 0.62)) + yShift - bearUp + bearDown, w, h },
-    { x: Math.max(8, Math.round(width * 0.82 - w / 2) - giraffeLeft), y: Math.max(14, Math.round(height * 0.18)) + yShift + giraffeDown, w, h },
+    { x: groundedX('rabbit'), y: groundedY, w, h },
+    { x: groundedX('cat'), y: groundedY, w, h },
+    { x: groundedX('panda'), y: groundedY, w, h },
+    { x: groundedX('bear'), y: groundedY, w, h },
+    { x: groundedX('giraffe'), y: groundedY, w, h },
   ];
 }
 
-function sceneFoodSlots(width: number, height: number, seed: number, bearRect?: Rect) {
+// A tiny seeded PRNG (LCG) so the shuffle below is deterministic per `seed`
+// (reproducible for a given round) but changes on every reset/replay.
+function seededRandom(seed: number) {
+  let s = seed + 1;
+  return () => {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    return s / 0x7fffffff;
+  };
+}
+
+function sceneFoodSlots(width: number, height: number, seed: number) {
   const isLandscape = width > height;
   const cardW = Math.min(isLandscape ? 88 : 82, Math.max(62, Math.round(Math.min(width, height) * 0.13)));
   const cardH = Math.round(cardW * 1.08);
-  const appleUp = Math.round(height * 0.90);
-  const appleRight = Math.round(width * 0.01);
-  const carrotRight = Math.round(width * 0.63);
-  const carrotDown = Math.round(height * 0.4);
-  const bananaRight = Math.round(width * 0.05);
-  const bananaUp = Math.round(height * 0.3);
-  const honeyLeft = Math.round(width * 0.2);
-  const honeyDown = Math.round(height * 0.5);
-  const fishLeft = Math.round(width * 0.6);
-  const fishUp = Math.round(height * 0.2);
-  const fishExtraSize = 0.2;
-  const surfaceSlots = isLandscape
+  // FoodTile's real rendered footprint is bigger than this nominal card —
+  // the art box can render up to 1.6x the food's `size` (see artBoxSize in
+  // FoodTile) and its label is stacked below that. Budget for both so
+  // neighbouring tiles' art and labels don't clip each other.
+  const trueW = Math.round(cardW * 1.65);
+  const trueH = Math.round(cardH * 1.9 + 34);
+
+  // Scatter anchors spread across the "sky" band above the ground line (see
+  // GROUND_FRACTION) in a zig-zag so neighbours clear each other's real
+  // footprint. Shuffled per round (seeded by `seed`) so the food isn't
+  // sitting directly over the animal it belongs to — the child has to look
+  // for the right one, not just drag straight down.
+  const anchors = isLandscape
     ? [
-        { x: 0.11, y: 0.17 },
-        { x: 0.86, y: 0.70 },
-        { x: 0.17, y: 0.24 },
-        { x: 0.62, y: 0.18 },
-        { x: 0.73, y: 0.56 },
-        { x: 0.47, y: 0.16 },
+        { x: 0.09, y: 0.20 }, { x: 0.27, y: 0.47 }, { x: 0.44, y: 0.15 },
+        { x: 0.61, y: 0.45 }, { x: 0.78, y: 0.17 }, { x: 0.94, y: 0.47 },
       ]
     : [
-        { x: 0.14, y: 0.21 },
-        { x: 0.83, y: 0.77 },
-        { x: 0.18, y: 0.26 },
-        { x: 0.63, y: 0.19 },
-        { x: 0.47, y: 0.62 },
-        { x: 0.47, y: 0.15 },
+        { x: 0.15, y: 0.14 }, { x: 0.50, y: 0.08 }, { x: 0.85, y: 0.14 },
+        { x: 0.15, y: 0.36 }, { x: 0.50, y: 0.30 }, { x: 0.85, y: 0.36 },
       ];
 
+  const order = [0, 1, 2, 3, 4, 5];
+  const rand = seededRandom(seed);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+
+  const minY = 8;
+  const maxY = Math.max(minY, height - cardH - 55);
+  const minX = 8;
+  const maxX = width - cardW - 8;
   const slots = TRAY_ORDER.map((_foodId, index) => {
-    const slot = surfaceSlots[index];
-    const driftX = ((seed + index) % 3 - 1) * 6 + (index === 1 ? appleRight : 0) + (index === 0 ? bananaRight : 0);
-    const driftY = index === 1 ? -appleUp : index === 0 ? -bananaUp : 0;
-    const minY = index === 1 ? 8 : index === 0 ? 0 : 64;
-    const carrotXBoost = index === 2 ? carrotRight : 0;
-    const carrotYBoost = index === 2 ? carrotDown : 0;
-    const honeyXBoost = index === 3 ? -honeyLeft : 0;
-    const honeyYBoost = index === 3 ? honeyDown : 0;
-    const fishXBoost = index === 4 ? -fishLeft : 0;
-    const fishYBoost = index === 4 ? -fishUp : 0;
+    const anchor = anchors[order[index]];
+    const jitterX = Math.round(((seed + index * 7) % 3 - 1) * (trueW * 0.08));
+    const jitterY = Math.round(((seed + index * 13) % 3 - 1) * (trueH * 0.05));
     return {
-      x: Math.max(8, Math.min(width - cardW - 8, Math.round(width * slot.x - cardW * 0.5 + driftX + carrotXBoost + honeyXBoost + fishXBoost))),
-      y: Math.max(minY, Math.min(height - cardH - 26, Math.round(height * slot.y - cardH * 0.5 + driftY + carrotYBoost + honeyYBoost + fishYBoost))),
+      x: Math.max(minX, Math.min(maxX, Math.round(width * anchor.x - cardW * 0.5 + jitterX))),
+      y: Math.max(minY, Math.min(maxY, Math.round(height * anchor.y - cardH * 0.5 + jitterY))),
       w: cardW,
       h: cardH,
     };
   });
 
-  if (slots[2] && slots[4] && slots[5]) {
-    slots[5] = {
-      ...slots[5],
-      x: slots[4].x,
-      y: Math.min(height - cardH - 8, slots[4].y + slots[4].h + 12 + slots[5].h * 1.0),
-    };
-  }
-
-  if (slots[0]) {
-    slots[0] = {
-      ...slots[0],
-      x: Math.min(width - cardW - 8, slots[0].x + slots[0].w * 0.5),
-      y: Math.max(0, slots[0].y - slots[0].h * 0.1),
-    };
-  }
-
-  if (slots[1]) {
-    slots[1] = {
-      ...slots[1],
-      y: Math.max(8, slots[1].y - slots[1].h * 0.2),
-    };
-  }
-
-  if (slots[3]) {
-    slots[3] = {
-      ...slots[3],
-      y: Math.max(8, slots[3].y - slots[3].h * 0.3),
-    };
-  }
-
-  if (slots[2]) {
-    slots[2] = {
-      ...slots[2],
-      y: Math.max(8, slots[2].y - slots[2].h * 0.5),
-    };
-  }
-
-  if (slots[4] && bearRect) {
-    slots[4] = {
-      ...slots[4],
-      x: Math.max(8, Math.min(width - cardW - 8, bearRect.x + bearRect.w * 0.5 - cardW * 0.5)),
-      y: Math.max(8, Math.min(height - cardH - 8, bearRect.y + bearRect.h + 12)),
-    };
+  // The hand-tuned anchor spread above is generous on a tablet but can be
+  // tighter than the tiles' real footprint on a small phone (a narrower
+  // stage, same 6 items) — resolve any remaining overlap by nudging tiles
+  // apart along whichever axis needs less movement, a few passes so a chain
+  // of three-plus crowded tiles fully separates rather than just the first
+  // pair. footprintOf mirrors FoodTile's actual layout: centered
+  // horizontally on the slot, extra label height growing downward from it.
+  const footprintOf = (slot: Rect) => ({
+    x: slot.x - (trueW - cardW) / 2,
+    y: slot.y,
+    w: trueW,
+    h: trueH,
+  });
+  for (let pass = 0; pass < 6; pass++) {
+    let moved = false;
+    for (let i = 0; i < slots.length; i++) {
+      for (let j = i + 1; j < slots.length; j++) {
+        const a = footprintOf(slots[i]);
+        const b = footprintOf(slots[j]);
+        const overlapX = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+        const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+        if (overlapX <= 0 || overlapY <= 0) continue;
+        moved = true;
+        const centerDX = (b.x + b.w / 2) - (a.x + a.w / 2);
+        const centerDY = (b.y + b.h / 2) - (a.y + a.h / 2);
+        if (overlapX < overlapY) {
+          const push = overlapX / 2 + 1;
+          const dir = centerDX >= 0 ? 1 : -1;
+          slots[i].x = Math.max(minX, Math.min(maxX, slots[i].x - dir * push));
+          slots[j].x = Math.max(minX, Math.min(maxX, slots[j].x + dir * push));
+        } else {
+          const push = overlapY / 2 + 1;
+          const dir = centerDY >= 0 ? 1 : -1;
+          slots[i].y = Math.max(minY, Math.min(maxY, slots[i].y - dir * push));
+          slots[j].y = Math.max(minY, Math.min(maxY, slots[j].y + dir * push));
+        }
+      }
+    }
+    if (!moved) break;
   }
 
   return slots;
@@ -285,10 +393,12 @@ function AnimalSpot({
   animal,
   active,
   width,
+  height,
 }: {
   animal: Animal;
   active: boolean;
   width: number;
+  height: number;
 }) {
   const animalSource = {
     monkey: neliWorldAssets.animals.monkey,
@@ -298,21 +408,28 @@ function AnimalSpot({
     bear: neliWorldAssets.animals.bear,
     giraffe: neliWorldAssets.animals.giraffe,
   }[animal.id];
-  const imageSize = {
-    monkey: Math.max(196, Math.min(280, width * 0.29)),
-    rabbit: Math.max(142, Math.min(192, width * 0.186)),
-    cat: Math.max(123, Math.min(169, width * 0.165)),
-    panda: Math.max(168, Math.min(224, width * 0.221)),
-    bear: Math.max(165, Math.min(230, width * 0.223)),
-    giraffe: Math.max(275, Math.min(389, width * 0.377)),
-  }[animal.id];
+  // These floors (196–275px) were tuned purely off width, with no ceiling
+  // tied to how tall the stage actually is — on a short landscape phone six
+  // of them at "floor" size were each already most of the available stage
+  // height, so neighbours overlapped. Scale the whole set down together
+  // below the same reference animalSlots uses, so relative sizing between
+  // animals is preserved; untouched on tablets/taller phones.
+  const imageSize = animalImageSize(animal.id, width, height);
+
+  // The monkey hangs from a vine at the top of its box — unchanged. Every
+  // other animal stands on the jungle floor: bottom-align its image inside
+  // the box so the image's own rendered bottom (its feet), not an
+  // independently-tuned offset, is what lands on the ground line set by
+  // GROUND_FRACTION in animalSlots.
+  const grounded = animal.id !== 'monkey';
 
   return (
-    <View style={styles.animalSpot}>
+    <View style={[styles.animalSpot, grounded && styles.animalSpotGrounded]}>
       <Image
         source={animalSource}
         style={[
           styles.animalImage,
+          grounded && styles.animalImageGrounded,
           active && styles.animalImageActive,
           animal.id === 'monkey' ? styles.monkeyImage : null,
           {
@@ -359,6 +476,13 @@ function FoodTile({
     pressScale.setValue(1);
     setPressed(false);
   }, [resetToken, drag, pressScale]);
+
+  // foodArtBox was a flat 120x120 regardless of `size` (already responsive
+  // to screen height), so the tile's real visual footprint — art box plus
+  // the label stacked below it — stayed ~140-150pt tall even when `size`
+  // shrank on a short phone, well past the tile's own nominal slot.h. 1.6x
+  // covers bamboo's 1.584x art multiplier (the largest), so nothing clips.
+  const artBoxSize = Math.round(size * 1.6 + 10);
 
   const pan = useMemo(
     () =>
@@ -416,7 +540,7 @@ function FoodTile({
       ]}
     >
       {food.id === 'bamboo' ? (
-        <View style={styles.foodArtBox}>
+        <View style={[styles.foodArtBox, { width: artBoxSize, height: artBoxSize }]}>
           <Image
             source={food.source}
             style={[styles.foodImage, getFoodArtStyle(food, size)]}
@@ -426,7 +550,7 @@ function FoodTile({
         </View>
       ) : (
         <>
-          <View style={styles.foodArtBox}>
+          <View style={[styles.foodArtBox, { width: artBoxSize, height: artBoxSize }]}>
             <Image
               source={food.source}
               style={[styles.foodImage, getFoodArtStyle(food, size)]}
@@ -501,9 +625,19 @@ export default function FeedAnimalsGame() {
   const { lang, addStars } = useContext(AppContext);
   const { reset } = useNav();
   const { width, height } = useLandscapeDimensions();
-  const { speakFarsiOnly, speakInLang, stop } = useSpeech();
+  const insets = useSafeAreaInsets();
   const stageRef = useRef<View>(null);
   const isFa = lang === 'fa' || lang === 'ar';
+  // TopBar is normal-flow (not absolute) so it really pushes `stage` down by
+  // its own rendered height. animalSlots/sceneFoodSlots used to be handed
+  // the full window `height`, clamping animal/food positions as if the
+  // whole screen were free real estate below y=0 — on a short landscape
+  // phone the header eats a much bigger share of that budget than on a
+  // tablet, so several foods ended up clamped to a y that was still well
+  // past the bottom of the actually-visible stage. Pass the real leftover
+  // height instead.
+  const headerHeight = topBarHeight(height, insets.top, { topInset: 10 });
+  const stageHeight = Math.max(120, height - headerHeight);
   const sceneSource = useMemo(() => {
     if (width > height) {
       return width / height > 1.45 ? neliWorldAssets.rooms.feedAnimalsJungle : neliWorldAssets.rooms.feedAnimalsJungleTabletLandscape;
@@ -540,18 +674,26 @@ export default function FeedAnimalsGame() {
 
   const currentAnimal = useMemo(() => ANIMALS.find(animal => !fedIds.includes(animal.foodId)) ?? ANIMALS[ANIMALS.length - 1], [fedIds]);
   const currentFood = FOOD_BY_ID[currentAnimal.foodId];
-  const animalLayout = useMemo(() => animalSlots(width, height), [height, width]);
-  const foodLayout = useMemo(() => sceneFoodSlots(width, height, resetToken, animalLayout[4]), [animalLayout, height, resetToken, width]);
-  const foodSize = Math.max(48, Math.min(78, Math.round(Math.min(width, height) * 0.085)));
+  const animalLayout = useMemo(() => animalSlots(width, stageHeight), [stageHeight, width]);
+  const foodLayout = useMemo(() => sceneFoodSlots(width, stageHeight, resetToken), [resetToken, stageHeight, width]);
+  const foodSize = Math.max(48, Math.min(78, Math.round(Math.min(width, stageHeight) * 0.085)));
 
-  const say = (fa: string, en: string) => {
-    stop();
-    speakFarsiOnly(fa, () => {
-      if (!isFa) setTimeout(() => speakInLang(en, lang), 220);
-    });
-  };
+  // This screen has recorded Farsi for the six food names and for "afarin",
+  // and nothing else. Every other line here used to fall through to TTS, and
+  // with no Persian voice installed (iOS ships none) the device read Arabic
+  // script with an English voice — a garbled syllable over the top of the
+  // recorded word. Recorded audio only, and silence where there is none.
 
+  // Every food is a PanResponder, and onPanResponderGrant fires on each
+  // touch-start — a finger that lands, slips and re-grabs retriggers the clip
+  // with nothing to stop it, so the same word stutters. One clip per food per
+  // 600ms is well under how long any of them take to say.
+  const lastSpokenRef = useRef<{ id: string; at: number }>({ id: '', at: 0 });
   const speakFood = (food: Food) => {
+    const now = Date.now();
+    const last = lastSpokenRef.current;
+    if (last.id === food.id && now - last.at < 600) return;
+    lastSpokenRef.current = { id: food.id, at: now };
     void playFaAudio(`feed-animals/food/${food.id}` as Parameters<typeof playFaAudio>[0]);
   };
 
@@ -560,12 +702,6 @@ export default function FeedAnimalsGame() {
       if (inspectTimer.current) clearTimeout(inspectTimer.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (!done) {
-      say(`به ${currentAnimal.fa} غذا بده.`, `Feed the ${currentAnimal.en}.`);
-    }
-  }, [currentAnimal.id, done]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!done && fedIds.length === ANIMALS.length) {
@@ -587,48 +723,49 @@ export default function FeedAnimalsGame() {
     if (done) return;
     const matchedAnimal = ANIMAL_BY_FOOD_ID[food.id];
     const target = animalRects[matchedAnimal.id];
-    const hitRect =
-      matchedAnimal.id === 'monkey'
-        ? {
-            x: target.x - target.w * 0.28,
-            y: target.y - target.h * 0.18,
-            w: target.w * 1.72,
-            h: target.h * 1.95,
-          }
-        : matchedAnimal.id === 'giraffe'
-          ? {
-              x: target.x - target.w * 0.18,
-              y: target.y - target.h * 0.08,
-              w: target.w * 1.36,
-              h: target.h * 1.38,
-            }
-        : target;
     const localPoint = {
       x: point.x - stageOrigin.x,
       y: point.y - stageOrigin.y,
     };
-    const marginX = matchedAnimal.id === 'monkey' ? 0 : matchedAnimal.id === 'giraffe' ? Math.max(54, target.w * 0.62) : Math.max(36, target.w * 0.52);
-    const marginY = matchedAnimal.id === 'monkey' ? 0 : matchedAnimal.id === 'giraffe' ? Math.max(42, target.h * 0.52) : Math.max(30, target.h * 0.38);
-    const nearTarget =
-      matchedAnimal.id === 'monkey'
-        ? hit(hitRect, localPoint.x, localPoint.y)
-        : localPoint.x >= target.x - marginX &&
-          localPoint.x <= target.x + target.w + marginX &&
-          localPoint.y >= target.y - marginY &&
-          localPoint.y <= target.y + target.h + marginY;
+
+    let nearTarget: boolean;
+    if (matchedAnimal.id === 'monkey') {
+      // Unchanged — the monkey's box is still top-anchored to its hanging pose.
+      const hitRect = {
+        x: target.x - target.w * 0.28,
+        y: target.y - target.h * 0.18,
+        w: target.w * 1.72,
+        h: target.h * 1.95,
+      };
+      nearTarget = hit(hitRect, localPoint.x, localPoint.y);
+    } else {
+      // Every other animal now stands with its feet flush with the box's
+      // bottom edge (GROUND_FRACTION in animalSlots) and can render taller
+      // than the nominal box (giraffe especially) — so the drop target is
+      // an invisible circle around the animal's real visible body, generous
+      // enough that a food dropped anywhere near it (not just precisely on
+      // top of it) still registers as a hit.
+      const imageSize = animalImageSize(matchedAnimal.id, width, stageHeight);
+      const bodyCenterX = target.x + target.w * 0.5;
+      const bodyCenterY = target.y + target.h - imageSize * 0.5;
+      const radius = imageSize * 0.5 + Math.max(46, imageSize * 0.55);
+      const dx = localPoint.x - bodyCenterX;
+      const dy = localPoint.y - bodyCenterY;
+      nearTarget = dx * dx + dy * dy <= radius * radius;
+    }
 
     if (!nearTarget) {
       setWrong(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setTimeout(() => setWrong(false), 480);
-      say('این غذا برای این حیوان نیست.', 'That is not the right food.');
+      void playFaAudio(FA_AUDIO_KEYS.feedback.tryAgain);
       return;
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addStars(1);
     setFedIds(prev => (prev.includes(food.id) ? prev : [...prev, food.id]));
-    const fedPlacement = getFedPlacement(target, foodSize, matchedAnimal.id);
+    const fedPlacement = getFedPlacement(target, foodSize, matchedAnimal.id, width, stageHeight);
     setFedFoodByAnimal(prev => ({
       ...prev,
       [matchedAnimal.id]: food.id,
@@ -638,8 +775,9 @@ export default function FeedAnimalsGame() {
       from,
       to: { x: fedPlacement.x, y: fedPlacement.y },
     });
-    say(`${food.fa} برای ${matchedAnimal.fa}.`, `${food.en} for the ${matchedAnimal.en}.`);
+    speakFood(food);
   };
+
 
   const handleFlyDone = () => {
     setFly(null);
@@ -657,7 +795,7 @@ export default function FeedAnimalsGame() {
     }, 1200);
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    void playFaAudio(`feed-animals/food/${food.id}` as Parameters<typeof playFaAudio>[0]);
+    speakFood(food);
   };
 
   const resetGame = () => {
@@ -674,20 +812,13 @@ export default function FeedAnimalsGame() {
       giraffe: null,
     });
     setResetToken(prev => prev + 1);
-    say('بیا دوباره غذا بدهیم.', 'Let us feed them again.');
   };
 
   return (
     <View style={styles.root}>
-      <ImageBackground source={sceneSource} style={styles.scene} resizeMode="cover">
+      <ImageBackground source={sceneSource} style={styles.scene} imageStyle={styles.sceneImage} resizeMode="cover">
         <View style={styles.sceneWash} />
         <TopBar title="Feed Animals" titleFa="غذا بده" showClose dark topInset={10} onBack={() => reset({ name: 'Main', tab: 'Games' })} />
-        {/* Invisible header spacer — preserves stage origin so animal/food positions stay correct */}
-        <View pointerEvents="none" style={{ opacity: 0 }}>
-          <View style={styles.header}>
-            <Text style={styles.kicker}>{' '}</Text>
-          </View>
-        </View>
 
         <View ref={stageRef} style={styles.stage} onLayout={refreshStageOrigin}>
           {animalLayout.map((slot, index) => {
@@ -706,14 +837,14 @@ export default function FeedAnimalsGame() {
                   setAnimalRects(prev => ({ ...prev, [animal.id]: { x, y, w, h } }));
                 }}
               >
-                <AnimalSpot animal={animal} active={active} width={width} />
+                <AnimalSpot animal={animal} active={active} width={width} height={stageHeight} />
                 {fedFoodId ? (
                   <View
                     pointerEvents="none"
                     style={[
                       styles.animalFoodOverlay,
                       inspectedAnimalId === animal.id ? styles.animalFoodOverlayActive : null,
-                      getFedAnchor(animal.id, foodSize),
+                      getFedAnchor(animal.id, foodSize, width, stageHeight),
                     ]}
                   >
                     {inspectedAnimalId === animal.id ? (
@@ -733,7 +864,7 @@ export default function FeedAnimalsGame() {
           {animalLayout.map((slot, index) => {
             const animal = ANIMALS[index];
             if (!fedFoodByAnimal[animal.id]) return null;
-            const anchor = getFedAnchor(animal.id, foodSize);
+            const anchor = getFedAnchor(animal.id, foodSize, width, stageHeight);
             return (
               <TouchableOpacity
                 key={`${animal.id}-food-touch`}
@@ -798,6 +929,10 @@ export default function FeedAnimalsGame() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#DFF7FF' },
   scene: { flex: 1 },
+  // Without an explicit imageStyle, react-native-web can leave the background
+  // <img> unsized in some nested-flex layouts, so it falls back to its own
+  // huge natural pixel size and only a random cropped sliver shows.
+  sceneImage: { width: '100%', height: '100%' },
   sceneWash: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(40, 24, 12, 0.06)' },
   header: {
     alignSelf: 'center',
@@ -830,8 +965,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
+  animalSpotGrounded: {
+    justifyContent: 'flex-end',
+  },
   animalImage: {
     marginTop: -8,
+  },
+  animalImageGrounded: {
+    marginTop: 0,
   },
   animalImageActive: {
     transform: [{ scale: 1.05 }],
