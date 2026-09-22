@@ -139,10 +139,47 @@ const COUNTER_EDGE_FROM_BOTTOM_WIDE = 0.323;
 const COUNTER_EDGE_FROM_BOTTOM_STANDARD = 0.061;
 const EDGE_MARGIN = 4;
 
-function getCounterSlots(width: number, height: number, target: Rect, count: number, vessel: Recipe['vessel'], ingredientSize: number, maxLineY = Infinity): Slot[] {
+type CounterLayout = { slots: Slot[]; tileSize: number };
+
+function getCounterSlots(width: number, height: number, target: Rect, count: number, vessel: Recipe['vessel'], ingredientSize: number, maxLineY = Infinity): CounterLayout {
   const isLandscape = width > height;
   const cardW = Math.min(isLandscape ? 104 : 88, Math.max(68, Math.floor(width * 0.11)));
   const cardH = Math.min(isLandscape ? 92 : 80, Math.max(64, Math.floor(height * 0.09)));
+  const margin = 10;
+  const leftCount = Math.ceil(count / 2);
+  const rightCount = count - leftCount;
+
+  // FoodTile renders each tile in a touch target that's the WIDER of
+  // slot.w and (tileSize + 24), centred on the slot — so a fixed floor on
+  // the tile size (as this used to have, pinned to the caller's
+  // screen-derived ingredientSize) can demand more width than a 4-wide
+  // side has on the narrowest phones (confirmed: iPhone SE, the 7-step
+  // Tahchin recipe — 4 tiles at that floor need ~300px against ~240px
+  // available), which put every overflowing tile back on the same clamped
+  // edge. tileSize is resolved here — shrunk only as far as fitting both
+  // sides actually requires — and handed back so the caller renders the
+  // art at this SAME size instead of the original request; touchW then
+  // always equals what will actually be drawn, so it can shrink past
+  // cardW too when the grid, not just the gap, is what's too tight.
+  let gap = Math.max(4, Math.round(cardW * 0.06));
+  const bowlGap = gap;
+  let tileSize = ingredientSize;
+  let touchW = tileSize + 24;
+  const leftAvailable = Math.max(0, target.x - bowlGap - margin);
+  const rightAvailable = Math.max(0, width - (target.x + target.w) - bowlGap - margin);
+  const fits = (n: number, available: number) => n * touchW + Math.max(0, n - 1) * gap <= available;
+  const minTileSize = 30;
+  while (gap > 2 && (!fits(leftCount, leftAvailable) || !fits(rightCount, rightAvailable))) {
+    gap -= 1;
+  }
+  while (
+    tileSize > minTileSize &&
+    (!fits(leftCount, leftAvailable) || !fits(rightCount, rightAvailable))
+  ) {
+    tileSize -= 2;
+    touchW = tileSize + 24;
+  }
+
   // Anchored to the bowl's OWN rendered rect — bottom-aligned with the bowl
   // image (counterBowl is target.h * 1.044 tall) — rather than computed
   // independently via its own from-bottom fraction and extraDrop. The two
@@ -154,30 +191,31 @@ function getCounterSlots(width: number, height: number, target: Rect, count: num
   // FoodTile top-aligns the ingredient art (boxH tall) within a touch target
   // (touchHeight tall) centred on this slot, offset by `slot.h * 0.02` below
   // — mirror that arithmetic in reverse to land the art's own bottom edge,
-  // not just the slot's, on the bowl's.
-  const touchHeight = Math.max(cardH, ingredientSize + 42);
-  const boxH = ingredientSize + 14;
+  // not just the slot's, on the bowl's. Uses the resolved tileSize so this
+  // stays correct if the art ended up smaller than requested above.
+  const touchHeight = Math.max(cardH, tileSize + 42);
+  const boxH = tileSize + 14;
   const bowlBottom = target.y + target.h * 1.006;
   const lineY = clamp(bowlBottom - cardH * 0.02 + (touchHeight - cardH) / 2 - boxH, height * 0.08, Math.min(height - cardH - 8, maxLineY));
-  const gap = Math.max(4, Math.round(cardW * 0.06));
-  const leftCount = Math.ceil(count / 2);
-  const rightCount = count - leftCount;
-  const leftStart = target.x - gap - leftCount * cardW - Math.max(0, leftCount - 1) * gap;
-  const rightStart = target.x + target.w + gap;
 
-  return Array.from({ length: count }, (_unused, index) => {
+  const leftStart = target.x - bowlGap - leftCount * touchW - Math.max(0, leftCount - 1) * gap;
+  const rightStart = target.x + target.w + bowlGap;
+
+  const slots = Array.from({ length: count }, (_unused, index) => {
     const isLeft = index < leftCount;
     const sideIndex = isLeft ? index : index - leftCount;
     const x = isLeft
-      ? leftStart + sideIndex * (cardW + gap)
-      : rightStart + sideIndex * (cardW + gap);
+      ? leftStart + sideIndex * (touchW + gap)
+      : rightStart + sideIndex * (touchW + gap);
     return {
-      x: clamp(x, 10, width - cardW - 10),
+      x: clamp(x, margin, width - touchW - margin),
       y: lineY + cardH * 0.02,
-      w: cardW,
+      w: touchW,
       h: cardH,
     };
   });
+
+  return { slots, tileSize };
 }
 
 function getTargetRect(width: number, height: number, sceneH: number, recipe: Recipe, targetFromBottom: number, extraDrop = 0): Rect {
@@ -618,7 +656,11 @@ export default function CookingGame() {
   const ingredientCardH = Math.min(isLandscapeScene ? 92 : 80, Math.max(64, Math.floor(height * 0.09)));
   const nextPillTopLocal = (height - 18 - 44) - (headerHeight + stageMarginTop);
   const maxIngredientLineY = nextPillTopLocal - ingredientCardH * 1.02 - 8;
-  const slots = useMemo(() => getCounterSlots(width, height, target, recipe.steps.length, recipe.vessel, ingredientSize, maxIngredientLineY), [height, recipe.steps.length, recipe.vessel, target, width, ingredientSize, maxIngredientLineY]);
+  // tileSize is ingredientSize as requested above, EXCEPT when a recipe has
+  // more steps than the screen has room for at that size (see
+  // getCounterSlots) — every ingredient-sized render below uses this
+  // resolved value so a shrunk slot and its art never disagree.
+  const { slots, tileSize } = useMemo(() => getCounterSlots(width, height, target, recipe.steps.length, recipe.vessel, ingredientSize, maxIngredientLineY), [height, recipe.steps.length, recipe.vessel, target, width, ingredientSize, maxIngredientLineY]);
 
   const say = (fa: string, en: string) => {
     stop();
@@ -715,12 +757,12 @@ export default function CookingGame() {
     setFly({
       ingredient,
       from: {
-        x: Math.max(0, localPoint.x - ingredientSize / 2),
-        y: Math.max(0, localPoint.y - ingredientSize / 2),
+        x: Math.max(0, localPoint.x - tileSize / 2),
+        y: Math.max(0, localPoint.y - tileSize / 2),
       },
       to: {
-        x: target.x + target.w * 0.58 - ingredientSize / 2,
-        y: target.y + target.h * 0.28 - ingredientSize / 2,
+        x: target.x + target.w * 0.58 - tileSize / 2,
+        y: target.y + target.h * 0.28 - tileSize / 2,
       },
     });
 
@@ -876,7 +918,7 @@ export default function CookingGame() {
                 key={ingredient.id}
                 ingredient={ingredient}
                 slot={slot}
-                size={ingredientSize}
+                size={tileSize}
                 disabled={disabled}
                 onAttempt={handleDrop}
                 resetToken={resetToken}
@@ -889,7 +931,7 @@ export default function CookingGame() {
               ingredient={fly.ingredient}
               from={fly.from}
               to={fly.to}
-              size={ingredientSize}
+              size={tileSize}
               onDone={handleFlyDone}
             />
           ) : null}
@@ -899,7 +941,7 @@ export default function CookingGame() {
               key={bowlAdd.id}
               target={target}
               color={bowlAdd.color}
-              size={ingredientSize}
+              size={tileSize}
               onDone={() => setBowlAdd(null)}
             />
           ) : null}

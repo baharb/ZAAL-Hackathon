@@ -499,10 +499,17 @@ export default function ColoringScreen() {
   // between sibling views (the crayon rail vs. the canvas), causing the
   // reported x/y to suddenly jump by the offset between those views'
   // coordinate spaces. Reported as a stray line appearing near the canvas
-  // edge, and as the drawn point not tracking the finger. gestureState's
-  // x0/y0/moveX/moveY are screen-absolute and never jump; stageOrigin
-  // converts that to a coordinate local to paintStage, measured once per
-  // layout via measureInWindow (paintStage doesn't move once laid out).
+  // edge, and as the drawn point not tracking the finger. nativeEvent's
+  // pageX/pageY are screen-absolute and never jump; stageOrigin converts
+  // that to a coordinate local to paintStage, measured once per layout via
+  // measureInWindow (paintStage doesn't move once laid out).
+  // NB: gestureState.x0/y0/moveX/moveY are DOCUMENTED as screen-absolute
+  // too, and behave that way on iOS, but on Android they can come back
+  // relative to whichever nested view first claimed the touch instead of
+  // the window (a long-standing RN/Android PanResponder inconsistency) —
+  // reported as the pointer tracking correctly on iPhone but drifting on
+  // Android. pageX/pageY don't have that platform split, so every handler
+  // below reads from evt.nativeEvent instead of gestureState.
   const stageRef = useRef<View>(null);
   const stageOrigin = useRef({ x: 0, y: 0 });
   // Only ever holds an id (or null) — never a stroke object. Earlier
@@ -707,28 +714,28 @@ export default function ColoringScreen() {
         // responder for a touch a child didn't already want, which is the
         // standard-recommended shape for a PanResponder that wraps touchable
         // children instead of covering the whole screen.
-        onStartShouldSetPanResponder: (evt, gestureState) => {
-          const x = gestureState.x0 - stageOrigin.current.x;
-          const y = gestureState.y0 - stageOrigin.current.y;
+        onStartShouldSetPanResponder: evt => {
+          const x = evt.nativeEvent.pageX - stageOrigin.current.x;
+          const y = evt.nativeEvent.pageY - stageOrigin.current.y;
           return mode === 'paint' && isPaintablePoint(x, y) && !isControlArea(x, y);
         },
-        onMoveShouldSetPanResponder: (evt, gestureState) => {
-          const x = gestureState.moveX - stageOrigin.current.x;
-          const y = gestureState.moveY - stageOrigin.current.y;
+        onMoveShouldSetPanResponder: evt => {
+          const x = evt.nativeEvent.pageX - stageOrigin.current.x;
+          const y = evt.nativeEvent.pageY - stageOrigin.current.y;
           return mode === 'paint' && isPaintablePoint(x, y) && !isControlArea(x, y);
         },
-        onPanResponderGrant: (evt, gestureState) => {
-          const x = gestureState.x0 - stageOrigin.current.x;
-          const y = gestureState.y0 - stageOrigin.current.y;
+        onPanResponderGrant: evt => {
+          const x = evt.nativeEvent.pageX - stageOrigin.current.x;
+          const y = evt.nativeEvent.pageY - stageOrigin.current.y;
           if (isControlArea(x, y) || !isPaintablePoint(x, y)) {
             return;
           }
           activeStrokeId.current = null;
           paintAt(x, y);
         },
-        onPanResponderMove: (evt, gestureState) => {
-          const x = gestureState.moveX - stageOrigin.current.x;
-          const y = gestureState.moveY - stageOrigin.current.y;
+        onPanResponderMove: evt => {
+          const x = evt.nativeEvent.pageX - stageOrigin.current.x;
+          const y = evt.nativeEvent.pageY - stageOrigin.current.y;
           if (isControlArea(x, y) || !isPaintablePoint(x, y)) {
             return;
           }
