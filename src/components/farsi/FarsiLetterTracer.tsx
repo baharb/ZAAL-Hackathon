@@ -32,11 +32,12 @@ type Props = {
   guideReplayToken: number;
   onComplete?: () => void;
   onTryAgain?: () => void;
-  playLetterSound?: (letterId: string) => void;
   playSuccessSound?: () => void;
   playTryAgainSound?: () => void;
   tolerance?: number;
   autoAdvanceDelayMs?: number;
+  /** Mute the intro narration (letter name, then "start from the green point"). Defaults to true. */
+  soundOn?: boolean;
   /** When true: on success, call onComplete immediately with no audio/celebration (parent owns the sequence) */
   immediateComplete?: boolean;
 };
@@ -63,6 +64,18 @@ const GUIDE_W     = 10;
 const POINT_MARKER_SIZE = 46;
 const POINT_MARKER_TIP_ANCHOR_Y = 0.5;
 const COMPLETE_PROGRESS = 0.95;
+const GUIDE_REPEATS = 2;
+// Another 25% slower on top of the first 25% slowdown (1.25 × 1.25), vs. the
+// original per-unit pace (was 4.2ms / viewBox unit, 520-1700ms clamp).
+const GUIDE_SLOWDOWN    = 1.25 * 1.25;
+const GUIDE_MS_PER_UNIT = 4.2 * GUIDE_SLOWDOWN;
+const GUIDE_MIN_MS      = 520  * GUIDE_SLOWDOWN;
+const GUIDE_MAX_MS      = 1700 * GUIDE_SLOWDOWN;
+// Safety net for the narration audio the intro sequence waits on before it
+// unlocks tracing (same idea as SplashScreen's timeout fallback): a clip that
+// fails to fire its "finished" event on a given device must not strand the
+// child forever in a non-interactive guide phase.
+const NARRATION_TIMEOUT_MS = 4000;
 const AnimPath    = Animated.createAnimatedComponent(Path);
 const TRACE_IMAGE_ID: Record<string, string> = {
   haa: 'he-jimi',
@@ -200,12 +213,12 @@ export default function FarsiLetterTracer({
   guideReplayToken,
   onComplete,
   onTryAgain,
-  playLetterSound,
   playSuccessSound,
   playTryAgainSound,
   tolerance = 32,
   autoAdvanceDelayMs = 0,
   immediateComplete = false,
+  soundOn = true,
 }: Props) {
   const vb = parseViewBox(letter.viewBox);
   const scaleX = boardSize / vb.width;
@@ -281,7 +294,7 @@ export default function FarsiLetterTracer({
     return () => loop.stop();
   }, [pulse]);
 
-  // ── Guide dash animation loop ──
+  // ── Guide dash animation loop (flowing dashes, runs for the whole guide phase) ──
   const startGuideAnim = () => {
     guideLoop.current?.stop();
     guideAnim.setValue(0);
@@ -296,17 +309,112 @@ export default function FarsiLetterTracer({
     guideLoop.current.start();
   };
 
-  // ── Restart guide on letter change or replay token ──
+  // Animates the pencil dot once along every stroke and resolves when the
+  // pass finishes (or immediately if guideCancel fires mid-pass).
+  function runGuidePass(): Promise<void> {
+    return new Promise(resolve => {
+      setGuideTick({ si: 0, progress: 0 });
+      // Cap raised from 1100 so longer merged strokes (e.g. sin/shin's single
+      // continuous path) keep the same per-unit pace as everything else
+      // instead of the guide dot suddenly zipping through in ~1s.
+      const durations = strokes.map(st => clamp(polylineLength(st.points) * GUIDE_MS_PER_UNIT, GUIDE_MIN_MS, GUIDE_MAX_MS));
+      let si = 0;
+      let tStart = Date.now();
+
+      const tick = () => {
+        if (guideCancel.current) { resolve(); return; }
+        const st = strokes[si];
+        if (!st) { resolve(); return; }
+        const dur = durations[si] ?? GUIDE_MIN_MS;
+        const prog = clamp((Date.now() - tStart) / dur, 0, 1);
+        setGuideTick({ si, progress: prog });
+        if (prog >= 1) {
+          si++;
+          tStart = Date.now();
+          setTimeout(tick, 80);
+        } else {
+          requestAnimationFrame(tick);
+        }
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+
+  // ── Intro sequence on letter change or replay token ──
+  // Order: say the letter name → show the guide path twice → invite the
+  // child to start. Tracing only becomes interactive (phase 'trace') once
+  // every step above has actually finished, so a stray touch during the
+  // narration can never be mistaken for the child having traced the letter.
   useEffect(() => {
-    playLetterSound?.(letter.id);
-    restartGuide();
+    guideCancel.current = true;
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    guideLoop.current?.stop();
+
+    setPhase('guide');
+    setActiveStroke(0);
+    setStrokeProg(strokes.map(() => 0));
+    setCompletedDots([]);
+    setSuccess(false);
+    setShowCeleb(false);
+    setGuideTick({ si: 0, progress: 0 });
+    strokeArmed.current = false;
+    pointerActive.current = false;
+
+    guideCancel.current = false;
+    startGuideAnim();
+
+    let cancelled = false;
+    const pause = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+    const withTimeout = (p: Promise<unknown>) => Promise.race([p, pause(NARRATION_TIMEOUT_MS)]);
+
+    const run = async () => {
+      const nameKey = makeAlphabetAudioKey('name', letter.id);
+      const nameFallback = FALLBACK_LETTER_NAME_FA[letter.id] ?? letter.letter;
+
+      if (soundOn) {
+        await withTimeout(playFaAudioOrSpeak(nameKey, nameFallback, { awaitFinish: true }));
+      } else {
+        await pause(600);
+      }
+      if (cancelled || guideCancel.current) return;
+
+      for (let i = 0; i < GUIDE_REPEATS; i++) {
+        await runGuidePass();
+        if (cancelled || guideCancel.current) return;
+      }
+
+      // Send the pencil back to the first point of the path — the green dot —
+      // before inviting the child to start, so "start from the green point"
+      // is said while it's actually sitting there, not wherever the last
+      // guide pass happened to end.
+      setGuideTick({ si: 0, progress: 0 });
+      if (cancelled || guideCancel.current) return;
+      await pause(300);
+      if (cancelled || guideCancel.current) return;
+
+      // Activate tracing immediately — the child can start dragging the green
+      // point the instant it appears. "Start from the green point" plays
+      // alongside that, not as a gate in front of it.
+      guideLoop.current?.stop();
+      setStrokeProg(strokes.map(() => 0));
+      setActiveStroke(0);
+      strokeArmed.current = false;
+      setPhase('trace');
+
+      if (soundOn) {
+        void playFaAudio(FA_AUDIO_KEYS.guidance.startHere);
+      }
+    };
+    void run();
+
     return () => {
+      cancelled = true;
       guideCancel.current = true;
       if (advanceTimer.current) clearTimeout(advanceTimer.current);
       guideLoop.current?.stop();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [letter.id, guideReplayToken]);
+  }, [letter.id, guideReplayToken, soundOn]);
 
   // ── Celebration on success ──
   useEffect(() => {
@@ -344,58 +452,6 @@ export default function FarsiLetterTracer({
     void run();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [success]);
-
-  function restartGuide() {
-    guideCancel.current = true;
-    if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    guideLoop.current?.stop();
-
-    setPhase('guide');
-    setActiveStroke(0);
-    setStrokeProg(strokes.map(() => 0));
-    setCompletedDots([]);
-    setSuccess(false);
-    setShowCeleb(false);
-    setGuideTick({ si: 0, progress: 0 });
-    strokeArmed.current = false;
-    pointerActive.current = false;
-
-    guideCancel.current = false;
-    startGuideAnim();
-
-    // Animate the pencil dot across the path. Cap raised from 1100 so longer
-    // merged strokes (e.g. sin/shin's single continuous path) keep the same
-    // per-unit pace as everything else instead of the guide dot suddenly
-    // zipping through in ~1s and being hard to track.
-    const durations = strokes.map(st => clamp(polylineLength(st.points) * 4.2, 520, 1700));
-    let si = 0;
-    let tStart = Date.now();
-
-    const tick = () => {
-      if (guideCancel.current) return;
-      const st = strokes[si];
-      if (!st) {
-        guideCancel.current = true;
-        setPhase('trace');
-        setGuideTick({ si: 0, progress: 0 });
-        setStrokeProg(strokes.map(() => 0));
-        setActiveStroke(0);
-        strokeArmed.current = false;
-        return;
-      }
-      const dur = durations[si] ?? 1000;
-      const prog = clamp((Date.now() - tStart) / dur, 0, 1);
-      setGuideTick({ si, progress: prog });
-      if (prog >= 1) {
-        si++;
-        tStart = Date.now();
-        setTimeout(tick, 80);
-      } else {
-        requestAnimationFrame(tick);
-      }
-    };
-    requestAnimationFrame(tick);
-  }
 
   function finishLetter() {
     if (success) return;

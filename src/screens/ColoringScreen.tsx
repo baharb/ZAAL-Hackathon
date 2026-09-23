@@ -499,18 +499,29 @@ export default function ColoringScreen() {
   // between sibling views (the crayon rail vs. the canvas), causing the
   // reported x/y to suddenly jump by the offset between those views'
   // coordinate spaces. Reported as a stray line appearing near the canvas
-  // edge, and as the drawn point not tracking the finger. nativeEvent's
-  // pageX/pageY are screen-absolute and never jump; stageOrigin converts
-  // that to a coordinate local to paintStage, measured once per layout via
-  // measureInWindow (paintStage doesn't move once laid out).
-  // NB: gestureState.x0/y0/moveX/moveY are DOCUMENTED as screen-absolute
-  // too, and behave that way on iOS, but on Android they can come back
-  // relative to whichever nested view first claimed the touch instead of
-  // the window (a long-standing RN/Android PanResponder inconsistency) —
-  // reported as the pointer tracking correctly on iPhone but drifting on
-  // Android. pageX/pageY don't have that platform split, so every handler
-  // below reads from evt.nativeEvent instead of gestureState.
-  const stageRef = useRef<View>(null);
+  // edge, and as the drawn point not tracking the finger. pageX/pageY are
+  // screen-absolute and never jump, so onPanResponderMove (below) uses
+  // those instead — converted to a paintStage-local coordinate via
+  // stageOrigin. gestureState.x0/y0/moveX/moveY are DOCUMENTED as
+  // screen-absolute too, and behave that way on iOS, but on Android they
+  // can come back relative to whichever nested view first claimed the
+  // touch instead of the window (a long-standing RN/Android PanResponder
+  // inconsistency) — reported as the pointer tracking correctly on iPhone
+  // but drifting on Android. pageX/pageY don't have that platform split.
+  //
+  // stageOrigin itself is NOT measured via measureInWindow. Confirmed live
+  // on an edge-to-edge Android device (this app has edgeToEdgeEnabled):
+  // measureInWindow's y for paintStage and pageY's own origin disagree by
+  // exactly the status bar's height (45px measured, 44-45px is what
+  // `adb shell dumpsys window displays` reports for statusBars on that
+  // device) — a fixed, deterministic mismatch between the two APIs'
+  // coordinate spaces under edge-to-edge, not a timing/staleness issue (it
+  // reproduced identically however soon after mount it was measured).
+  // Instead, stageOrigin is CALIBRATED from a real touch: at gesture start,
+  // locationX/Y (reliable at touch-DOWN, before any jump can happen) and
+  // pageX/Y are read from the very same event, so their difference is each
+  // API's own origin relative to the other — correct regardless of what
+  // either one measures from independently.
   const stageOrigin = useRef({ x: 0, y: 0 });
   // Only ever holds an id (or null) — never a stroke object. Earlier
   // versions of this code kept the in-progress stroke as a mutable object on
@@ -715,8 +726,11 @@ export default function ColoringScreen() {
         // standard-recommended shape for a PanResponder that wraps touchable
         // children instead of covering the whole screen.
         onStartShouldSetPanResponder: evt => {
-          const x = evt.nativeEvent.pageX - stageOrigin.current.x;
-          const y = evt.nativeEvent.pageY - stageOrigin.current.y;
+          // locationX/Y at touch-DOWN is reliable (the view-jump bug this
+          // screen works around only happens mid-gesture, crossing between
+          // sibling views during a MOVE) and needs no calibration, unlike
+          // pageX/Y which needs stageOrigin — see the field's own comment.
+          const { locationX: x, locationY: y } = evt.nativeEvent;
           return mode === 'paint' && isPaintablePoint(x, y) && !isControlArea(x, y);
         },
         onMoveShouldSetPanResponder: evt => {
@@ -725,8 +739,14 @@ export default function ColoringScreen() {
           return mode === 'paint' && isPaintablePoint(x, y) && !isControlArea(x, y);
         },
         onPanResponderGrant: evt => {
-          const x = evt.nativeEvent.pageX - stageOrigin.current.x;
-          const y = evt.nativeEvent.pageY - stageOrigin.current.y;
+          const { locationX: x, locationY: y, pageX, pageY } = evt.nativeEvent;
+          // Calibrate stageOrigin from this same touch: locationX/Y and
+          // pageX/Y both describe the same physical point, so their
+          // difference is pageX/Y's origin relative to paintStage —
+          // correct by construction, whatever either API measures from
+          // internally. Used by onPanResponderMove for the rest of this
+          // gesture, where locationX/Y itself can no longer be trusted.
+          stageOrigin.current = { x: pageX - x, y: pageY - y };
           if (isControlArea(x, y) || !isPaintablePoint(x, y)) {
             return;
           }
@@ -785,7 +805,6 @@ export default function ColoringScreen() {
 
       <View style={styles.paintStageOuter}>
         <View
-          ref={stageRef}
           style={styles.paintStage}
           {...pan.panHandlers}
           onLayout={event => {
@@ -793,13 +812,6 @@ export default function ColoringScreen() {
             if (w > 0 && h > 0) {
               setStageSize({ w, h });
             }
-            // Re-measure on every layout pass, not just once — orientation
-            // changes, keyboard, or anything else that moves this view on
-            // screen would otherwise leave stageOrigin stale and every touch
-            // coordinate silently wrong.
-            stageRef.current?.measureInWindow((x, y) => {
-              stageOrigin.current = { x, y };
-            });
           }}
         >
           <View

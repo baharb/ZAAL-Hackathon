@@ -154,7 +154,6 @@ export default function ToothBrushGame() {
   const lilaRef = useRef<View>(null);
   const gameAreaRef = useRef<any>(null);
   const brushStartedRef = useRef(false);
-  const brushCuePlayedRef = useRef(false);
   const brushTouchStartCleanCountRef = useRef(0);
   const brushIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const brushIdleCuePlayedRef = useRef(false);
@@ -241,7 +240,7 @@ export default function ToothBrushGame() {
   useEffect(() => {
     void stopFaAudio();
     const id = setTimeout(() => {
-      void playFaAudioSequence([FA_AUDIO_KEYS.toothbrush.brushTeeth, FA_AUDIO_KEYS.toothbrush.brushLilaTeeth], 110);
+      void playFaAudioSequence([FA_AUDIO_KEYS.toothbrush.brushLilaTeeth], 110);
     }, 450);
     return () => clearTimeout(id);
   }, [isFa, lang]);
@@ -472,10 +471,6 @@ export default function ToothBrushGame() {
     onMoveShouldSetPanResponder: () => !doneRef.current,
     onPanResponderGrant: e => {
       setBrushing(true);
-      if (!brushCuePlayedRef.current) {
-        brushCuePlayedRef.current = true;
-        void playFaAudioSequence([FA_AUDIO_KEYS.toothbrush.brushTeeth], 100);
-      }
       const pageX = e.nativeEvent.pageX;
       const pageY = e.nativeEvent.pageY;
       brushTouchStartCleanCountRef.current = cleanedRef.current.filter(Boolean).length;
@@ -500,7 +495,6 @@ export default function ToothBrushGame() {
     cleanedRef.current = empty;
     doneRef.current = false;
     brushStartedRef.current = false;
-    brushCuePlayedRef.current = false;
     brushTouchStartCleanCountRef.current = 0;
     brushIdleCuePlayedRef.current = false;
     clearBrushIdleTimer();

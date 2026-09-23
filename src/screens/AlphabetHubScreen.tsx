@@ -26,7 +26,7 @@ export default function AlphabetHubScreen() {
           {isFa ? 'حرف‌ها را تمرین کن' : 'Practice letters'}
         </Text>
 
-        <View style={[styles.grid, { columnGap: gap, rowGap: gap }]}>
+        <View style={[styles.grid, styles.gridRtl, { columnGap: gap, rowGap: gap }]}>
           {FARSI_LETTERS.map(letter => (
             <TouchableOpacity
               key={letter.id}
@@ -53,6 +53,9 @@ const styles = StyleSheet.create({
   scroll: { paddingBottom: 36 },
   sectionTitle: { color: '#FFFFFF' },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  // Alef starts at the right and the alphabet reads right-to-left, same as the
+  // Persian letters it lists — independent of the app's own UI language.
+  gridRtl: { flexDirection: 'row-reverse' },
   card: { backgroundColor: '#AEEBFF', overflow: 'hidden', borderWidth: 4, borderColor: '#FFFFFF', shadowColor: '#170736', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 5 },
   thumb: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   letterGlyph: { fontFamily: ff('fa', 'black'), color: '#FFFFFF' },

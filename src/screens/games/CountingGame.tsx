@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import TopBar from '../../components/TopBar';
@@ -6,7 +6,7 @@ import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAs
 import { characterAssets } from '../../assets/characterAssets';
 import { AppContext } from '../../store/AppContext';
 import { useNav } from '../../store/NavContext';
-import { getCountingNumberAudioKey, playFaAudio, speakWithGeneratedVoice } from '../../utils/faAudio';
+import { FA_AUDIO_KEYS, getCountingNumberAudioKey, playFaAudioSequence, playFaAudio, speakWithGeneratedVoice, stopFaAudio } from '../../utils/faAudio';
 import { C } from '../../theme/colors';
 import { dir, ff } from '../../theme/fonts';
 
@@ -66,6 +66,14 @@ export default function CountingGame() {
   // taller than the whole screen). Scale everything below the tablet
   // breakpoint; untouched above it.
   const heightScale = Math.min(1, height / 620);
+
+  useEffect(() => {
+    void stopFaAudio();
+    const id = setTimeout(() => {
+      void playFaAudioSequence([FA_AUDIO_KEYS.counting.info], 110);
+    }, 450);
+    return () => clearTimeout(id);
+  }, []);
 
   const tapItem = (index: number) => {
     if (countedItems.includes(index)) return;

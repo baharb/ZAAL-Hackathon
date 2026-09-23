@@ -19,7 +19,7 @@ import { useLandscapeDimensions } from '../../hooks/useLandscapeDimensions';
 import TopBar, { topBarHeight } from '../../components/TopBar';
 import { dir, ff } from '../../theme/fonts';
 import { neliWorldAssets } from '../../assets/neliWorldAssets';
-import { FA_AUDIO_KEYS, playFaAudio } from '../../utils/faAudio';
+import { FA_AUDIO_KEYS, playFaAudio, playFaAudioSequence, stopFaAudio } from '../../utils/faAudio';
 import PopperCelebration from '../../components/PopperCelebration';
 import GameEndOverlay from '../../components/GameEndOverlay';
 
@@ -701,6 +701,14 @@ export default function FeedAnimalsGame() {
     return () => {
       if (inspectTimer.current) clearTimeout(inspectTimer.current);
     };
+  }, []);
+
+  useEffect(() => {
+    void stopFaAudio();
+    const id = setTimeout(() => {
+      void playFaAudioSequence([FA_AUDIO_KEYS.feedAnimals.info], 110);
+    }, 450);
+    return () => clearTimeout(id);
   }, []);
 
   useEffect(() => {

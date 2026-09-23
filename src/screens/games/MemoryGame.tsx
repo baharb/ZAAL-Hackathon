@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { FA_AUDIO_KEYS, FALLBACK_LETTER_NAME_FA, makeAlphabetAudioKey, playFaAudio, playFaAudioOrSpeak } from '../../utils/faAudio';
+import { FA_AUDIO_KEYS, FALLBACK_LETTER_NAME_FA, makeAlphabetAudioKey, playFaAudio, playFaAudioOrSpeak, stopFaAudio } from '../../utils/faAudio';
 import * as Haptics from 'expo-haptics';
 import { AppContext } from '../../store/AppContext';
 import { FA, ff } from '../../theme/fonts';
@@ -311,6 +311,14 @@ export default function MemoryGame() {
   useEffect(() => {
     cardsRef.current = cards;
   }, [cards]);
+
+  useEffect(() => {
+    void stopFaAudio();
+    const id = setTimeout(() => {
+      void playFaAudio('memory/info', { awaitFinish: true });
+    }, 450);
+    return () => clearTimeout(id);
+  }, []);
 
   useEffect(() => {
     if (!allComplete) return;

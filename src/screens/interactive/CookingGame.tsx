@@ -692,7 +692,7 @@ export default function CookingGame() {
       say(`بعدی: ${current.fa}`, `Next: ${current.en}`);
     }
   };
-  // Repeats the current ingredient's name every 6s of inactivity so a child
+  // Repeats the current ingredient's name every 17s of inactivity so a child
   // who wandered off or forgot what's next gets reminded, until they move on
   // (step/resetToken change, handled by the effect below) or finish (done).
   const scheduleIdleReminder = () => {
@@ -701,7 +701,7 @@ export default function CookingGame() {
       if (doneRef.current) return;
       announceCurrentIngredient();
       scheduleIdleReminder();
-    }, 6000);
+    }, 17000);
   };
 
   useEffect(() => {
@@ -716,6 +716,15 @@ export default function CookingGame() {
           await new Promise<void>(resolve => speakFarsiOnly(recipe.fa, resolve));
           if (cancelled) return;
         }
+        // A gap is required here: replace()-ing the shared player onto the
+        // info clip immediately after the name clip's own didJustFinish can
+        // fire a stray leftover status update that resolves THIS awaitFinish
+        // instantly (observed: ~12ms, not the clip's real ~5s) — the same
+        // race playFaAudioSequence's gapMs already guards against elsewhere.
+        await new Promise(resolve => setTimeout(resolve, 150));
+        if (cancelled) return;
+        await playFaAudio('ingredients/info-cook', { awaitFinish: true });
+        if (cancelled) return;
       }
       if (cancelled) return;
       announceCurrentIngredient();

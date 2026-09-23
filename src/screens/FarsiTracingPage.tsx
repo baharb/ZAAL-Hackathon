@@ -19,7 +19,7 @@ import { C } from '../theme/colors';
 export default function FarsiTracingPage() {
   const { width, height } = useWindowDimensions();
   const { lang } = useContext(AppContext);
-  const { screen, goBack, navigate } = useNav();
+  const { screen, goBack } = useNav();
 
   // Single-letter mode: launched from a specific letter tile in GamesScreen
   const isSingleMode = screen.name === 'InteractiveFarsiTrace' && !!screen.letterId;
@@ -68,19 +68,6 @@ export default function FarsiTracingPage() {
     setShowLetterReveal(false);
     setShowCelebration(false);
     setGuideToken(token => token + 1);
-  };
-
-  const playLetterSound = async (letterId: string) => {
-    if (!soundOn) return;
-    try {
-      await playFaAudio(FA_AUDIO_KEYS.guidance.startHere, { awaitFinish: true });
-      await new Promise<void>(r => setTimeout(r, 180));
-      const nameLetter = FARSI_LETTERS.find(l => l.id === letterId);
-      await playFaAudioOrSpeak(
-        makeAlphabetAudioKey('name', letterId),
-        FALLBACK_LETTER_NAME_FA[letterId] ?? nameLetter?.letter ?? '',
-      );
-    } catch {}
   };
 
   const playSuccessSound = async () => {
@@ -164,7 +151,16 @@ export default function FarsiTracingPage() {
       }
 
       if (!isMounted.current) return;
-      // Phase 3 — celebration + آفرین (starts immediately, no extra pause)
+      // A gap is required here: replace()-ing the shared player onto آفرین
+      // immediately after the example word's own didJustFinish can fire a
+      // stray leftover status update that resolves it near-instantly
+      // (observed: ~12ms, not the clip's real length) — silencing the voice
+      // while the celebration still runs its full 3.2s, which is exactly
+      // the "not together" feeling reported. Same race as playFaAudioSequence's
+      // gapMs guards against elsewhere.
+      await pause(150);
+      if (!isMounted.current) return;
+      // Phase 3 — celebration + آفرین, fired together
       setShowCelebration(true);
       if (soundOn) void playFaAudio(FA_AUDIO_KEYS.feedback.afarin);
     };
@@ -201,9 +197,9 @@ export default function FarsiTracingPage() {
                 guideReplayToken={guideToken}
                 onComplete={handleComplete}
                 onTryAgain={playTryAgainSound}
-                playLetterSound={playLetterSound}
                 playSuccessSound={playSuccessSound}
                 playTryAgainSound={playTryAgainSound}
+                soundOn={soundOn}
                 immediateComplete
               />
             ) : (
@@ -228,7 +224,7 @@ export default function FarsiTracingPage() {
         />
         {showEndOverlay && (
           <EndOverlay
-            onGo={() => { setShowEndOverlay(false); navigate({ name: 'Main' }); }}
+            onGo={() => { setShowEndOverlay(false); goBack(); }}
           />
         )}
       </View>
@@ -283,9 +279,9 @@ export default function FarsiTracingPage() {
               guideReplayToken={guideToken}
               onComplete={() => setLetterComplete(true)}
               onTryAgain={playTryAgainSound}
-              playLetterSound={playLetterSound}
               playSuccessSound={playSuccessSound}
               playTryAgainSound={playTryAgainSound}
+              soundOn={soundOn}
             />
           </View>
 
@@ -333,6 +329,15 @@ const RING_C = 2 * Math.PI * RING_R;
 
 function EndOverlay({ onGo }: { onGo: () => void }) {
   const progress = useRef(new Animated.Value(0)).current;
+  // Guards against the 5s auto-advance and a manual tap on the button both
+  // firing onGo — without this, a tap landing right as the countdown ends
+  // calls goBack() twice, popping one screen further than intended.
+  const firedRef = useRef(false);
+  const fireOnGo = () => {
+    if (firedRef.current) return;
+    firedRef.current = true;
+    onGo();
+  };
 
   useEffect(() => {
     Animated.timing(progress, {
@@ -341,7 +346,7 @@ function EndOverlay({ onGo }: { onGo: () => void }) {
       easing: Easing.linear,
       useNativeDriver: false,   // SVG strokeDashoffset can't use native driver
     }).start(({ finished }) => {
-      if (finished) onGo();
+      if (finished) fireOnGo();
     });
     return () => progress.stopAnimation();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -375,7 +380,7 @@ function EndOverlay({ onGo }: { onGo: () => void }) {
           />
         </Svg>
 
-        <TouchableOpacity style={endStyles.btn} onPress={onGo} activeOpacity={0.82}>
+        <TouchableOpacity style={endStyles.btn} onPress={fireOnGo} activeOpacity={0.82}>
           <Text style={endStyles.btnText}>بریم بازی دیگه! 🎮</Text>
         </TouchableOpacity>
       </View>

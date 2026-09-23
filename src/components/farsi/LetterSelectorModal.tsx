@@ -73,7 +73,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   grid: {
-    flexDirection: 'row',
+    // Alef starts at the right and the alphabet reads right-to-left, same as
+    // the AlphabetHub grid this mirrors.
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 10,
     paddingBottom: 12,
