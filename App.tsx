@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { usePreventScreenCapture } from 'expo-screen-capture';
 import * as NavigationBar from 'expo-navigation-bar';
+import { setAudioModeAsync } from 'expo-audio';
 import {
   Vazirmatn_400Regular,
   Vazirmatn_500Medium,
@@ -199,6 +200,17 @@ export default function App() {
     if (Platform.OS !== 'android') return;
     NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => {});
     NavigationBar.setVisibilityAsync('hidden').catch(() => {});
+  }, []);
+
+  // Nothing in this app ever configured the iOS audio session, so it ran on
+  // whatever expo-audio's undocumented default is — which does not
+  // guarantee playback continues when the device's physical silent switch
+  // is on. That's a very plausible reason the splash screen's "yay" cheer
+  // (the very first sound the app ever plays, before any other clip has
+  // established the session) went silent on iPhone. This has to run once,
+  // early, before anything tries to play.
+  React.useEffect(() => {
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
   }, []);
 
   const [fontsLoaded] = useFonts({

@@ -63,7 +63,16 @@ async function silenceOutputs(pausePlayer: boolean) {
     // ignore
   }
   loadingToken += 1;
+  // A pending awaitFinish caller must be unblocked, not silently dropped —
+  // clearing this without invoking it leaves that caller's promise orphaned
+  // forever whenever a later playFaAudio() call interrupts it before its
+  // clip naturally finishes (e.g. MemoryGame matching two pairs fast enough
+  // that the second match's speakLetter() interrupts the first's still-
+  // pending one — the first's await never resolves, so code after it, like
+  // marking the level complete, never runs either).
+  const pendingFinish = onSharedPlayerFinish;
   onSharedPlayerFinish = null;
+  pendingFinish?.();
   if (pausePlayer && sharedPlayer) {
     try {
       sharedPlayer.pause();
