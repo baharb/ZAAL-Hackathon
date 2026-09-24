@@ -13,7 +13,7 @@ type Props = {
 
 export default function LetterSelectorModal({ visible, letters, selectedId, onClose, onSelect }: Props) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} supportedOrientations={['landscape']}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={e => e.stopPropagation()}>
           <View style={styles.header}>

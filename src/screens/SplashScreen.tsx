@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, ImageBackground, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 import { createAudioPlayer, AudioPlayer } from 'expo-audio';
+import Constants from 'expo-constants';
 import PopperCelebration from '../components/PopperCelebration';
 import { characterAssets } from '../assets/characterAssets';
 import { roomBackgroundPickers } from '../assets/neliWorldAssets';
@@ -18,6 +19,7 @@ const YAY_DURATION_MS = 2116;
 const POP_SOUND = require('../../assets/audio/pop.wav');
 const LOGO_WHITE = require('../../assets/logo-white.webp');
 const LOGO_WHITE_ASPECT = 961 / 501;
+const APP_VERSION = Constants.expoConfig?.version ?? '';
 
 type CastMember = {
   key: string;
@@ -257,6 +259,11 @@ export default function SplashScreen() {
         <Text allowFontScaling={false} style={[styles.finaleName, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
           {isFa ? 'زال' : 'Persian for kids'}
         </Text>
+        {!!APP_VERSION && (
+          <Text allowFontScaling={false} style={[styles.finaleVersion, { fontFamily: ff(lang, 'black') }]}>
+            {APP_VERSION}
+          </Text>
+        )}
       </Animated.View>
     </ImageBackground>
   );
@@ -276,4 +283,5 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   finaleName: { color: '#FFFFFF', fontSize: 30, lineHeight: 42, marginTop: 14 },
+  finaleVersion: { color: '#FFFFFF', fontSize: 30, lineHeight: 42, marginTop: 18 },
 });

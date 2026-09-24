@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, ImageSourcePropType, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, ImageSourcePropType, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { Lang } from '../store/AppContext';
 import { dir, ff } from '../theme/fonts';
@@ -18,6 +18,9 @@ interface Props {
   onVerify: (password: string) => boolean;
   onSuccess: () => void;
   onClose: () => void;
+  /** Both must be given together to show the link — omit to keep a gate (e.g. Premium) without one. */
+  forgotPasswordLabel?: string;
+  onForgotPassword?: () => void;
 }
 
 const PLACEHOLDER: Partial<Record<Lang, string>> = {
@@ -33,6 +36,7 @@ const PLACEHOLDER: Partial<Record<Lang, string>> = {
 // in whatever language they last picked.
 export default function PasswordGate({
   iconSource, iconEmoji, iconBg, iconTint, iconRound, lang, title, subtitle, buttonLabel, errorText, onVerify, onSuccess, onClose,
+  forgotPasswordLabel, onForgotPassword,
 }: Props) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -50,6 +54,15 @@ export default function PasswordGate({
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* A sibling backdrop behind everything else, not a wrapper around it —
+          wrapping the whole screen in a Touchable put the small forgot-
+          password link inside its responder subtree and silently ate its
+          taps (the large submit button was coincidentally unaffected, which
+          is what made this so easy to miss). As a sibling painted first, it
+          only ever catches taps that nothing on top of it claims. */}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={StyleSheet.absoluteFill} />
+      </TouchableWithoutFeedback>
       <View style={styles.blobOne} />
       <View style={styles.blobTwo} />
       <TouchableOpacity style={styles.closeButton} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
@@ -82,6 +95,11 @@ export default function PasswordGate({
         <TouchableOpacity style={styles.button} onPress={submit} activeOpacity={0.86}>
           <Text style={[styles.buttonText, { fontFamily: ff(lang, 'black') }]}>{buttonLabel}</Text>
         </TouchableOpacity>
+        {forgotPasswordLabel && onForgotPassword && (
+          <TouchableOpacity onPress={onForgotPassword} activeOpacity={0.7} style={styles.forgotRow}>
+            <Text style={[styles.forgotText, { fontFamily: ff(lang, 'bold') }]}>{forgotPasswordLabel}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -105,4 +123,6 @@ const styles = StyleSheet.create({
   error: { color: '#D73737', alignSelf: 'stretch', marginTop: 7, fontSize: 12 },
   button: { width: '100%', height: 58, borderRadius: 19, backgroundColor: '#FF7A1A', alignItems: 'center', justifyContent: 'center', marginTop: 14 },
   buttonText: { color: '#FFFFFF', fontSize: 16 },
+  forgotRow: { marginTop: 14 },
+  forgotText: { color: '#6B21A8', textAlign: 'center', fontSize: 13 },
 });

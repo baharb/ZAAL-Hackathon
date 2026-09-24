@@ -192,7 +192,7 @@ const MEMORY_ID_TO_AUDIO_ID: Record<string, string> = {
 function speakLetter(item: LetterItem) {
   const audioId = MEMORY_ID_TO_AUDIO_ID[item.id] ?? item.id;
   const key = makeAlphabetAudioKey('name', audioId);
-  void playFaAudioOrSpeak(key, FALLBACK_LETTER_NAME_FA[audioId] ?? item.name);
+  return playFaAudioOrSpeak(key, FALLBACK_LETTER_NAME_FA[audioId] ?? item.name, { awaitFinish: true });
 }
 
 function CardBack() {
@@ -375,7 +375,7 @@ export default function MemoryGame() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setLastMatched(first.item);
       setFoundLetters(prev => (prev.some(item => item.id === first.item.id) ? prev : [...prev, first.item]));
-      setTimeout(() => speakLetter(first.item), 180);
+      const matchedItem = first.item;
 
       const next = cardsRef.current.map((card, i) => (i === a || i === b ? { ...card, matched: true, flipped: true } : card));
       const levelDone = next.every(card => card.matched);
@@ -386,6 +386,17 @@ export default function MemoryGame() {
       if (levelDone) {
         setBusy(true);
         addStars(3);
+      }
+
+      // Marking the level/game complete (below) triggers a separate effect
+      // that plays "آفرین" on its own timer — if that fires while this
+      // match's own letter name is still playing, its interrupt:true default
+      // replace()s the shared player and cuts the name off entirely. Waiting
+      // for speakLetter's own awaitFinish here, before setting either
+      // completion flag, sequences the two instead of racing them.
+      setTimeout(async () => {
+        await speakLetter(matchedItem);
+        if (!levelDone) return;
         const current = levelIndexRef.current;
         if (current >= levelPlanRef.current.length - 1) {
           if (!awardedRef.current) {
@@ -397,7 +408,7 @@ export default function MemoryGame() {
         } else {
           setLevelComplete(true);
         }
-      }
+      }, 180);
       return;
     }
 

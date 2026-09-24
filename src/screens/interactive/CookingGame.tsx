@@ -725,6 +725,12 @@ export default function CookingGame() {
         if (cancelled) return;
         await playFaAudio('ingredients/info-cook', { awaitFinish: true });
         if (cancelled) return;
+        // Same stale-event race as the gap above, between info-cook finishing
+        // and the first ingredient's name starting — without it the first
+        // ingredient's announceCurrentIngredient() call lands right on top of
+        // info-cook's own didJustFinish and is silently swallowed.
+        await new Promise(resolve => setTimeout(resolve, 150));
+        if (cancelled) return;
       }
       if (cancelled) return;
       announceCurrentIngredient();

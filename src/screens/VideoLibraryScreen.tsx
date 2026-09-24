@@ -367,7 +367,7 @@ export default function VideoLibraryScreen() {
 
       </ScrollView>
 
-      <Modal visible={playerVisible} animationType="fade" transparent onRequestClose={() => setPlayerVisible(false)}>
+      <Modal visible={playerVisible} animationType="fade" transparent onRequestClose={() => setPlayerVisible(false)} supportedOrientations={['landscape']}>
         <View style={styles.playerOverlay}>
           <View style={styles.playerCard}>
             <View style={styles.playerHeader}>

@@ -41,11 +41,13 @@ interface NavContextType {
   navigate: (s: Screen) => void;
   reset: (s: Screen) => void;
   goBack: () => void;
+  canGoBack: boolean;
 }
 export const NavContext = createContext<NavContextType>({} as NavContextType);
 export function NavProvider({ children }: { children: ReactNode }) {
   const [history, setHistory] = useState<Screen[]>([{ name: 'Splash' }]);
   const screen = history[history.length - 1];
+  const canGoBack = history.length > 1;
   const navigate = (s: Screen) => setHistory(p => {
     const top = p[p.length - 1];
     const sameMain = top.name === 'Main' && s.name === 'Main';
@@ -60,6 +62,6 @@ export function NavProvider({ children }: { children: ReactNode }) {
   // from the browser console instead of clicking through the whole app.
   // Remove before shipping.
   if (typeof window !== 'undefined') (window as any).__zaalNav = { screen, navigate, reset, goBack };
-  return <NavContext.Provider value={{ screen, navigate, reset, goBack }}>{children}</NavContext.Provider>;
+  return <NavContext.Provider value={{ screen, navigate, reset, goBack, canGoBack }}>{children}</NavContext.Provider>;
 }
 export function useNav() { return useContext(NavContext); }

@@ -2,7 +2,7 @@
   "expo": {
     "name": "ZAAL",
     "slug": "zaal",
-    "version": "1.1.7",
+    "version": "1.1.10",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +20,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "10"
+      "buildNumber": "15"
     },
     "android": {
       "adaptiveIcon": {

@@ -114,8 +114,16 @@ export async function playFaAudio(key: FaTestAudioKey, options?: PlayFaAudioOpti
   try {
     player.replace(source);
     if (options?.volume != null) player.volume = options.volume;
+    // The shared player is a module-level singleton reused by every screen,
+    // and setPlaybackRate() is a property of the player, not the source —
+    // replace() swaps the audio content but does not reset it. Without this
+    // else branch, a screen that ever requests a non-default rate (e.g.
+    // AlphabetTrainScreen's 1.3x) leaves every later playFaAudio() call on
+    // any other screen sped up too, for the rest of the app's lifetime.
     if (options?.playbackRate != null) {
       player.setPlaybackRate(options.playbackRate, options.shouldCorrectPitch === false ? 'low' : 'high');
+    } else {
+      player.setPlaybackRate(1.0, 'high');
     }
   } catch {
     return false;

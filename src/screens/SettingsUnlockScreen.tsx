@@ -23,6 +23,10 @@ const TX: Record<string, Partial<Record<Lang, string>>> = {
     fa: 'رمز عبور درست نیست.', en: 'Incorrect passcode.',
     fr: 'Code incorrect.', es: 'Contraseña incorrecta.',
   },
+  forgotPassword: {
+    fa: 'رمز عبور را فراموش کرده‌اید؟', en: 'Forgot your passcode?',
+    fr: 'Mot de passe oublié ?', es: '¿Olvidaste tu contraseña?',
+  },
 };
 
 function t(lang: Lang, key: keyof typeof TX): string {
@@ -47,6 +51,8 @@ export default function SettingsUnlockScreen() {
       onVerify={verifySettingsPassword}
       onSuccess={() => navigate({ name: 'Main', tab: 'Profile' })}
       onClose={goBack}
+      forgotPasswordLabel={t(settingsLang, 'forgotPassword')}
+      onForgotPassword={() => navigate({ name: 'AccountSetup' })}
     />
   );
 }

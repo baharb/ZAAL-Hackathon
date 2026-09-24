@@ -4,7 +4,6 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { usePreventScreenCapture } from 'expo-screen-capture';
-import * as ScreenOrientation from 'expo-screen-orientation';
 import * as NavigationBar from 'expo-navigation-bar';
 import {
   Vazirmatn_400Regular,
@@ -131,21 +130,6 @@ function PurchasesBridge() {
   return null;
 }
 
-// Single owner of screen orientation. Always landscape, on every route and
-// every device — a route-driven portrait exception (AccountSetup on phones)
-// used to live here, but locking to it and then back to landscape as routes
-// changed could race a Modal's presentation on iOS and crash the app, so
-// every screen now stays landscape unconditionally.
-function OrientationGate() {
-  React.useEffect(() => {
-    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {
-      // Some environments (web, a few tablets) can't lock. Harmless: the
-      // screens below are responsive to whatever shape they end up in.
-    });
-  }, []);
-  return null;
-}
-
 // The app has no other error boundary anywhere, so any uncaught error during
 // render — from any screen — unmounts the entire tree and leaves a
 // permanent blank/white screen with no way back in, which is exactly the
@@ -251,7 +235,6 @@ export default function App() {
         <NavProvider>
           <StatusBar style="light" backgroundColor="#2D1B69" translucent />
           <PurchasesBridge />
-          <OrientationGate />
           <ScreenTimeGate />
           <RootErrorBoundaryWithNav>
             <Router />

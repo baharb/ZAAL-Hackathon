@@ -1,8 +1,9 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import { characterAssets } from '../assets/characterAssets';
+import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { AppContext, isRTL, Lang, LANGUAGES } from '../store/AppContext';
 import { useNav } from '../store/NavContext';
 import { dir, ff } from '../theme/fonts';
@@ -91,7 +92,7 @@ const TX: Record<string, Partial<Record<Lang, string>>> = {
     fr: 'Définissez votre code parental', es: 'Configura tu contraseña de padres',
   },
   passwordSubtitle: {
-    fa: 'سال تولدتان را وارد کنید. این عدد از این پس رمز ورود به تنظیمات والدین خواهد بود.',
+    fa: 'سال تولدتان را وارد کنید (میلادی یا شمسی). این عدد از این پس رمز ورود به تنظیمات والدین خواهد بود.',
     en: 'Enter your birth year. From now on, this will be your passcode for parent settings.',
     fr: 'Saisissez votre année de naissance. Ce sera désormais votre code d’accès aux paramètres parentaux.',
     es: 'Ingresa tu año de nacimiento. A partir de ahora, este será tu código de acceso a los ajustes de padres.',
@@ -320,7 +321,7 @@ function PickerSheet({
   children: React.ReactNode; scroll?: boolean;
 }) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent supportedOrientations={['landscape']}>
       <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={onClose}>
         <TouchableOpacity style={styles.sheet} activeOpacity={1} onPress={() => {}}>
           <Text style={[styles.sheetTitle, { fontFamily: ff(lang, 'black') }]}>{title}</Text>
@@ -335,7 +336,7 @@ function PickerSheet({
 
 export default function AccountSetupScreen() {
   const { activateAccount, settingsLang, setSettingsLang } = useContext(AppContext);
-  const { reset } = useNav();
+  const { reset, goBack, canGoBack } = useNav();
   const { width, height } = useWindowDimensions();
   // Lay out from the shape we actually got, not from an assumed
   // orientation: phones land here in portrait, tablets stay landscape,
@@ -388,9 +389,17 @@ export default function AccountSetupScreen() {
   };
 
   const validateBirthYear = (value: string) => {
+    if (!/^\d{4}$/.test(value)) return false;
     const birthYearNum = Number(value);
     const currentYear = new Date().getFullYear();
-    return /^\d{4}$/.test(value) && birthYearNum >= currentYear - 100 && birthYearNum <= currentYear - 13;
+    const validGregorian = birthYearNum >= currentYear - 100 && birthYearNum <= currentYear - 13;
+    // Shamsi (Jalali) runs ~621-622 years behind Gregorian — plenty of
+    // parents know their own birth year only in Shamsi. This is a plausible-
+    // range check for a passcode, not an exact calendar conversion, so a
+    // wide ±2 buffer on the offset is fine.
+    const approxShamsiNow = currentYear - 621;
+    const validShamsi = birthYearNum >= approxShamsiNow - 102 && birthYearNum <= approxShamsiNow - 11;
+    return validGregorian || validShamsi;
   };
 
   const sendCode = async () => {
@@ -546,8 +555,26 @@ export default function AccountSetupScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* A sibling backdrop behind everything else, not a wrapper around it —
+          wrapping the whole screen in a Touchable put every nested
+          TouchableOpacity/Modal trigger inside its responder subtree, and
+          some of them (the small ones especially) silently stopped
+          receiving taps. As a sibling painted first, it only ever catches
+          taps that nothing on top of it claims. */}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={StyleSheet.absoluteFill} />
+      </TouchableWithoutFeedback>
       <View style={styles.sun} />
       <View style={styles.cloud} />
+      {canGoBack && (
+        // Only reachable now: this screen used to be first-run only (no way
+        // to leave), but "forgot password" (SettingsUnlockScreen) pushes it
+        // on top of that screen too — without a close button, cancelling out
+        // of a password reset would be a dead end.
+        <TouchableOpacity style={styles.closeButton} onPress={goBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Image source={neliWorldAssets.ui.close} style={styles.closeIcon} resizeMode="contain" />
+        </TouchableOpacity>
+      )}
       <View
         style={[
           styles.shell,
@@ -744,6 +771,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#64D8A4', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   sun: { position: 'absolute', width: 280, height: 280, borderRadius: 140, backgroundColor: '#FFE16A', top: -100, right: -55 },
   cloud: { position: 'absolute', width: 360, height: 180, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.34)', bottom: -80, left: -70 },
+  closeButton: { position: 'absolute', top: 12, left: 12, width: 50, height: 50, alignItems: 'center', justifyContent: 'center', zIndex: 30 },
+  closeIcon: { width: 46, height: 46 },
   shell: { borderRadius: 34, backgroundColor: '#FFFFFF', overflow: 'visible', borderWidth: 7, borderColor: 'rgba(255,255,255,0.75)', elevation: 12, shadowColor: '#174B3A', shadowOpacity: 0.18, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } },
   artPane: { width: '43%', backgroundColor: '#FFF3B0', alignItems: 'center', justifyContent: 'center', padding: 24, borderRadius: 27, overflow: 'hidden' },
   artPanePortrait: { width: '100%', paddingVertical: 14, paddingHorizontal: 18, gap: 14, justifyContent: 'flex-start' },
