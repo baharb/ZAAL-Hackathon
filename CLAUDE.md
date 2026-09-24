@@ -4,18 +4,20 @@ Farsi learning app for young children. Expo SDK 54, React Native 0.81, React 19.
 
 ## Orientation
 
-Landscape everywhere **except** `AccountSetup`, which is portrait on phones only.
-`app.json` is `"orientation": "default"`; the real decision lives in
-`OrientationGate` in `App.tsx`, driven by the active route:
+Landscape everywhere, unconditionally — `app.json` is `"orientation": "default"`,
+and `OrientationGate` in `App.tsx` locks every route to landscape on mount.
+`AccountSetup` used to get a route-driven portrait exception on phones, but
+locking to portrait and back to landscape as routes changed could race a
+`Modal`'s presentation on iOS and hard-crash the app (this is what got the
+iOS build rejected by App Review — tapping the language dropdown on
+`AccountSetup` crashed the app). Don't reintroduce a per-route orientation
+switch without solving that race first.
 
-```
-PORTRAIT_ROUTES = { AccountSetup }      // portrait, phones only
-TABLET_MIN_EDGE = 600                   // shortest edge >= 600dp is a tablet
-```
-
-In landscape the screen's **height is its shortest edge**, so `height >= 600`
-is the tablet test throughout (HomeScreen uses it to show/hide the
-دسترسی سریع row).
+The screen's **height is its shortest edge**, so `height >= 600` is the
+tablet test throughout (HomeScreen uses it to show/hide the دسترسی سریع row).
+`AccountSetupScreen` still has portrait-specific styling branches
+(`portrait`/`short` in its layout) left over from the old exception — they're
+dead code now that the screen is always landscape-locked, harmless but unused.
 
 ## The dominant bug class in this codebase
 

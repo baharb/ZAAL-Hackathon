@@ -343,6 +343,12 @@ export const FA_AUDIO_KEYS = {
     brushLilaTeeth: 'toothbrush/brush-lila-teeth' as const,
     brushTeeth: 'toothbrush/brush-teeth' as const,
   },
+  feedAnimals: {
+    info: 'feed-animals/food/info' as const,
+  },
+  counting: {
+    info: 'counting/number/info' as const,
+  },
   solarSystem: {
     mercury: 'solar-system/mercury' as const,
     venus: 'solar-system/venus' as const,
