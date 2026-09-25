@@ -83,7 +83,10 @@
     background: var(--orange); color: #fff; font-weight: 600; font-size: 14px;
     padding: 10px 18px; border-radius: 999px; text-decoration: none;
   }
-  .find-us { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+  .email-line { font-size: 18px; font-weight: 600; margin: 14px 0 4px; word-break: break-all; }
+  .find-us { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+  .card.fa { font-family: 'Vazirmatn', system-ui, sans-serif; }
+  .card.fa p { line-height: 1.9; }
   .find-us a { font-weight: 600; text-decoration: none; }
   .find-us a:hover { text-decoration: underline; }
 
@@ -117,43 +120,81 @@
 </div>
 
 <main class="wrap">
+  <div class="card contact-box" id="contact">
+    <h2>Contact us</h2>
+    <p style="margin:0;">Questions, problems, or feedback about the ZAAL app? Email us — we read every message and reply within <strong>2 business days</strong>.</p>
+    <p class="email-line">Email: <a href="mailto:bahar.bahreman@gmail.com?subject=ZAAL%20support">bahar.bahreman@gmail.com</a></p>
+    <a class="button" href="mailto:bahar.bahreman@gmail.com?subject=ZAAL%20support">Email support</a>
+    <div class="find-us">
+      <a href="https://instagram.com/zaalkids" target="_blank" rel="noopener">@zaalkids on Instagram</a>
+      <a href="privacy.html">Privacy Policy</a>
+    </div>
+  </div>
+
   <div class="card">
-    <p class="lede">Most questions are answered below. If yours isn't, just email us — we read every message.</p>
+    <h2>Reporting a problem</h2>
+    <p style="margin-top:0;">To help us fix it quickly, please include:</p>
+    <ul>
+      <li>Your device (for example, iPad Air or iPhone 15) and its iOS / iPadOS or Android version</li>
+      <li>The ZAAL version — it is shown on the app's opening screen</li>
+      <li>What you tapped, what you expected, and what happened instead (a screenshot helps)</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Frequently asked questions</h2>
 
     <div class="faq-item">
-      <h3>I forgot my parent PIN. How do I reset it?</h3>
-      <p>Settings are protected by a PIN so kids can't change language or account details. If you've forgotten yours, email us from the address you used to set up ZAAL and we'll help you regain access.</p>
+      <h3>Why does ZAAL ask me to sign in the first time?</h3>
+      <p>The first time ZAAL opens, a parent verifies an email address or phone number with a one-time code, then sets a passcode (your birth year). The passcode keeps parent settings — like language and daily screen-time limits — out of your child's reach. Your child never needs to sign in.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>I didn't receive my verification code.</h3>
+      <p>Check your spam or junk folder, wait a minute, then tap <em>Resend Code</em>. Text messages cannot be delivered to Iranian (+98) phone numbers, so please use an email address instead. If the code still doesn't arrive, email us.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>I forgot my parent passcode. How do I reset it?</h3>
+      <p>On the passcode screen, tap <em>Forgot your passcode?</em>, verify your email or phone again with a new code, and set a new passcode. If you no longer have access to that email or phone, contact us.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>There is no sound.</h3>
+      <p>Turn up the device volume and make sure it isn't muted (on iPhone and some iPads, check the silent switch or Control Center). If you use Bluetooth headphones or a speaker, make sure they are connected and turned up.</p>
     </div>
 
     <div class="faq-item">
       <h3>Does ZAAL need an internet connection?</h3>
-      <p>You need internet the first time you set up a parent account (to verify your email or phone with a one-time code). After that, games, stories, and lessons work fine offline.</p>
+      <p>Only for the first-time parent sign-in and for resetting a passcode. Games, stories, and lessons work offline.</p>
     </div>
 
     <div class="faq-item">
-      <h3>Is ZAAL really free?</h3>
-      <p>Yes — every game, story, and activity in the current version is completely free, with no ads and no account required just to play.</p>
+      <h3>Is ZAAL free?</h3>
+      <p>Yes. Every game, story, and activity is free, with no ads and no in-app purchases.</p>
+    </div>
+
+    <div class="faq-item">
+      <h3>Which devices are supported?</h3>
+      <p>iPhone and iPad, and Android phones and tablets. ZAAL is designed to be held sideways (landscape) and looks best that way.</p>
     </div>
 
     <div class="faq-item">
       <h3>Where is my child's progress saved?</h3>
-      <p>Stars, badges, and lesson progress are saved locally on your device. If you'd like to move progress to a new device or have any trouble with it, reach out below.</p>
+      <p>Stars, badges, and lesson progress are stored only on your device. Deleting the app deletes that progress.</p>
     </div>
 
     <div class="faq-item">
       <h3>How do I delete my account or data?</h3>
-      <p>See the "Requesting account deletion" section of our <a href="privacy.html#account-deletion">Privacy Policy</a> for the full details.</p>
+      <p>Email us from the address (or with the phone number) you signed in with and ask for deletion — see <a href="privacy.html#account-deletion">Requesting account deletion</a> in our Privacy Policy. Deleting the app removes everything stored on the device.</p>
     </div>
   </div>
 
-  <div class="card contact-box">
-    <h2>Still need help?</h2>
-    <div class="find-us">
-      <a href="https://zaalapp.com/">zaalapp.com</a>
-      <a href="https://instagram.com/zaalkids" target="_blank" rel="noopener">@zaalkids on Instagram</a>
-    </div>
-    <p style="margin-bottom:0; margin-top:14px;">Email us and we'll get back to you as soon as we can.</p>
-    <a class="button" href="mailto:bahar.bahreman@gmail.com?subject=ZAAL%20support">Email support</a>
+  <div class="card fa" dir="rtl" lang="fa">
+    <h2>پشتیبانی به فارسی</h2>
+    <p style="margin-top:0;">اگر سؤال یا مشکلی در استفاده از زال دارید، به ما ایمیل بزنید. همهٔ پیام‌ها را می‌خوانیم و حداکثر ظرف ۲ روز کاری پاسخ می‌دهیم.</p>
+    <p class="email-line">ایمیل: <a href="mailto:bahar.bahreman@gmail.com?subject=ZAAL%20support" dir="ltr">bahar.bahreman@gmail.com</a></p>
+    <p style="margin-bottom:0;">لطفاً مدل دستگاه، نسخهٔ سیستم‌عامل و نسخهٔ زال (روی صفحهٔ آغاز برنامه نوشته شده) را هم بنویسید.</p>
   </div>
 </main>
 
