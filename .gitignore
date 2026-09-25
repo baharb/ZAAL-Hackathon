@@ -4,6 +4,7 @@ node_modules/
 # Expo
 .expo/
 
+*.jks
 # Android / iOS builds
 android/build/
 ios/build/
