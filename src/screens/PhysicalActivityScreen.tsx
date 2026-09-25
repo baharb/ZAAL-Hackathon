@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 import * as Haptics from 'expo-haptics';
 import { AppContext } from '../store/AppContext';
 import { useSpeech } from '../hooks/useSpeech';

@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 import { PACKAGE_TYPE, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 import TopBar from '../components/TopBar';
 import { AppContext } from '../store/AppContext';

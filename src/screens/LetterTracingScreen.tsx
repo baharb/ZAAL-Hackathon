@@ -10,8 +10,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 import * as Haptics from 'expo-haptics';
 import Svg, { Circle, Defs, G, LinearGradient, Path, Stop } from 'react-native-svg';
 import { AppContext, Lang } from '../store/AppContext';

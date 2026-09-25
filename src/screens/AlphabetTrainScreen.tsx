@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
   View,
   PixelRatio,
-  useWindowDimensions,
 } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Ellipse, G, Line, Path, Polygon, Polyline, Rect } from 'react-native-svg';

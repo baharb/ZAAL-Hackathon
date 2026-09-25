@@ -7,8 +7,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 import * as Haptics from 'expo-haptics';
 import Svg, { Path } from 'react-native-svg';
 import TopBar from '../components/TopBar';

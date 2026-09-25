@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, ImageBackground, PanResponder, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Image, ImageBackground, PanResponder, StyleSheet, Text, View } from 'react-native';
+import { useWindowDimensions } from '../../layout/PortraitFallback';
 import * as Haptics from 'expo-haptics';
 import TopBar, { topBarHeight } from '../../components/TopBar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

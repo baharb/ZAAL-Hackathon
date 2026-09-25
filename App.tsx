@@ -50,6 +50,7 @@ import ToothBrushGame      from './src/screens/interactive/ToothBrushGame';
 import ConversationGame    from './src/screens/interactive/ConversationGame';
 import SolarSystemPuzzleGame from './src/screens/interactive/SolarSystemPuzzleGame';
 import GameLandscapeFrame  from './src/components/GameLandscapeFrame';
+import PortraitFallback    from './src/layout/PortraitFallback';
 import TimeUpScreen        from './src/screens/TimeUpScreen';
 import { AppContext } from './src/store/AppContext';
 import { getCurrentCustomerInfo, hasPremiumEntitlement, initPurchases, subscribeToCustomerInfo } from './src/services/purchases';
@@ -248,9 +249,13 @@ export default function App() {
           <StatusBar style="light" backgroundColor="#2D1B69" translucent />
           <PurchasesBridge />
           <ScreenTimeGate />
-          <RootErrorBoundaryWithNav>
-            <Router />
-          </RootErrorBoundaryWithNav>
+          {/* Landscape: pass-through. Portrait (iPad ignoring the lock): the
+              whole app in a landscape-shaped box — see PortraitFallback. */}
+          <PortraitFallback>
+            <RootErrorBoundaryWithNav>
+              <Router />
+            </RootErrorBoundaryWithNav>
+          </PortraitFallback>
         </NavProvider>
       </AppProvider>
     </SafeAreaProvider>

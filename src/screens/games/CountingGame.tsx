@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useWindowDimensions } from '../../layout/PortraitFallback';
 import * as Haptics from 'expo-haptics';
 import TopBar from '../../components/TopBar';
 import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAssets';

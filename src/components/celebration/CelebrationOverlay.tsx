@@ -5,8 +5,8 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from 'react-native';
+import { useWindowDimensions } from '../../layout/PortraitFallback';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

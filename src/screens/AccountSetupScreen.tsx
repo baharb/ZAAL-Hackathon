@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 import * as Haptics from 'expo-haptics';
 import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import { characterAssets } from '../assets/characterAssets';
@@ -605,7 +606,11 @@ export default function AccountSetupScreen() {
         </View>
 
         <ScrollView
-          style={styles.formPane}
+          // In portrait the shell has only a maxHeight, no height, so
+          // `flex: 1` (basis 0) collapses the form to nothing — App Review
+          // saw just the welcome banner on an iPad and called it
+          // unresponsive. Size to content there and shrink to fit instead.
+          style={portrait ? styles.formPanePortrait : styles.formPane}
           contentContainerStyle={[styles.formContent, portrait && styles.formContentPortrait, short && styles.formContentShort]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -786,6 +791,7 @@ const styles = StyleSheet.create({
   artCopy: { color: '#66577F', fontSize: 14, lineHeight: 23, textAlign: 'center', marginTop: 8 },
   artCopyPortrait: { fontSize: 12.5, lineHeight: 19, textAlign: 'left', marginTop: 3 },
   formPane: { flex: 1 },
+  formPanePortrait: { flexGrow: 0, flexShrink: 1, flexBasis: 'auto' },
   formContent: { flexGrow: 1, paddingHorizontal: 42, paddingVertical: 30, justifyContent: 'center' },
   formContentPortrait: { paddingHorizontal: 22, paddingVertical: 20 },
   topRow: { alignItems: 'center', justifyContent: 'flex-end', marginBottom: 6 },

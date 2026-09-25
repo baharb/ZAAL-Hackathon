@@ -1,5 +1,6 @@
 import React, { useContext, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 import CharacterAvatar from '../components/CharacterAvatar';
 import TopBar from '../components/TopBar';
 import { CHARACTERS } from '../data/characters';

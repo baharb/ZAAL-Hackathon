@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
-import { Image, View, Text, TouchableOpacity, StyleSheet, PixelRatio, useWindowDimensions } from 'react-native';
+import { Image, View, Text, TouchableOpacity, StyleSheet, PixelRatio } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppContext, Lang } from '../store/AppContext';
 import { useNav } from '../store/NavContext';

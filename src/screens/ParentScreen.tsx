@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 import DailyLimitCard from '../components/DailyLimitCard';
 import { AppContext } from '../store/AppContext';
 import { useNav } from '../store/NavContext';

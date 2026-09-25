@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import React, { useContext, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 import TopBar from '../components/TopBar';
 import CharacterAvatar from '../components/CharacterAvatar';
 import DailyLimitCard from '../components/DailyLimitCard';

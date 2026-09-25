@@ -1,4 +1,4 @@
-import { useWindowDimensions } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 
 export function useLandscapeDimensions() {
   const { width, height, scale, fontScale } = useWindowDimensions();

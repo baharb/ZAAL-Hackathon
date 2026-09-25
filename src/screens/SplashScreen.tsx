@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, ImageBackground, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Image, ImageBackground, StyleSheet, Text, View } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 import type { ImageSourcePropType } from 'react-native';
 import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import Constants from 'expo-constants';
@@ -12,7 +13,9 @@ import { dir, ff } from '../theme/fonts';
 
 // The real recorded clip of kids shouting "yay" and cheering — plays the
 // instant Neli (the last character) arrives. ~2.116s long, mixed quiet.
-const YAY_KIDS_SOUND = require('../../assets/audio/yay-kids.mp3');
+// WAV, not the original MP3: it was silent on iPhone while every WAV in the
+// app (all the pops and all ~250 recorded words) plays there fine.
+const YAY_KIDS_SOUND = require('../../assets/audio/yay-kids.wav');
 const YAY_DURATION_MS = 2116;
 // One short pop as each cast member lands — six of them, 340ms apart,
 // so it reads as the huddle assembling rather than as six separate cues.
@@ -139,26 +142,26 @@ export default function SplashScreen() {
     const lastCharAt = FIRST_ENTRANCE_DELAY_MS + lastIndex * ENTRANCE_GAP_MS;
 
     // Neli (the last arrival) triggers the real "yay" cheer clip, played quiet.
-    timers.push(setTimeout(() => {
-      try {
-        const player = createAudioPlayer(YAY_KIDS_SOUND);
-        if (cancelled) {
-          try { player.remove(); } catch {}
-          return;
+    // The player is created now, seconds ahead, and only play()ed when Neli
+    // lands: creating it and calling play() in the same tick asks iOS to
+    // start a clip it hasn't loaded yet.
+    try {
+      const player = createAudioPlayer(YAY_KIDS_SOUND);
+      player.volume = 0.4;
+      soundRef.current = player;
+      const subscription = player.addListener('playbackStatusUpdate', status => {
+        if (status.isLoaded && status.didJustFinish) {
+          subscription.remove();
+          try { player.remove(); } catch { /* ignore */ }
+          if (soundRef.current === player) soundRef.current = null;
         }
-        player.volume = 0.4;
-        soundRef.current = player;
-        player.play();
-        const subscription = player.addListener('playbackStatusUpdate', status => {
-          if (status.isLoaded && status.didJustFinish) {
-            subscription.remove();
-            try { player.remove(); } catch { /* ignore */ }
-            if (soundRef.current === player) soundRef.current = null;
-          }
-        });
-      } catch {
-        // sound is a nice-to-have, never block the splash on it
-      }
+      });
+    } catch {
+      // sound is a nice-to-have, never block the splash on it
+    }
+    timers.push(setTimeout(() => {
+      if (cancelled) return;
+      try { soundRef.current?.play(); } catch {}
     }, lastCharAt));
 
     // Stay on the yard through the cheer, then move on ~70% of the way through it.

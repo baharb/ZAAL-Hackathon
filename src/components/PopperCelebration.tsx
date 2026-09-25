@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 
 const COLORS = ['#FF5F4E', '#FFD53D', '#41EFAA', '#5BE8FF', '#FF80C0', '#B48DFF', '#FF9A3C', '#A0FF61'];
 type CelebShape = 'circle' | 'rect' | 'star';

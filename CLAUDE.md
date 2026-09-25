@@ -4,20 +4,72 @@ Farsi learning app for young children. Expo SDK 54, React Native 0.81, React 19.
 
 ## Orientation
 
-Landscape everywhere, unconditionally — `app.json` is `"orientation": "default"`,
-and `OrientationGate` in `App.tsx` locks every route to landscape on mount.
-`AccountSetup` used to get a route-driven portrait exception on phones, but
-locking to portrait and back to landscape as routes changed could race a
-`Modal`'s presentation on iOS and hard-crash the app (this is what got the
-iOS build rejected by App Review — tapping the language dropdown on
-`AccountSetup` crashed the app). Don't reintroduce a per-route orientation
-switch without solving that race first.
+Landscape everywhere, unconditionally, declared **statically** — `app.json`'s
+top-level `"orientation": "landscape"` sets it natively for both platforms:
+Expo prebuild writes it into iOS's `Info.plist` (no `ios/` directory is
+committed, so this is the only iOS orientation config there is), and
+`android/app/src/main/AndroidManifest.xml` sets
+`android:screenOrientation="landscape"` on `MainActivity` directly (bare
+workflow — app.json's `orientation` is ignored there once a native `android/`
+dir exists, the same way `android.package` is).
+
+There used to be a **runtime** lock too — `OrientationGate` in `App.tsx`
+called `expo-screen-orientation`'s `lockAsync()` on mount, originally to give
+`AccountSetup` a portrait exception on phones. That runtime call is gone now,
+but it turned out to be a red herring for the crash below — removing it
+entirely (a whole separate release, build 11) reproduced the identical crash
+with the identical stack trace. It's still gone because it was dead weight
+once orientation is static, not because it was ever the cause.
+
+**The actual cause, confirmed via crash log:** every `<Modal>` in the app
+crashed on iOS release builds on a real device — `-[UIViewController
+__supportedInterfaceOrientations]` throws inside
+`_prepareForMixedOrientationTransitionIfNecessaryInWindow` when
+`RCTModalHostViewComponentView` presents itself, because a landscape-only
+app's `Modal` has no orientation overlap with what it computes by default.
+This is a known React Native bug (present since 0.79) that only reproduces
+in release mode on a real device — never in dev mode, never on Android, and
+not necessarily in the Simulator — which is exactly why it shipped and only
+got caught by App Review. It's what actually got the iOS build rejected
+(tapping the language dropdown on `AccountSetup` crashed the app — that's
+just the first `Modal` a fresh install hits).
+
+**Fix:** every `<Modal>` must pass `supportedOrientations={['landscape']}`.
+There is no app-wide default for this prop — it's per-instance. If you add a
+new `<Modal>` anywhere, it needs this prop or it *will* crash on a real iOS
+device in a release build, silently passing local/dev testing.
 
 The screen's **height is its shortest edge**, so `height >= 600` is the
 tablet test throughout (HomeScreen uses it to show/hide the دسترسی سریع row).
-`AccountSetupScreen` still has portrait-specific styling branches
-(`portrait`/`short` in its layout) left over from the old exception — they're
-dead code now that the screen is always landscape-locked, harmless but unused.
+**iPad does not honor the orientation lock by itself.** Since iPadOS 26,
+iPad apps are resizable windows and `UISupportedInterfaceOrientations` is
+ignored unless `UIRequiresFullScreen` is set — App Review ran build 18 in
+**portrait** on an iPad Air (iPadOS 27). `app.json` now sets
+`ios.requireFullScreen: true`, but Apple has deprecated that key, so
+**portrait on iPad must still work**.
+
+**Portrait fallback: `src/layout/PortraitFallback.tsx`** wraps the router in
+`App.tsx`. In landscape it is a pure pass-through. In portrait it renders the
+whole app in a centred landscape-shaped box — full width, as tall as the
+device's own landscape aspect (820x1180 → 820x570), real size — with a
+"rotate your device" hint in the band below. Rules that follow from it:
+
+- **Import `useWindowDimensions` from `src/layout/PortraitFallback`, never
+  from `react-native`.** Ours reports the box in portrait; react-native's
+  reports the whole window and the screen will lay out for the wrong shape.
+  Same for `Dimensions.get` — don't use it (nothing does today).
+- **Never scale the box with a transform.** Drag/paint/brush code mixes
+  `pageX`/`measureInWindow` (screen units) with layout units; they only agree
+  when nothing is scaled.
+- Inside the box, safe-area insets are zero, and the box itself lifts clear
+  of the keyboard (screens' `KeyboardAvoidingView`s measure from their local
+  frame and can't see it).
+- The element tree is identical in both orientations, so rotating doesn't
+  remount the current screen. Keep it that way.
+
+(Before this existed, `AccountSetupScreen`'s portrait branch collapsed its
+form to 0pt and App Review saw only the welcome banner — rejected as
+"unresponsive after launch".)
 
 ## The dominant bug class in this codebase
 
@@ -65,9 +117,40 @@ English voice (which produced a garbled syllable). Silence is the intended
 failure. `FeedAnimalsGame` uses recorded audio only — prompts with no recording
 were removed rather than left to TTS.
 
+**Prefer WAV for sound effects.** Every clip confirmed working on iPhone is
+WAV. The splash "yay" was the only MP3 and the only sound reported silent on
+iPhone; it's now `yay-kids.wav`, created when the splash mounts and only
+`play()`ed when Neli lands. `alphabet-train-toots.mp3` is the one MP3 left.
+
 Recorded clips live in `assets/audio/fa-test/`, indexed by
 `assets/faTestAudio.generated.ts` (auto-generated, do not hand-edit).
 Text→clip lookup is **exact match** on normalized text.
+
+`App.tsx` calls `setAudioModeAsync({ playsInSilentMode: true })` once on
+launch — added because nothing configured the iOS audio session before,
+so it ran on `expo-audio`'s undocumented default, and there's no guarantee
+playback survives the device's physical silent switch without this. If a
+"the sound just doesn't play" report is otherwise unreproducible (no
+crash, no error, everything looks right in the code), check whether it's
+really this — the iOS silent switch is genuinely easy for the reporter not
+to think to mention.
+
+**`playFaAudio(key, { awaitFinish: true })` can hang forever if something
+else plays audio before it naturally finishes.** The shared player is a
+module-level singleton, and only one `awaitFinish` caller can be pending at
+a time (`onSharedPlayerFinish`). `silenceOutputs()` — which every
+`playFaAudio()` call runs first (default `interrupt: true`) — used to just
+null that callback out instead of resolving it, so an earlier still-playing
+`awaitFinish` call was silently orphaned rather than unblocked. Fixed by
+resolving the pending callback before clearing it. This is what caused
+MemoryGame's "match two pairs fast, the last voice goes silent and Next
+never enables" bug: the second match's `speakLetter()` interrupted the
+first's still-pending one, and the code that runs after
+`await speakLetter(...)` — which sets `levelComplete`/`allComplete` — never
+ran because the await never returned. Any `await playFaAudio(..., {
+awaitFinish: true })` followed by state-setting logic is exposed to this if
+something else can plausibly interrupt it first; don't reintroduce the
+null-without-resolving version of `silenceOutputs()`.
 
 ## Known gaps
 

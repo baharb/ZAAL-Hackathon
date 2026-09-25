@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
-import { Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useWindowDimensions } from '../layout/PortraitFallback';
 import TopBar from '../components/TopBar';
 import { characterAssets } from '../assets/characterAssets';
 import { neliWorldAssets } from '../assets/neliWorldAssets';

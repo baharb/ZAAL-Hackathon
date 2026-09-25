@@ -1,5 +1,6 @@
 import React, { useContext, useState } from 'react';
-import { Image, ImageBackground, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Image, ImageBackground, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useWindowDimensions } from '../../layout/PortraitFallback';
 import * as Haptics from 'expo-haptics';
 import { AppContext } from '../../store/AppContext';
 import { useSpeech } from '../../hooks/useSpeech';
