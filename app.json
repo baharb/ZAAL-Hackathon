@@ -21,7 +21,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "18"
+      "buildNumber": "19"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +29,7 @@
         "backgroundColor": "#6B21A8"
       },
       "package": "com.zaal.app",
-      "versionCode": 18
+      "versionCode": 19
     },
     "plugins": [
       "./plugins/withRemoveForegroundServiceMediaPlayback.js",
