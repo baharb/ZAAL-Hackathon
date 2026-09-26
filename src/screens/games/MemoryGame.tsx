@@ -6,7 +6,8 @@ import * as Haptics from 'expo-haptics';
 import { AppContext } from '../../store/AppContext';
 import { FA, ff } from '../../theme/fonts';
 import { C } from '../../theme/colors';
-import TopBar from '../../components/TopBar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import TopBar, { topBarHeight } from '../../components/TopBar';
 import PopperCelebration from '../../components/PopperCelebration';
 import GameEndOverlay from '../../components/GameEndOverlay';
 import { characterAssets } from '../../assets/characterAssets';
@@ -289,20 +290,33 @@ export default function MemoryGame() {
   const promptFontSize = Math.max(15, Math.round(22 * screenScale));
   const promptLineHeight = Math.max(20, Math.round(30 * screenScale));
 
-  const compactHeight = Math.max(0, height - 118);
-  const mascotWidth = Math.min(312, Math.max(216, Math.floor(width * 0.24)));
-  const mascotHeight = Math.min(408, Math.max(288, mascotWidth * 1.28));
-  const stageWidth = Math.min(width - 48, 720);
+  // Everything below is sized from the height actually left for the stage
+  // once the bar, the progress/prompt block and content padding are taken.
+  // The old `height - 118` guess plus the lamb's 288pt floor made the stage
+  // ~290pt tall on a ~280pt phone, so it spilled up into the prompt.
+  const insets = useSafeAreaInsets();
+  const promptBlockHeight = 8 + 10 + promptLineHeight + 4;
+  const stageAvailH = Math.max(
+    160,
+    height - topBarHeight(height, insets.top) - CONTENT_PAD_TOP - CONTENT_PAD_BOTTOM - promptBlockHeight,
+  );
+  const chipSize = Math.round(Math.max(34, Math.min(56, stageAvailH * 0.14)));
+  // The image is drawn at scale(1.3) for its transparent margins, so 0.8 of
+  // the free height keeps its visible bounds inside the stage.
+  const mascotHeight = Math.min(408, Math.max(288, Math.min(312, Math.max(216, width * 0.24)) * 1.28), stageAvailH * 0.8);
+  const mascotWidth = Math.min(312, Math.max(216, Math.floor(width * 0.24)), Math.floor(mascotHeight / 1.28));
+  // Clear of the prev/next arrows pinned 20pt in from each edge.
+  const stageWidth = Math.min(width - 2 * (20 + stepFlashSize + 8), 720);
   const gridInnerWidth = stageWidth - mascotWidth - 16;
   const cardGap = 10;
   const cardSize = Math.min(
     92,
     Math.max(
-      44,
+      40,
       Math.floor(
         Math.min(
           (gridInnerWidth - cardGap * (cols - 1)) / cols,
-          (compactHeight - 150 - cardGap * (rows - 1)) / rows,
+          (stageAvailH - chipSize - 10 - cardGap * (rows - 1)) / rows,
         ),
       ),
     ),
@@ -494,7 +508,7 @@ export default function MemoryGame() {
           />
 
           <View style={styles.gameColumn}>
-            <View style={styles.foundRow}>
+            <View style={[styles.foundRow, { minHeight: chipSize }]}>
               {foundOrder.map(letter => {
                 const found = foundLetters.some(item => item.id === letter.id);
                 return (
@@ -502,7 +516,7 @@ export default function MemoryGame() {
                     key={letter.id}
                     style={[
                       styles.foundChip,
-                      { borderColor: '#FACC15' },
+                      { borderColor: '#FACC15', width: chipSize, height: chipSize, borderRadius: chipSize / 2, paddingTop: Math.round(chipSize * 0.1) },
                       found ? styles.foundChipFound : styles.foundChipHidden,
                     ]}
                   >
@@ -511,7 +525,7 @@ export default function MemoryGame() {
                         style={[
                           styles.foundChipText,
                           letter.id === 'alef' ? styles.foundChipAlef : null,
-                          { color: letter.color },
+                          { color: letter.color, fontSize: Math.round(chipSize * 0.36), lineHeight: Math.round(chipSize * 0.54) },
                         ]}
                       >
                         {letter.char}
@@ -569,6 +583,9 @@ export default function MemoryGame() {
   );
 }
 
+const CONTENT_PAD_TOP = 10;
+const CONTENT_PAD_BOTTOM = 18;
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.purple, overflow: 'hidden' },
   content: {
@@ -576,8 +593,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 18,
+    paddingTop: CONTENT_PAD_TOP,
+    paddingBottom: CONTENT_PAD_BOTTOM,
     position: 'relative',
   },
   stepFlash: {
@@ -602,14 +619,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     width: '100%',
-    marginTop: -36,
   },
+  // In the flow, above the stage. It used to be absolute with the stage
+  // pulled up under it by a -36 margin, which only worked with a tablet's
+  // spare height.
   topProgressWrap: {
-    position: 'absolute',
-    top: 6,
-    left: 16,
-    right: 16,
-    width: 'auto',
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,

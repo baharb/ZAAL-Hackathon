@@ -1,7 +1,8 @@
 import React, { useContext } from 'react';
 import { Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useWindowDimensions } from '../layout/PortraitFallback';
-import TopBar from '../components/TopBar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import TopBar, { topBarHeight } from '../components/TopBar';
 import { characterAssets } from '../assets/characterAssets';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
 import CharacterAvatar from '../components/CharacterAvatar';
@@ -306,16 +307,7 @@ export default function HomeScreen() {
   const ui = Math.min(responsive.contentWidth / 700, height / 400);
   const isFa = lang === 'fa' || lang === 'ar';
 
-  const bigGap = Math.max(18, Math.round(22 * ui));
-  const cardGap = Math.round(bigGap * 0.8 * 0.6);
-  const bigCardRadius = Math.max(22, Math.round(26 * ui));
-  const bigCardWRaw = (responsive.contentWidth - bigGap * 2 - cardGap * 3) / 4;
-  const bigCardSize = Math.min(bigCardWRaw, Math.max(190, Math.round(230 * ui)));
-  const smallGap = Math.max(9, Math.round(11 * ui));
-  const smallTileW = bigCardSize * 0.3;
-  const smallRowWidth = responsive.contentWidth - bigGap * 2;
-  const smallColumns = Math.max(1, Math.floor((smallRowWidth + smallGap) / (smallTileW + smallGap)));
-  const quickAccessItems = buildQuickAccessItems(smallColumns);
+  const insets = useSafeAreaInsets();
 
   // In landscape the screen's height IS its shortest edge, so this is the
   // standard 600dp tablet breakpoint (matching TABLET_MIN_EDGE in App.tsx):
@@ -324,6 +316,30 @@ export default function HomeScreen() {
   // access row below them is reachable only by scrolling, so drop it there and
   // let the cards be the whole page.
   const showQuickAccess = height >= 600;
+
+  const bigGap = Math.max(18, Math.round(22 * ui));
+  const cardGap = Math.round(bigGap * 0.8 * 0.6);
+  const bigCardRadius = Math.max(22, Math.round(26 * ui));
+  const bigCardWRaw = (responsive.contentWidth - bigGap * 2 - cardGap * 3) / 4;
+  // The page must never scroll, so the cards are also capped by the height
+  // left under the TopBar. Sizing by width alone overflowed wide-but-short
+  // screens (1400x620 by 65pt): the cards grew with the width and pushed the
+  // quick-access row off the bottom. Budget below mirrors the layout: scroll
+  // padding, the cards, and (tablets) 34 gap + header + one row of tiles
+  // that are 0.3x a card. The header's text height is taken as 2x its font
+  // size to cover the Farsi font's tall line box.
+  const headerMarginTop = Math.max(14, Math.round(20 * ui));
+  const headerFont = Math.max(12, Math.round(13 * ui));
+  const availH = height - topBarHeight(height, insets.top, { large: true }) - SCROLL_PAD_V * 2;
+  const quickAccessFixed = showQuickAccess ? 34 + headerMarginTop + headerFont * 2 + 10 : 0;
+  const bigCardFitH = (availH - quickAccessFixed) / (showQuickAccess ? 1.3 : 1);
+  const bigCardSize = Math.floor(Math.min(bigCardWRaw, Math.max(190, Math.round(230 * ui)), bigCardFitH));
+  const smallGap = Math.max(9, Math.round(11 * ui));
+  const smallTileW = bigCardSize * 0.3;
+  const smallRowWidth = responsive.contentWidth - bigGap * 2;
+  const smallColumns = Math.max(1, Math.floor((smallRowWidth + smallGap) / (smallTileW + smallGap)));
+  const quickAccessItems = buildQuickAccessItems(smallColumns);
+
   // The caption band was a flat 54pt — over a third of a small card.
   const bandHeight = Math.max(34, Math.round(54 * (bigCardSize / 230)));
 
@@ -399,6 +415,8 @@ export default function HomeScreen() {
   );
 }
 
+const SCROLL_PAD_V = 26;
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#2B1268' },
   // flexGrow lets the container fill the viewport so justifyContent can
@@ -406,7 +424,7 @@ const styles = StyleSheet.create({
   // tall iPad (1024pt) otherwise leaves a block of dead purple below the
   // quick-access row. When content does exceed the height it simply
   // scrolls as before. Vertical padding is symmetric so 'centre' is true.
-  scroll: { paddingHorizontal: 14, paddingVertical: 26, flexGrow: 1, justifyContent: 'center' },
+  scroll: { paddingHorizontal: 14, paddingVertical: SCROLL_PAD_V, flexGrow: 1, justifyContent: 'center' },
   bigCards: { flexDirection: 'row', justifyContent: 'center', marginBottom: 34 },
   bigCardsOnly: { marginBottom: 0 },
   bigCard: { borderRadius: 26, overflow: 'hidden', backgroundColor: '#AEEBFF', shadowColor: '#170736', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 16, elevation: 9 },

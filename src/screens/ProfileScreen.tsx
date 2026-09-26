@@ -5,6 +5,7 @@ import { useWindowDimensions } from '../layout/PortraitFallback';
 import TopBar from '../components/TopBar';
 import CharacterAvatar from '../components/CharacterAvatar';
 import DailyLimitCard from '../components/DailyLimitCard';
+import DeleteAccountCard from '../components/DeleteAccountCard';
 import PremiumCard from '../components/PremiumCard';
 import { PREMIUM_ENABLED } from '../config/features';
 import { usePremiumGate } from '../hooks/usePremiumGate';
@@ -153,6 +154,7 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.passwordForm}>
             <TextInput
+              disableFullscreenUI
               value={currentPassword}
               onChangeText={value => { setCurrentPassword(value.replace(/\D/g, '').slice(0, 4)); setPasswordStatus(null); }}
               placeholder={t(lang, 'currentPwd')}
@@ -165,6 +167,7 @@ export default function ProfileScreen() {
             />
             <View style={styles.passwordRow}>
               <TextInput
+                disableFullscreenUI
                 value={newPassword}
                 onChangeText={value => { setNewPassword(value.replace(/\D/g, '').slice(0, 4)); setPasswordStatus(null); }}
                 placeholder={t(lang, 'newPwd')}
@@ -176,6 +179,7 @@ export default function ProfileScreen() {
                 style={[styles.passwordInput, styles.passwordHalf, { fontFamily: ff(lang, 'regular') }]}
               />
               <TextInput
+                disableFullscreenUI
                 value={confirmPassword}
                 onChangeText={value => { setConfirmPassword(value.replace(/\D/g, '').slice(0, 4)); setPasswordStatus(null); }}
                 placeholder={t(lang, 'confirmPwd')}
@@ -293,6 +297,9 @@ export default function ProfileScreen() {
           </View>
         </View>
         ) : null}
+
+        {/* Box 7 — Delete account (App Store guideline 5.1.1(v)) */}
+        <DeleteAccountCard lang={lang} ui={ui} />
 
         {!!APP_VERSION && (
           <Text style={[styles.versionText, { fontFamily: ff(lang, 'bold'), marginTop: Math.max(4, Math.round(6 * ui)) }]}>

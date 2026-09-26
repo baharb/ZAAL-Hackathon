@@ -98,6 +98,21 @@ bottom-anchored (`top: height - sceneH`) and overflows off the top.
 had `insets.top + 90` pinned, which matched neither a phone (70) nor a tablet
 (~98). If you change `TopBar`'s sizing, change `topBarHeight` in step.
 
+**4. Android lies about the window, and scales text.** Found on a Xiaomi:
+`useWindowDimensions` reported ~80dp less width than the app draws into (the
+hidden nav bar/cutout strip), and the system text size was ~1.27x, which
+React Native applies to every `<Text>`. So: `PortraitFallback` now serves
+the root view's **measured** size in landscape too (it ignores height shrinks
+at the same width — that's the keyboard under `adjustResize`), and
+`MainApplication.kt`/`MainActivity.kt` pin `fontScale` to 1 via
+`withFixedFontScale()`. iOS Dynamic Type is **not** pinned. `TopBar` now
+renders at exactly `topBarHeight()` (its title stack used to measure taller).
+
+**No system keyboard on kid-reachable or landscape-phone gates.** Android's
+full-screen text-entry mode takes over a landscape phone when a `TextInput`
+focuses. PIN entry (`PasswordGate`, `TimeUpScreen`) uses `NumericKeypad`
+beside the copy. Every remaining `TextInput` has `disableFullscreenUI`.
+
 Anything positioned as a fraction of **screen height** over art anchored
 differently will drift as chrome takes a bigger share of a short screen. In
 `CookingGame`, `COUNTER_LINE_FROM_BOTTOM` / `TARGET_FROM_BOTTOM` measure from
@@ -151,6 +166,17 @@ ran because the await never returned. Any `await playFaAudio(..., {
 awaitFinish: true })` followed by state-setting logic is exposed to this if
 something else can plausibly interrupt it first; don't reintroduce the
 null-without-resolving version of `silenceOutputs()`.
+
+## Account deletion (App Store 5.1.1(v))
+
+Build 19 was rejected for having account creation without in-app deletion.
+Settings -> **Delete account** (`src/components/DeleteAccountCard.tsx`)
+deletes the Supabase auth user via the `delete_my_account()` RPC, then wipes
+AsyncStorage (`deleteLocalAccount` in `AppContext`). The RPC needs a session,
+so `verifyCode()` **no longer signs out** after verifying; older installs
+without one re-verify with a fresh code (`shouldCreateUser: false`).
+The SQL function in `supabase/delete_my_account.sql` must be installed in the
+Supabase project or remote deletion fails.
 
 ## Known gaps
 

@@ -7,7 +7,8 @@ import { useNav } from '../../store/NavContext';
 import { useSpeech } from '../../hooks/useSpeech';
 import { useLandscapeDimensions } from '../../hooks/useLandscapeDimensions';
 import BlinkingNeliImage from '../../components/BlinkingNeliImage';
-import TopBar from '../../components/TopBar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import TopBar, { topBarHeight } from '../../components/TopBar';
 import { C } from '../../theme/colors';
 import { dir, ff } from '../../theme/fonts';
 import { FA_TEST_AUDIO } from '../../assets/faTestAudio.generated';
@@ -240,9 +241,24 @@ export default function ConversationGame() {
   const heightScale = Math.min(1, height / 620);
   const avatarMinFloor = 200 + 50 * heightScale;
   const avatarSize = Math.min(Math.max(width * 0.26, avatarMinFloor), isLandscape ? 360 : 320) * 1.02;
-  const choiceCardHeight = Math.round(96 * heightScale);
-  const choiceIconSize = Math.round((isLandscape ? 94 : 84) * heightScale);
   const choiceStackGap = Math.max(4, Math.round(10 * heightScale));
+  // heightScale alone still left prompt + 3 cards ~20pt taller than the
+  // space under the bar on a ~400pt phone (and scrolling is off there), so
+  // the third card was cut in half. Fit the cards to what's actually left
+  // after the bar, paddings and a two-line prompt.
+  const insets = useSafeAreaInsets();
+  const promptSize = Math.max(16, Math.round(20 * heightScale));
+  const promptLineH = Math.round(promptSize * 1.4);
+  const promptPadV = Math.max(6, Math.round(10 * heightScale));
+  const promptMarginBottom = Math.round(10 * heightScale);
+  const columnFreeH = height
+    - topBarHeight(height, insets.top, { topInset: 10 })
+    - Math.round(10 * heightScale) - Math.round(20 * heightScale) // scroll padding
+    - 2 * Math.round(8 * heightScale) // column padding
+    - (2 * promptLineH + 2 * promptPadV + 2) - promptMarginBottom;
+  const choiceCardHeight = Math.max(48, Math.min(Math.round(96 * heightScale), Math.floor((columnFreeH - 2 * choiceStackGap) / 3)));
+  const choiceScale = choiceCardHeight / 96;
+  const choiceIconSize = Math.round((isLandscape ? 94 : 84) * choiceScale);
   // Below the tablet breakpoint the layout is now sized to fit without
   // scrolling, and the step-progress dots are the first thing cut to buy
   // back vertical room on a short phone screen.
@@ -365,9 +381,9 @@ export default function ConversationGame() {
           >
             <View style={[styles.sceneLayout, isLandscape ? styles.sceneLayoutLandscape : styles.sceneLayoutPortrait]}>
               <Animated.View style={[styles.leftColumn, { paddingVertical: Math.round(8 * heightScale), transform: [{ translateY: slide }] }]}>
-                <TouchableOpacity style={[styles.scenePrompt, { minHeight: Math.round(54 * heightScale), marginBottom: Math.round(10 * heightScale) }]} onPress={speakScene} activeOpacity={0.88}>
-                  <Image source={neliWorldAssets.ui.voice} style={styles.speechIcon} resizeMode="contain" />
-                  <Text style={[styles.promptBubbleText, { fontFamily: ff(lang === 'fa' || lang === 'ar' ? 'fa' : lang, 'black') }, dir(lang)]}>
+                <TouchableOpacity style={[styles.scenePrompt, { minHeight: Math.round(54 * heightScale), marginBottom: promptMarginBottom, paddingVertical: promptPadV }]} onPress={speakScene} activeOpacity={0.88}>
+                  <Image source={neliWorldAssets.ui.voice} style={[styles.speechIcon, { width: Math.max(32, Math.round(43 * heightScale)), height: Math.max(32, Math.round(43 * heightScale)) }]} resizeMode="contain" />
+                  <Text style={[styles.promptBubbleText, { fontFamily: ff(lang === 'fa' || lang === 'ar' ? 'fa' : lang, 'black'), fontSize: promptSize, lineHeight: promptLineH }, dir(lang)]}>
                     {promptFor(scene, lang)}
                   </Text>
                 </TouchableOpacity>
@@ -382,7 +398,7 @@ export default function ConversationGame() {
                           key={choice.id}
                           style={[
                             styles.choiceCard,
-                            { width: choiceCardWidth, height: choiceCardHeight },
+                            { width: choiceCardWidth, height: choiceCardHeight, paddingVertical: Math.round(12 * choiceScale) },
                             isDimmed && styles.choiceCardDimmed,
                             showCorrect && styles.choiceCardCorrect,
                             showWrong && styles.choiceCardWrong,
@@ -390,7 +406,7 @@ export default function ConversationGame() {
                         onPress={() => choose(choice)}
                         activeOpacity={0.9}
                       >
-                        <View style={[styles.choiceArtWrap, { width: Math.round(102 * heightScale) }]}>
+                        <View style={[styles.choiceArtWrap, { width: Math.round(102 * choiceScale), padding: Math.round(10 * choiceScale) }]}>
                           <ChoiceArt choice={choice} size={choiceIconSize} />
                         </View>
                         <View style={styles.choiceTextWrap}>

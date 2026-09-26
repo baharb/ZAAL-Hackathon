@@ -8,6 +8,9 @@ type Props = {
   onBackspace: () => void;
   keyColor?: string;
   keyTextColor?: string;
+  /** Diameter of each key. 68 is the design size; short screens pass less. */
+  keySize?: number;
+  gap?: number;
 };
 
 const ROWS = [
@@ -17,7 +20,8 @@ const ROWS = [
   ['', '0', 'back'],
 ];
 
-export default function NumericKeypad({ onDigit, onBackspace, keyColor = 'rgba(255,255,255,0.14)', keyTextColor = '#FFFFFF' }: Props) {
+export default function NumericKeypad({ onDigit, onBackspace, keyColor = 'rgba(255,255,255,0.14)', keyTextColor = '#FFFFFF', keySize = 68, gap = 12 }: Props) {
+  const keyBox = { width: keySize, height: keySize, borderRadius: keySize / 2 };
   const press = (key: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (key === 'back') onBackspace();
@@ -25,22 +29,22 @@ export default function NumericKeypad({ onDigit, onBackspace, keyColor = 'rgba(2
   };
 
   return (
-    <View style={styles.grid}>
+    <View style={[styles.grid, { gap }]}>
       {ROWS.map((row, r) => (
-        <View key={r} style={styles.row}>
+        <View key={r} style={[styles.row, { gap }]}>
           {row.map((key, c) => {
-            if (!key) return <View key={c} style={styles.key} />;
+            if (!key) return <View key={c} style={[styles.key, keyBox]} />;
             return (
               <TouchableOpacity
                 key={c}
-                style={[styles.key, { backgroundColor: keyColor }]}
+                style={[styles.key, keyBox, { backgroundColor: keyColor }]}
                 activeOpacity={0.7}
                 onPress={() => press(key)}
               >
                 {key === 'back' ? (
-                  <Text style={[styles.keyText, { color: keyTextColor, fontSize: 20 }]}>⌫</Text>
+                  <Text style={[styles.keyText, { color: keyTextColor, fontSize: Math.round(20 * keySize / 68) }]}>⌫</Text>
                 ) : (
-                  <Text style={[styles.keyText, { color: keyTextColor, fontFamily: ff('en', 'black') }]}>{key}</Text>
+                  <Text style={[styles.keyText, { color: keyTextColor, fontFamily: ff('en', 'black'), fontSize: Math.round(24 * keySize / 68) }]}>{key}</Text>
                 )}
               </TouchableOpacity>
             );

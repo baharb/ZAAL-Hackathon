@@ -15,10 +15,6 @@ const TX: Record<string, Partial<Record<Lang, string>>> = {
     fr: 'Saisissez votre code pour ouvrir les paramètres parentaux.',
     es: 'Ingresa tu contraseña para abrir los ajustes de padres.',
   },
-  buttonLabel: {
-    fa: 'باز کردن تنظیمات', en: 'Open Settings',
-    fr: 'Ouvrir les paramètres', es: 'Abrir ajustes',
-  },
   errorText: {
     fa: 'رمز عبور درست نیست.', en: 'Incorrect passcode.',
     fr: 'Code incorrect.', es: 'Contraseña incorrecta.',
@@ -46,7 +42,6 @@ export default function SettingsUnlockScreen() {
       lang={settingsLang}
       title={t(settingsLang, 'title')}
       subtitle={t(settingsLang, 'subtitle')}
-      buttonLabel={t(settingsLang, 'buttonLabel')}
       errorText={t(settingsLang, 'errorText')}
       onVerify={verifySettingsPassword}
       onSuccess={() => navigate({ name: 'Main', tab: 'Profile' })}

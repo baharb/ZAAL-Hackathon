@@ -3,7 +3,8 @@ import { Animated, Easing, Image, ImageSourcePropType, StyleSheet, Text, Touchab
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import Svg, { Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-import TopBar from '../components/TopBar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import TopBar, { topBarHeight } from '../components/TopBar';
 import { AppContext } from '../store/AppContext';
 import { useNav } from '../store/NavContext';
 import { FARSI_LETTERS } from '../data/farsiLetters';
@@ -16,6 +17,9 @@ import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { ALPHABET_EXAMPLE_ASSETS } from '../assets/alphabetExampleAssets';
 import { ff } from '../theme/fonts';
 import { C } from '../theme/colors';
+
+const SINGLE_PAD_TOP = 12;
+const SINGLE_PAD_BOTTOM = 20;
 
 export default function FarsiTracingPage() {
   const { width, height } = useWindowDimensions();
@@ -56,11 +60,25 @@ export default function FarsiTracingPage() {
   const letter = FARSI_LETTERS[index] ?? FARSI_LETTERS[0]!;
   const isFa = lang === 'fa' || lang === 'ar';
   const compact = width < 900;
+  const insets = useSafeAreaInsets();
   const boardSize = useMemo(() => {
-    const sidePad = isSingleMode ? (compact ? 40 : 80) : (compact ? 120 : 160);
+    if (isSingleMode) {
+      // The board is the only thing under the bar here, so take the real
+      // leftover height. `height * 0.52` left a 206pt board on a 397pt phone
+      // with a third of the screen empty around it.
+      const freeH = height - topBarHeight(height, insets.top) - SINGLE_PAD_BOTTOM - SINGLE_PAD_TOP;
+      return Math.max(160, Math.min(width - (compact ? 40 : 80), freeH, 520));
+    }
+    const sidePad = compact ? 120 : 160;
     if (compact) return Math.min(width - sidePad, height * 0.52);
     return Math.min(width - sidePad, height * 0.68, 520);
-  }, [compact, height, width, isSingleMode]);
+  }, [compact, height, width, isSingleMode, insets.top]);
+  // Reveal/example text was a fixed 176pt/64pt, authored against the 520pt
+  // tablet board — on a phone board the example word wrapped to two lines
+  // and spilled out over the top bar. Everything scales with the board now.
+  const revealCharSize = Math.round(boardSize * 0.4);
+  const revealNameSize = Math.max(16, Math.round(boardSize * 0.065));
+  const exampleWordSize = Math.max(22, Math.round(boardSize * 0.14));
 
   const goToLetter = (nextIndex: number) => {
     void stopFaAudio();
@@ -185,9 +203,9 @@ export default function FarsiTracingPage() {
           <View style={[styles.boardShell, { width: boardSize, height: boardSize }]}>
             {showLetterReveal ? (
               /* Phase 1: letter character in colored box while name is spoken */
-              <View style={[styles.exampleBox, { backgroundColor: letter.color ?? '#6C4EFF' }]}>
-                <Text style={styles.letterRevealChar}>{letter.letter}</Text>
-                <Text style={styles.letterRevealName}>{letter.nameFa}</Text>
+              <View style={[styles.exampleBox, { backgroundColor: letter.color ?? '#6C4EFF', gap: Math.round(boardSize * 0.02) }]}>
+                <Text style={[styles.letterRevealChar, { fontSize: revealCharSize, lineHeight: Math.round(revealCharSize * 1.7), paddingTop: Math.round(boardSize * 0.03) }]}>{letter.letter}</Text>
+                <Text style={[styles.letterRevealName, { fontSize: revealNameSize, lineHeight: Math.round(revealNameSize * 1.36) }]}>{letter.nameFa}</Text>
               </View>
             ) : !letterComplete ? (
               /* Tracing phase */
@@ -209,7 +227,14 @@ export default function FarsiTracingPage() {
                 {ALPHABET_EXAMPLE_ASSETS[letter.id]
                   ? <Image source={ALPHABET_EXAMPLE_ASSETS[letter.id] as ImageSourcePropType} style={styles.exampleImage} resizeMode="contain" />
                   : null}
-                <Text style={styles.exampleWord}>{letter.exampleFa ?? ''}</Text>
+                <Text
+                  style={[styles.exampleWord, { fontSize: exampleWordSize, lineHeight: Math.round(exampleWordSize * 1.4) }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.6}
+                >
+                  {letter.exampleFa ?? ''}
+                </Text>
               </View>
             )}
           </View>
@@ -416,7 +441,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingTop: SINGLE_PAD_TOP,
+    paddingBottom: SINGLE_PAD_BOTTOM,
     gap: 20,
   },
   exampleBox: {
@@ -425,6 +451,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     gap: 14,
   },
   exampleImage: {
@@ -453,6 +480,7 @@ const styles = StyleSheet.create({
     fontSize: 64,
     lineHeight: 84,
     textAlign: 'center',
+    paddingHorizontal: 10,
   },
   clearBtnSingle: {
     flexDirection: 'row',

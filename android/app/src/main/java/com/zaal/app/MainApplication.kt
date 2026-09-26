@@ -1,6 +1,7 @@
 package com.zaal.app
 
 import android.app.Application
+import android.content.Context
 import android.content.res.Configuration
 
 import com.facebook.react.PackageList
@@ -16,7 +17,25 @@ import com.facebook.react.defaults.DefaultReactNativeHost
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
 
+/**
+ * Every screen is fixed art with text laid over it, sized for fontScale 1.
+ * Xiaomi (MIUI/HyperOS) and Samsung ship with a larger system text size on
+ * by default, and React Native scales every <Text> by it — prompts wrapped to
+ * extra lines and pushed cards off-screen, a word on the letter page overran
+ * its box by a full line. Pin fontScale to 1 for this app only.
+ */
+fun Context.withFixedFontScale(): Context {
+  val config = Configuration(resources.configuration)
+  if (config.fontScale == 1f) return this
+  config.fontScale = 1f
+  return createConfigurationContext(config)
+}
+
 class MainApplication : Application(), ReactApplication {
+
+  override fun attachBaseContext(base: Context) {
+    super.attachBaseContext(base.withFixedFontScale())
+  }
 
   override val reactNativeHost: ReactNativeHost = ReactNativeHostWrapper(
       this,

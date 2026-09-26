@@ -4,6 +4,7 @@ import {
   Easing,
   Keyboard,
   KeyboardEvent,
+  LayoutChangeEvent,
   Platform,
   StyleSheet,
   Text,
@@ -48,6 +49,28 @@ export default function PortraitFallback({ children }: { children: React.ReactNo
   const realInsets = useContext(SafeAreaInsetsContext);
   const portrait = height > width;
 
+  // In landscape, report the root view's measured size rather than the
+  // window metrics. Some Android phones (seen on a Xiaomi) report a window
+  // ~80dp narrower than what the app actually draws into — the hidden nav
+  // bar / cutout strip is excluded from the metrics but not from the view —
+  // so anything positioned from `width` stopped short of the right edge
+  // (CookingGame's kitchen left a bare strip there). Until the first layout
+  // arrives, fall back to the window size.
+  const [measured, setMeasured] = useState<Size | null>(null);
+  const onRootLayout = (e: LayoutChangeEvent) => {
+    const { width: w, height: h } = e.nativeEvent.layout;
+    if (w <= 0 || h <= 0) return;
+    const next = { width: Math.round(w), height: Math.round(h) };
+    setMeasured(prev => {
+      if (!prev || prev.width !== next.width) return next;
+      // Same width, shorter: Android's adjustResize shrinking the root for
+      // the keyboard. Screens size themselves off the full height, not the
+      // sliver above the keyboard (the window metrics never shrank either).
+      return next.height > prev.height ? next : prev;
+    });
+  };
+  const landscapeSize = measured && measured.width > measured.height ? measured : null;
+
   const boxW = width;
   const boxH = Math.round((width * width) / height);
   const boxTop = Math.max(0, Math.round((height - boxH) / 2));
@@ -69,13 +92,13 @@ export default function PortraitFallback({ children }: { children: React.ReactNo
     : 0;
 
   return (
-    <View style={[styles.fill, portrait && styles.band]}>
+    <View style={[styles.fill, portrait && styles.band]} onLayout={onRootLayout}>
       <View
         style={portrait
           ? { position: 'absolute', left: 0, top: boxTop - lift, width: boxW, height: boxH, overflow: 'hidden' }
           : styles.fill}
       >
-        <ViewportContext.Provider value={portrait ? { width: boxW, height: boxH } : null}>
+        <ViewportContext.Provider value={portrait ? { width: boxW, height: boxH } : landscapeSize}>
           {/* The box sits in the middle of the screen, clear of the status
               bar and home indicator, so nothing inside should pad for them. */}
           <SafeAreaInsetsContext.Provider value={portrait ? ZERO_INSETS : realInsets}>

@@ -2,11 +2,10 @@
 //
 // Flow: parent types an email or phone number -> we ask Supabase Auth to
 // send a 6-digit one-time code to it (signInWithOtp) -> parent types the
-// code back -> we ask Supabase to check it (verifyOtp). Once verified we
-// immediately sign out of Supabase again — the app doesn't keep a Supabase
-// session, it only uses this as a one-time "yes, this contact is real and
-// this parent can receive something sent to it" check before calling the
-// existing local activateAccount(contact, pin, birthYear).
+// code back -> we ask Supabase to check it (verifyOtp). That's the "yes,
+// this contact is real" check before the local activateAccount(contact, pin,
+// birthYear). The resulting session is kept only so the account can later be
+// deleted from Settings (see the deletion section at the bottom).
 //
 // IMPORTANT (Iran / SMS): Twilio — the SMS provider behind Supabase's phone
 // OTP — stopped delivering SMS to Iranian numbers in March 2025 (US sanctions
@@ -74,7 +73,61 @@ export async function verifyCode(contact: DetectedContact, code: string): Promis
       ? await supabase.auth.verifyOtp({ email: contact.value, token: code, type: 'email' })
       : await supabase.auth.verifyOtp({ phone: contact.value, token: code, type: 'sms' });
   if (error) throw new VerifyCodeError(error.message);
-  // We only needed the one-time proof of ownership — don't keep a Supabase
-  // session sitting around alongside the app's own local password system.
-  await supabase.auth.signOut().catch(() => {});
+  // The session is deliberately KEPT (it used to be signed out here). It is
+  // what lets "Delete account" in Settings remove the Supabase user without
+  // a second emailed code — App Store guideline 5.1.1(v) requires in-app
+  // account deletion. Nothing else in the app reads it.
+}
+
+// ---- Account deletion (App Store guideline 5.1.1(v)) ----------------------
+//
+// The only server-side record is the Supabase auth user that signInWithOtp
+// created. `delete_my_account()` is a SECURITY DEFINER SQL function (see
+// supabase/delete_my_account.sql — it must be installed in the project) that
+// deletes auth.users where id = auth.uid(), so it needs a live session:
+//   - installs that verified on this build still hold the session above;
+//   - older installs signed out right after verifying, so they re-prove
+//     ownership with a fresh code (sendDeletionCode + verifyCode) first.
+
+export class DeleteAccountError extends Error {
+  constructor(message: string, readonly needsReverify = false) { super(message); }
+}
+
+export async function hasRemoteSession(): Promise<boolean> {
+  if (!supabaseConfigured) return false;
+  try {
+    const { data } = await supabase.auth.getSession();
+    return Boolean(data.session);
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteRemoteAccount(): Promise<void> {
+  const { error } = await supabase.rpc('delete_my_account');
+  if (error) {
+    const authProblem = /jwt|auth|not authenticated|401/i.test(`${error.code} ${error.message}`);
+    throw new DeleteAccountError(error.message, authProblem);
+  }
+  // The user row is gone, so a global sign-out would 4xx; just drop the
+  // local copy of the session.
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+}
+
+// Re-verification for deletion. shouldCreateUser: false so this can't create
+// the very record we're about to delete. Returns 'no-remote-account' when
+// Supabase has no user for this contact — then there's nothing server-side
+// to delete and wiping local data completes the deletion.
+export async function sendDeletionCode(contact: DetectedContact): Promise<'sent' | 'no-remote-account'> {
+  if (!supabaseConfigured) return 'no-remote-account';
+  const options = { shouldCreateUser: false };
+  const { error } =
+    contact.channel === 'email'
+      ? await supabase.auth.signInWithOtp({ email: contact.value, options })
+      : await supabase.auth.signInWithOtp({ phone: contact.value, options });
+  if (!error) return 'sent';
+  if ((error as any).code === 'otp_disabled' || /signups not allowed/i.test(error.message)) {
+    return 'no-remote-account';
+  }
+  throw new SendCodeError(error.message);
 }

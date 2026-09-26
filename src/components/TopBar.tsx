@@ -76,6 +76,12 @@ export default function TopBar({
   // Wide enough for the button it holds plus breathing room, instead of a flat
   // 84pt that wasted horizontal space on phones and could clip on tablets.
   const sideWidth = Math.max(buttonSize + 14, 68);
+  // Pinned rather than left to the content: the title stack (Vazirmatn's
+  // tall line box over the subtitle) measured a few points taller than
+  // topBarHeight's estimate, and every screen that stacks under the bar via
+  // topBarHeight (CookingGame's recipe tabs, FeedAnimals' stage) was then
+  // tucked under it. Now the two can't disagree.
+  const barHeight = topBarHeight(height, insets.top, { large, topInset });
 
   const localTitle = (() => {
     if (lang === 'fa' && titleFa) return titleFa;
@@ -88,7 +94,7 @@ export default function TopBar({
   })();
 
   return (
-    <View style={[styles.bar, { backgroundColor: bg, paddingTop: insets.top + topInset + (large ? Math.max(4, Math.min(height * 0.022, 16)) : 0), paddingBottom: large ? Math.max(6, Math.min(height * 0.032, 18)) : 8, paddingHorizontal: Math.max(12, Math.min(width * 0.022, 18)) + Math.max(insets.left, insets.right) }]}>
+    <View style={[styles.bar, { backgroundColor: bg, height: barHeight, paddingTop: insets.top + topInset + (large ? Math.max(4, Math.min(height * 0.022, 16)) : 0), paddingBottom: large ? Math.max(6, Math.min(height * 0.032, 18)) : 8, paddingHorizontal: Math.max(12, Math.min(width * 0.022, 18)) + Math.max(insets.left, insets.right) }]}>
       {/* Back button — large, bold, pill-shaped */}
       <View style={[styles.side, { width: sideWidth }]}>
         {showClose ? (

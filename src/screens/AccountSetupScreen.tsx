@@ -262,6 +262,7 @@ function CodeCircles({
         );
       })}
       <TextInput
+        disableFullscreenUI
         ref={inputRef}
         value={value}
         onChangeText={text => onChangeText(text.replace(/\D/g, '').slice(0, length))}
@@ -643,6 +644,7 @@ export default function AccountSetupScreen() {
 
               {mode === 'email' ? (
                 <TextInput
+                  disableFullscreenUI
                   value={email}
                   onChangeText={onEmailChange}
                   placeholder={t(lang, 'emailPlaceholder')}
@@ -665,6 +667,7 @@ export default function AccountSetupScreen() {
                     <Text style={styles.langChevron}>▼</Text>
                   </TouchableOpacity>
                   <TextInput
+                    disableFullscreenUI
                     value={national}
                     onChangeText={onNationalChange}
                     placeholder={t(lang, 'phonePlaceholder')}

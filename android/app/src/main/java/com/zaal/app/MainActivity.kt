@@ -1,5 +1,6 @@
 package com.zaal.app
 
+import android.content.Context
 import android.os.Build
 import android.os.Bundle
 
@@ -11,6 +12,11 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 import expo.modules.ReactActivityDelegateWrapper
 
 class MainActivity : ReactActivity() {
+  // See withFixedFontScale in MainApplication.kt.
+  override fun attachBaseContext(newBase: Context) {
+    super.attachBaseContext(newBase.withFixedFontScale())
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     // Set the theme to AppTheme BEFORE onCreate to support
     // coloring the background, status bar, and navigation bar.

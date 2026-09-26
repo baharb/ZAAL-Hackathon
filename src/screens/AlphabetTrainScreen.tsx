@@ -28,6 +28,11 @@ import { ff } from '../theme/fonts';
 
 type AlphabetItem = (typeof ALPHABETS)[number];
 const getCarWidth = (screenWidth: number) => Math.max(286, Math.min(392, screenWidth * 0.43));
+// The widest a car gets (getCarWidth's cap) — the letter, its drop and the
+// roof art were all authored at this size. On a phone the car is shrunk to
+// fit the height (down to ~260pt), and a fixed 66pt letter then hung out of
+// the bottom of the wagon.
+const CAR_REFERENCE_WIDTH = 392;
 const LETTER_COLORS = ['#FFFFFF', '#FFE66D', '#BFF7FF', '#E9DDFF', '#D8FFB8', '#FFF4D6'];
 const LETTER_TOP_SPACE: Partial<Record<string, number>> = {
   ا: 18,
@@ -571,9 +576,10 @@ function TrainCar({
     ]).start();
   }, [imagePop, showImage]);
 
+  const k = width / CAR_REFERENCE_WIDTH;
   const letterScale = letterPop.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] });
-  const letterTopSpace = LETTER_TOP_SPACE[item.letter] ?? 0;
-  const letterY = letterPop.interpolate({ inputRange: [0, 1], outputRange: [12 + letterTopSpace, letterTopSpace] });
+  const letterTopSpace = (LETTER_TOP_SPACE[item.letter] ?? 0) * k;
+  const letterY = letterPop.interpolate({ inputRange: [0, 1], outputRange: [12 * k + letterTopSpace, letterTopSpace] });
   const letterOpacity = letterPop.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, 1, 1] });
   const imageScale = imagePop.interpolate({ inputRange: [0, 1], outputRange: [0.25, 1] });
   const imageY = imagePop.interpolate({ inputRange: [0, 1], outputRange: [14, 0] });
@@ -591,7 +597,16 @@ function TrainCar({
         <Animated.View
           style={[
             styles.roofArtStage,
-            { opacity: imageOpacity, transform: [{ translateY: imageY }, { scale: imageScale }] },
+            {
+              // Art bottom stays 22pt(×k) into the wagon's top edge, which
+              // sits at carWrap's fixed 68pt padding — so as the art shrinks
+              // it moves down with it rather than floating off the roof.
+              top: 68 - 110 * k,
+              width: 156 * k,
+              height: 132 * k,
+              opacity: imageOpacity,
+              transform: [{ translateY: imageY }, { scale: imageScale }],
+            },
           ]}
         >
           <ExampleImage item={item} />
@@ -604,7 +619,7 @@ function TrainCar({
             <Animated.Text
               style={[
                 styles.carLetter,
-                { color: letterColor, opacity: letterOpacity, transform: [{ translateY: letterY }, { scale: letterScale }] },
+                { fontSize: 66 * k, lineHeight: 86 * k, color: letterColor, opacity: letterOpacity, transform: [{ translateY: letterY }, { scale: letterScale }] },
               ]}
             >
               {item.letter}

@@ -2,7 +2,8 @@ import React, { useContext, useEffect, useState } from 'react';
 import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useWindowDimensions } from '../../layout/PortraitFallback';
 import * as Haptics from 'expo-haptics';
-import TopBar from '../../components/TopBar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import TopBar, { topBarHeight } from '../../components/TopBar';
 import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAssets';
 import { characterAssets } from '../../assets/characterAssets';
 import { AppContext } from '../../store/AppContext';
@@ -67,6 +68,22 @@ export default function CountingGame() {
   // taller than the whole screen). Scale everything below the tablet
   // breakpoint; untouched above it.
   const heightScale = Math.min(1, height / 620);
+  const insets = useSafeAreaInsets();
+  const barH = topBarHeight(height, insets.top);
+  // The answer tray was a fixed 78pt row under a fixed 120pt content
+  // padding, which left the pill + garden ~180pt on a phone — less than
+  // they need, so the centred column spilled up over the TopBar.
+  const numBtnH = Math.max(54, Math.round(78 * heightScale));
+  const numBtnW = Math.max(84, Math.round(112 * heightScale));
+  const trayPadTop = Math.round(12 * heightScale);
+  const trayPadBottom = Math.max(10, Math.round(18 * heightScale));
+  const trayH = numBtnH + trayPadTop + trayPadBottom;
+  const kickerSize = Math.max(18, Math.round(25 * heightScale));
+  // The owl's bottom is anchored above the tray, so its height must also
+  // stop at the bar — 420 × heightScale alone put its ears over the title.
+  const owlBottom = Math.round(66 * heightScale);
+  const owlH = Math.max(120, Math.min(Math.round(420 * heightScale), height - barH - owlBottom - 6));
+  const owlW = Math.round(owlH * (340 / 420));
 
   useEffect(() => {
     void stopFaAudio();
@@ -114,23 +131,23 @@ export default function CountingGame() {
         <View style={styles.skyGlow} />
         <TopBar title="Counting" titleFa="بشمار" showClose dark onBack={() => resetNav({ name: 'Main', tab: 'Games' })} />
 
-        <View style={styles.content}>
-          <View style={[styles.questionPill, { marginBottom: Math.round(14 * heightScale) }]}>
-            <Text style={[styles.kicker, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
+        <View style={[styles.content, { paddingBottom: trayH + 8 }]}>
+          <View style={[styles.questionPill, { marginBottom: Math.round(14 * heightScale), paddingVertical: Math.max(6, Math.round(10 * heightScale)) }]}>
+            <Text style={[styles.kicker, { fontFamily: ff(lang, 'black'), fontSize: kickerSize, lineHeight: Math.round(kickerSize * 1.36) }, dir(lang)]}>
               {isFa ? 'چند تا می‌بینی؟' : 'How many do you see?'}
             </Text>
           </View>
 
           <Image
             source={characterAssets.aidin.poses.thinking}
-            style={[styles.owl, { width: Math.round(340 * heightScale), height: Math.round(420 * heightScale) }]}
+            style={[styles.owl, { width: owlW, height: owlH, bottom: owlBottom }]}
             resizeMode="contain"
           />
 
           <View
             style={[
               styles.objectGarden,
-              { minWidth: Math.max(260, Math.round(390 * heightScale)), minHeight: Math.max(130, Math.round(220 * heightScale)), gap: Math.max(8, Math.round(18 * heightScale)) },
+              { minWidth: Math.max(260, Math.round(390 * heightScale)), minHeight: Math.max(80, Math.round(220 * heightScale)), gap: Math.max(8, Math.round(18 * heightScale)) },
             ]}
           >
             {Array.from({ length: round.count }).map((_, i) => {
@@ -166,19 +183,19 @@ export default function CountingGame() {
           </View>
         </View>
 
-        <View style={styles.bottomTray}>
-          <View style={styles.options}>
+        <View style={[styles.bottomTray, { paddingTop: trayPadTop, paddingBottom: trayPadBottom }]}>
+          <View style={[styles.options, { gap: Math.max(10, Math.round(16 * heightScale)) }]}>
             {round.options.map(n => {
               const selectedWrong = feedback === false && n !== round.count;
               const selectedRight = feedback !== null && n === round.count;
               return (
                 <TouchableOpacity
                   key={n}
-                  style={[styles.numBtn, selectedRight && styles.numBtnRight, selectedWrong && styles.numBtnDim]}
+                  style={[styles.numBtn, { width: numBtnW, height: numBtnH }, selectedRight && styles.numBtnRight, selectedWrong && styles.numBtnDim]}
                   onPress={() => handleAnswer(n)}
                   activeOpacity={0.86}
                 >
-                  <Text style={styles.numText}>{toFaDigits(n)}</Text>
+                  <Text style={[styles.numText, { fontSize: Math.max(28, Math.round(38 * heightScale)) }]}>{toFaDigits(n)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -186,7 +203,7 @@ export default function CountingGame() {
         </View>
 
         {feedback !== null ? (
-          <View style={[styles.feedback, feedback ? styles.feedbackGood : styles.feedbackBad]}>
+          <View style={[styles.feedback, { bottom: trayH + 6 }, feedback ? styles.feedbackGood : styles.feedbackBad]}>
             <Text style={[styles.feedbackText, { fontFamily: ff(isFa ? 'fa' : lang, 'black') }]}>
               {feedback ? (isFa ? '\u062f\u0631\u0633\u062a \u0628\u0648\u062f!' : 'That is right!') : (isFa ? `\u0628\u0648\u062f ${toFaDigits(round.count)}` : `It was ${round.count}`)}
             </Text>

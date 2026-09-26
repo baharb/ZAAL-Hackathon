@@ -41,6 +41,10 @@ interface AppContextType {
   activateAccount: (contact: string, password: string, parentBirthYear?: number) => Promise<void>;
   verifySettingsPassword: (password: string) => boolean;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
+  // Wipes everything stored on the device and resets in-memory state, so the
+  // app is back to a fresh install. The server-side half of account deletion
+  // lives in services/accountActivation.ts — call that first.
+  deleteLocalAccount: () => Promise<void>;
   // Premium/subscription status. Not wired to a real payment provider yet —
   // see PremiumScreen.tsx for where the purchase call will set this.
   isPremium: boolean; setIsPremium: (v: boolean) => void;
@@ -226,6 +230,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await save({ passwordSalt: salt, passwordVerifier: verifier });
     return true;
   };
+  const deleteLocalAccount = async () => {
+    try { await AsyncStorage.clear(); } catch {}
+    setAgeState(0);
+    setStars(0);
+    setBadges([]);
+    setStickers([]);
+    setCompletedSections([]);
+    setPathProgressState(0);
+    setSelectedCharacterState('neli');
+    setAccountContact(null);
+    setParentBirthYearState(null);
+    setPasswordSalt('');
+    setPasswordVerifier('');
+    setIsPremiumState(false);
+    setDailyLimitEnabledState(false);
+    setDailyLimitMinutesState(60);
+    usedTodayMsRef.current = 0;
+    setUsedTodayMs(0);
+    setBonusMinutesTodayState(0);
+  };
   const setIsPremium = (v: boolean) => { setIsPremiumState(v); save({ isPremium: v }); };
 
   // Daily screen-time limit — no separate PIN; gated by the account password.
@@ -248,7 +272,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       selectedCharacterId, setSelectedCharacter,
       authReady, hasAccount: Boolean(accountContact && passwordVerifier), accountContact,
       parentBirthYear,
-      activateAccount, verifySettingsPassword, changePassword,
+      activateAccount, verifySettingsPassword, changePassword, deleteLocalAccount,
       isPremium, setIsPremium,
       dailyLimitEnabled, setDailyLimitEnabled,
       dailyLimitMinutes, setDailyLimitMinutes,

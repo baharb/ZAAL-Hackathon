@@ -14,7 +14,6 @@ const TX: Record<string, Partial<Record<Lang, string>>> = {
     fr: 'Saisissez votre code parental pour voir Premium et continuer.',
     es: 'Ingresa tu contraseña de padres para ver Premium y continuar.',
   },
-  buttonLabel: { fa: 'ادامه', en: 'Continue', fr: 'Continuer', es: 'Continuar' },
   errorText: {
     fa: 'رمز عبور درست نیست.', en: 'Incorrect passcode.',
     fr: 'Code incorrect.', es: 'Contraseña incorrecta.',
@@ -39,7 +38,6 @@ export default function PremiumUnlockScreen() {
       lang={settingsLang}
       title={t(settingsLang, 'title')}
       subtitle={t(settingsLang, 'subtitle')}
-      buttonLabel={t(settingsLang, 'buttonLabel')}
       errorText={t(settingsLang, 'errorText')}
       onVerify={verifySettingsPassword}
       onSuccess={() => navigate({ name: 'Premium' })}
