@@ -123,61 +123,60 @@ function animalImageSize(animalId: AnimalId, width: number, height: number) {
 // were first copied from and why they all landed near each animal's feet
 // (worst for giraffe: 150*0.92 sits 36% down its own much-taller image, not
 // 92% — its mouth is near the top of a tall neck, not the bottom).
-function getFedPlacement(target: Rect, foodSize: number, animalId: AnimalId, width: number, height: number): Rect {
-  const offsets: Record<AnimalId, { x: number; y: number; scale: number }> = {
-    monkey: { x: 1.22, y: 1.65, scale: 1.152 },
-    rabbit: { x: 0.54, y: 0.65, scale: 1.078 },
-    cat: { x: 0.46, y: 0.58, scale: 1.553 },
-    panda: { x: 0.52, y: 0.52, scale: 1.078 },
-    bear: { x: 0.45, y: 0.60, scale: 1.00 },
-    giraffe: { x: 0.35, y: 0.36, scale: 1.10 },
-  };
-  const offset = offsets[animalId];
-  const size = Math.max(42, Math.round(foodSize * offset.scale));
-  if (animalId === 'monkey') {
-    return {
-      x: target.x + target.w * offset.x - size * 0.5,
-      y: target.y + target.h * offset.y - size * 0.5,
-      w: size,
-      h: size,
-    };
-  }
-  const imageSize = animalImageSize(animalId, width, height);
-  const imageTop = target.h - imageSize;
-  return {
-    x: target.x + target.w * offset.x - size * 0.5,
-    y: target.y + imageTop + imageSize * offset.y - size * 0.5,
-    w: size,
-    h: size,
-  };
+// The monkey image's rect inside its box (box-relative px). It's centred in
+// the box (alignItems: 'center') but much wider than it, shifted by
+// styles.monkeyImage's marginLeft: 10 (half of which survives centring) and
+// lifted by its marginTop: -14. The monkey is sized independently of its box,
+// so anything placed "on the monkey" has to be measured from this, not from
+// box fractions — those only matched on a tablet.
+function monkeyImageRect(boxW: number, width: number, height: number): Rect {
+  const size = animalImageSize('monkey', width, height);
+  return { x: (boxW - size) / 2 + 5, y: -14, w: size, h: size };
 }
 
-function getFedAnchor(animalId: AnimalId, foodSize: number, width: number, height: number) {
-  const anchors: Record<AnimalId, { x: number; y: number; scale: number }> = {
-    monkey: { x: 1.20, y: 1.44, scale: 1.152 },
-    rabbit: { x: 0.54, y: 0.65, scale: 1.078 },
-    cat: { x: 0.46, y: 0.58, scale: 1.553 },
-    panda: { x: 0.52, y: 0.52, scale: 1.078 },
-    bear: { x: 0.45, y: 0.60, scale: 1.00 },
-    giraffe: { x: 0.35, y: 0.36, scale: 1.10 },
-  };
-  const anchor = anchors[animalId];
+// Where a fed food sits on each animal, as its centre in box-relative px.
+// Grounded animals: x is a fraction of the box width, y a fraction of the
+// image height measured from the image's top edge (boxH - imageSize, since
+// the image is bottom-aligned). The monkey: fractions of its image rect —
+// (0.757, 0.821) is exactly where the old fixed 110x150-box numbers put the
+// banana on a tablet, where they were tuned. On a phone the box shrinks
+// (animalSlots' slotScale) and those fixed numbers left the banana off to
+// the side of the monkey.
+const FED_ANCHORS: Record<AnimalId, { x: number; y: number; scale: number }> = {
+  monkey: { x: 0.757, y: 0.821, scale: 1.152 },
+  rabbit: { x: 0.54, y: 0.65, scale: 1.078 },
+  cat: { x: 0.46, y: 0.58, scale: 1.553 },
+  panda: { x: 0.52, y: 0.52, scale: 1.078 },
+  bear: { x: 0.45, y: 0.60, scale: 1.00 },
+  giraffe: { x: 0.35, y: 0.36, scale: 1.10 },
+};
+
+function fedFoodCenter(animalId: AnimalId, boxW: number, boxH: number, foodSize: number, width: number, height: number) {
+  const anchor = FED_ANCHORS[animalId];
   const size = Math.max(42, Math.round(foodSize * anchor.scale));
   if (animalId === 'monkey') {
-    return {
-      left: Math.round(110 * anchor.x - size * 0.5),
-      top: Math.round(150 * anchor.y - size * 0.5),
-      width: size,
-      height: size,
-    };
+    const img = monkeyImageRect(boxW, width, height);
+    return { x: img.x + img.w * anchor.x, y: img.y + img.h * anchor.y, size };
   }
   const imageSize = animalImageSize(animalId, width, height);
-  const imageTop = 150 - imageSize;
+  return { x: boxW * anchor.x, y: boxH - imageSize + imageSize * anchor.y, size };
+}
+
+// Stage coordinates — where the flying food lands, so it ends exactly where
+// getFedAnchor then shows it.
+function getFedPlacement(target: Rect, foodSize: number, animalId: AnimalId, width: number, height: number): Rect {
+  const c = fedFoodCenter(animalId, target.w, target.h, foodSize, width, height);
+  return { x: target.x + c.x - c.size * 0.5, y: target.y + c.y - c.size * 0.5, w: c.size, h: c.size };
+}
+
+// Box coordinates — the fed food drawn inside the animal's box.
+function getFedAnchor(animalId: AnimalId, slot: Rect, foodSize: number, width: number, height: number) {
+  const c = fedFoodCenter(animalId, slot.w, slot.h, foodSize, width, height);
   return {
-    left: Math.round(110 * anchor.x - size * 0.5),
-    top: Math.round(imageTop + imageSize * anchor.y - size * 0.5),
-    width: size,
-    height: size,
+    left: Math.round(c.x - c.size * 0.5),
+    top: Math.round(c.y - c.size * 0.5),
+    width: c.size,
+    height: c.size,
   };
 }
 
@@ -312,9 +311,18 @@ function sceneFoodSlots(width: number, height: number, seed: number) {
   // footprint. Shuffled per round (seeded by `seed`) so the food isn't
   // sitting directly over the animal it belongs to — the child has to look
   // for the right one, not just drag straight down.
+  //
+  // The first landscape anchor used to be { x: 0.09, y: 0.20 } — right on
+  // top of the monkey, which hangs in that corner (whichever food the
+  // shuffle put there, the fish in the first round, started on the monkey).
+  // It now sits just under the monkey's drawn image, in the free corner left
+  // of the grounded row.
+  const monkeySlot = animalSlots(width, height)[0]!;
+  const monkeyImg = monkeyImageRect(monkeySlot.w, width, height);
+  const underMonkeyY = (monkeySlot.y + monkeyImg.y + monkeyImg.h + 6 + cardH * 0.5) / height;
   const anchors = isLandscape
     ? [
-        { x: 0.09, y: 0.20 }, { x: 0.27, y: 0.47 }, { x: 0.44, y: 0.15 },
+        { x: 0.09, y: underMonkeyY }, { x: 0.27, y: 0.47 }, { x: 0.44, y: 0.15 },
         { x: 0.61, y: 0.45 }, { x: 0.78, y: 0.17 }, { x: 0.94, y: 0.47 },
       ]
     : [
@@ -738,12 +746,15 @@ export default function FeedAnimalsGame() {
 
     let nearTarget: boolean;
     if (matchedAnimal.id === 'monkey') {
-      // Unchanged — the monkey's box is still top-anchored to its hanging pose.
+      // The monkey's real drawn image (see monkeyImageRect), plus a margin —
+      // box fractions only lined up with it on a tablet.
+      const img = monkeyImageRect(target.w, width, stageHeight);
+      const pad = img.w * 0.1;
       const hitRect = {
-        x: target.x - target.w * 0.28,
-        y: target.y - target.h * 0.18,
-        w: target.w * 1.72,
-        h: target.h * 1.95,
+        x: target.x + img.x - pad,
+        y: target.y + img.y - pad,
+        w: img.w + pad * 2,
+        h: img.h + pad * 2,
       };
       nearTarget = hit(hitRect, localPoint.x, localPoint.y);
     } else {
@@ -852,7 +863,7 @@ export default function FeedAnimalsGame() {
                     style={[
                       styles.animalFoodOverlay,
                       inspectedAnimalId === animal.id ? styles.animalFoodOverlayActive : null,
-                      getFedAnchor(animal.id, foodSize, width, stageHeight),
+                      getFedAnchor(animal.id, slot, foodSize, width, stageHeight),
                     ]}
                   >
                     {inspectedAnimalId === animal.id ? (
@@ -872,7 +883,7 @@ export default function FeedAnimalsGame() {
           {animalLayout.map((slot, index) => {
             const animal = ANIMALS[index];
             if (!fedFoodByAnimal[animal.id]) return null;
-            const anchor = getFedAnchor(animal.id, foodSize, width, stageHeight);
+            const anchor = getFedAnchor(animal.id, slot, foodSize, width, stageHeight);
             return (
               <TouchableOpacity
                 key={`${animal.id}-food-touch`}

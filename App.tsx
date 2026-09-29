@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { View, ActivityIndicator, I18nManager, Platform, useWindowDimensions } from 'react-native';
+import { View, ActivityIndicator, I18nManager, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';

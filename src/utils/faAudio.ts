@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import * as Speech from 'expo-speech';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../assets/faTestAudio.generated';
@@ -25,6 +26,45 @@ let nextAllowedAt = 0;
 let sharedPlayer: AudioPlayer | null = null;
 let loadingToken = 0;
 let onSharedPlayerFinish: (() => void) | null = null;
+// When the current clip's play() was issued — see STALE_FINISH_WINDOW_MS.
+let sharedPlayStartedAt = 0;
+// When a player last finished or was paused — see IOS_SESSION_SETTLE_MS.
+let lastReleaseAt = 0;
+
+// Android only. Android's expo-audio reports didJustFinish: true on EVERY
+// status update sent while the player sits in STATE_ENDED (the isPlaying,
+// playbackState and isLoading listeners each send one), not once. One of
+// those computed before replace() but delivered to JS after the next clip
+// registered its awaitFinish callback resolves that NEW clip instantly (seen
+// at ~12ms — see FarsiTracingPage's comment before آفرین). Stale events
+// arrive within a few ms; the shortest recorded clip is 1.0s (0.77s at the
+// Train's 1.3x), so no real finish can land inside this window. iOS sends
+// exactly one finish event per clip, so it is left untouched there.
+const STALE_FINISH_WINDOW_MS = 250;
+
+// iOS only. After any player finishes or is paused, expo-audio waits 100ms
+// and then deactivates the audio session if no player is *playing* at that
+// instant. A clip started inside that window is still loading, not playing,
+// so the session is pulled out from under it and it plays silent — the
+// Train's example word (90ms after the name) and Tracing's letter name after
+// Next both started inside it. Waiting until the check has already run means
+// play() re-activates the session cleanly afterwards.
+//
+// Do NOT "fix" this with createAudioPlayer's keepAudioSessionActive option
+// instead: build 22 did, and on iPhone it made clips far more often silent
+// (with the Train stalling on its timeouts), not less.
+const IOS_SESSION_SETTLE_MS = 250;
+
+// Upper bound on any awaitFinish wait. The longest clip in fa-test that the
+// app plays is 5.0s (memory/info, ingredients/info-cook) at rate >= 1.0.
+// Keep this above that if longer clips are ever added — and check new clips
+// for long silent tails (several shipped with 20-135s of silence/noise).
+const AWAIT_FINISH_MAX_MS = 12000;
+
+/** Call after pausing/stopping any other expo-audio player (see IOS_SESSION_SETTLE_MS). */
+export function noteAudioPlayerReleased() {
+  lastReleaseAt = Date.now();
+}
 
 function getSharedPlayer(): AudioPlayer | null {
   if (sharedPlayer) return sharedPlayer;
@@ -32,6 +72,8 @@ function getSharedPlayer(): AudioPlayer | null {
     const player = createAudioPlayer(null);
     player.addListener('playbackStatusUpdate', status => {
       if (status.isLoaded && status.didJustFinish) {
+        if (Platform.OS === 'android' && Date.now() - sharedPlayStartedAt < STALE_FINISH_WINDOW_MS) return;
+        noteAudioPlayerReleased();
         const cb = onSharedPlayerFinish;
         onSharedPlayerFinish = null;
         cb?.();
@@ -74,6 +116,7 @@ async function silenceOutputs(pausePlayer: boolean) {
   onSharedPlayerFinish = null;
   pendingFinish?.();
   if (pausePlayer && sharedPlayer) {
+    noteAudioPlayerReleased();
     try {
       sharedPlayer.pause();
     } catch {
@@ -109,8 +152,10 @@ export async function playFaAudio(key: FaTestAudioKey, options?: PlayFaAudioOpti
   // Wait out MIN_GAP_MS since the last real replace()/play() call — see the
   // comment above MIN_GAP_MS for why. A newer call bumps loadingToken while
   // this one waits, so if this call gets superseded before its turn, it just
-  // drops out here instead of touching the player.
-  const wait = nextAllowedAt - Date.now();
+  // drops out here instead of touching the player. On iOS, also wait out
+  // IOS_SESSION_SETTLE_MS since the last finish/pause.
+  const readyAt = Platform.OS === 'ios' ? Math.max(nextAllowedAt, lastReleaseAt + IOS_SESSION_SETTLE_MS) : nextAllowedAt;
+  const wait = readyAt - Date.now();
   if (wait > 0) {
     await new Promise(resolve => setTimeout(resolve, wait));
     if (token !== loadingToken) return false;
@@ -146,6 +191,7 @@ export async function playFaAudio(key: FaTestAudioKey, options?: PlayFaAudioOpti
     // (AbortError) if something else touches the player before it settles.
     // Promise.resolve() is a no-op on a real void return and safely swallows
     // that rejection on web when it isn't.
+    sharedPlayStartedAt = Date.now();
     Promise.resolve(player.play() as unknown).catch(() => {});
   } catch {
     return false;
@@ -153,7 +199,21 @@ export async function playFaAudio(key: FaTestAudioKey, options?: PlayFaAudioOpti
 
   if (options?.awaitFinish) {
     return await new Promise<boolean>(resolve => {
-      onSharedPlayerFinish = () => resolve(true);
+      // Safety net: if the native "finished" event never arrives (a dropped
+      // callback, an iOS audio-session hiccup), resolve anyway so callers
+      // that set state after the await — Tracing's celebration, Cooking's
+      // steps, Conversation's next question, Memory's level-complete — can
+      // never freeze. The longest clip played is 5s (see AWAIT_FINISH_MAX_MS).
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (onSharedPlayerFinish === finish) onSharedPlayerFinish = null;
+        resolve(true);
+      };
+      const timer = setTimeout(finish, AWAIT_FINISH_MAX_MS);
+      onSharedPlayerFinish = finish;
     });
   }
   onSharedPlayerFinish = null;
@@ -218,12 +278,18 @@ async function speakFaRawAwait(text: string, options?: { interrupt?: boolean; ra
   if (!text) return false;
   if (options?.interrupt !== false) Speech.stop();
   return new Promise<boolean>(resolve => {
+    // Same safety net as playFaAudio's awaitFinish: a TTS engine that never
+    // calls back (no voice installed, an interrupted utterance) must not
+    // freeze the caller.
+    const timer = setTimeout(() => resolve(false), AWAIT_FINISH_MAX_MS);
+    const done = (ok: boolean) => { clearTimeout(timer); resolve(ok); };
     Speech.speak(text, {
       language: 'fa-IR',
       rate: options?.rate ?? 0.72,
       pitch: options?.pitch ?? 1.14,
-      onDone: () => resolve(true),
-      onError: () => resolve(false),
+      onDone: () => done(true),
+      onError: () => done(false),
+      onStopped: () => done(false),
     });
   });
 }

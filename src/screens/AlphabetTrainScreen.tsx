@@ -20,7 +20,7 @@ import { FARSI_LETTER_BY_ID } from '../data/farsiLetters';
 import { ALPHABET_EXAMPLE_ASSETS } from '../assets/alphabetExampleAssets';
 import { useNav } from '../store/NavContext';
 import { useSpeech } from '../hooks/useSpeech';
-import { ALPHABET_AUDIO_ID_OVERRIDE, FALLBACK_LETTER_NAME_FA as GLOBAL_FALLBACK_LETTER_NAME_FA, makeAlphabetAudioKey, playFaAudio, playFaAudioOrSpeak, stopFaAudio } from '../utils/faAudio';
+import { ALPHABET_AUDIO_ID_OVERRIDE, FALLBACK_LETTER_NAME_FA as GLOBAL_FALLBACK_LETTER_NAME_FA, makeAlphabetAudioKey, noteAudioPlayerReleased, playFaAudio, playFaAudioOrSpeak, stopFaAudio } from '../utils/faAudio';
 import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { characterAssets } from '../assets/characterAssets';
@@ -738,6 +738,9 @@ export default function AlphabetTrainScreen() {
       introSoundStopped = true;
       const playerToStop = introPlayer;
       if (playerToStop) {
+        // The pause below arms iOS's session-deactivation check; this makes
+        // the first letter's name wait it out (see IOS_SESSION_SETTLE_MS).
+        noteAudioPlayerReleased();
         try {
           playerToStop.pause();
         } catch {}
@@ -757,6 +760,7 @@ export default function AlphabetTrainScreen() {
         player.play();
         const subscription = player.addListener('playbackStatusUpdate', status => {
           if (status.isLoaded && status.didJustFinish) {
+            noteAudioPlayerReleased();
             subscription.remove();
             try { player.remove(); } catch {}
           }

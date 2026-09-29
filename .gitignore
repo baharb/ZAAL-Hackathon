@@ -18,7 +18,6 @@ ios/build/
 *.png
 *.webp
 *.jpg
-*.wav
 *.mp3
 # Supabase (send-code feature) secrets
 .env

@@ -167,6 +167,23 @@ awaitFinish: true })` followed by state-setting logic is exposed to this if
 something else can plausibly interrupt it first; don't reintroduce the
 null-without-resolving version of `silenceOutputs()`.
 
+**expo-audio has two native races that silence a clip at random.** Both hit
+AlphabetTrain's example word (it starts 90ms after the letter name ends) and
+Tracing's letter name after Next (`goToLetter` pauses, then the tracer plays
+the new name at once).
+(1) iOS: 100ms after any player finishes or pauses, expo-audio deactivates
+the audio session if no player is playing at that instant — a clip still
+loading is not "playing", so it plays silent. `playFaAudio()` on iOS waits
+`IOS_SESSION_SETTLE_MS` after the last finish/pause (`noteAudioPlayerReleased()`
+— call it when pausing any *other* player too, as the Train's whistle does)
+so that check has already run. **Do not use `keepAudioSessionActive: true`
+instead** — build 22 did, and on iPhone it made the Train and Tracing far
+more often silent and stalled, not less (cause not understood).
+(2) Android: every status update while the player is ended says
+`didJustFinish: true`, so a stale one can resolve the *next* clip's
+`awaitFinish` instantly. `getSharedPlayer()` ignores finish events inside
+`STALE_FINISH_WINDOW_MS` of `play()`, on Android only.
+
 ## Account deletion (App Store 5.1.1(v))
 
 Build 19 was rejected for having account creation without in-app deletion.
@@ -182,6 +199,13 @@ Supabase project or remote deletion fails.
 
 - Prompts with no recording, so currently silent: `به [animal] غذا بده`,
   `بیا دوباره غذا بدهیم` (FeedAnimals).
+- `clothes/shorts.wav` contains no speech (peak amplitude ~244, i.e. room
+  noise) — tapping shorts in DressUp says nothing. Needs re-recording.
+- **Check every new recording for silent/noisy tails.** Nine shipped with
+  5–135s of silence or junk after ~1s of speech (Cooking's dish names, which
+  are awaited, stalled the game for up to two minutes; `pizza` played 49s of
+  loud noise). They're trimmed now. `playFaAudio`'s `AWAIT_FINISH_MAX_MS`
+  (12s) assumes no clip the app plays is longer than 5s.
 - Screens still carrying unscaled fixed-pixel art, worst first:
   `LearningPathScreen`, `AlphabetTrainScreen`, `games/QuizGame`,
   `InteractiveGamesHub`, `AudiobooksScreen`, `LetterTracingScreen`,
