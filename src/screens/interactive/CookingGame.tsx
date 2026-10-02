@@ -141,6 +141,18 @@ const EDGE_MARGIN = 4;
 
 type CounterLayout = { slots: Slot[]; tileSize: number };
 
+function shuffledSlotOrder(count: number): number[] {
+  const order = Array.from({ length: count }, (_unused, index) => index);
+  if (count < 2) return order;
+  do {
+    for (let i = count - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+  } while (order.every((slotIndex, index) => slotIndex === index));
+  return order;
+}
+
 function getCounterSlots(width: number, height: number, target: Rect, count: number, vessel: Recipe['vessel'], ingredientSize: number, maxLineY = Infinity): CounterLayout {
   const isLandscape = width > height;
   const cardW = Math.min(isLandscape ? 104 : 88, Math.max(68, Math.floor(width * 0.11)));
@@ -661,6 +673,11 @@ export default function CookingGame() {
   // getCounterSlots) — every ingredient-sized render below uses this
   // resolved value so a shrunk slot and its art never disagree.
   const { slots, tileSize } = useMemo(() => getCounterSlots(width, height, target, recipe.steps.length, recipe.vessel, ingredientSize, maxIngredientLineY), [height, recipe.steps.length, recipe.vessel, target, width, ingredientSize, maxIngredientLineY]);
+  // Which slot each step's ingredient sits in. Shuffled per recipe (and per
+  // replay, via resetToken) so the counter isn't laid out in the order the
+  // voice asks for them — the child has to find each one. Never the identity
+  // order, so a lucky shuffle can't give the answer away.
+  const slotOrder = useMemo(() => shuffledSlotOrder(recipe.steps.length), [recipeIdx, resetToken, recipe.steps.length]);
 
   const say = (fa: string, en: string) => {
     stop();
@@ -926,7 +943,7 @@ export default function CookingGame() {
           </View>
 
           {recipe.steps.map((ingredient, index) => {
-            const slot = slots[index];
+            const slot = slots[slotOrder[index] ?? index];
             const disabled = usedIds.includes(ingredient.id) || done;
             return (
               <FoodTile
