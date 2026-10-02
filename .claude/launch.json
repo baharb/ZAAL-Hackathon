@@ -4,8 +4,27 @@
     {
       "name": "expo-web",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["expo", "start", "--web", "--port", "8082"],
+      "runtimeArgs": [
+        "expo",
+        "start",
+        "--web",
+        "--port",
+        "8082"
+      ],
       "port": 8082
+    },
+    {
+      "name": "website",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--yes",
+        "http-server",
+        "website",
+        "-p",
+        "8090",
+        "-c-1"
+      ],
+      "port": 8090
     }
   ]
 }
