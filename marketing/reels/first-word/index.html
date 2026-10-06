@@ -1,0 +1,75 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ZAAL first word reel</title>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Nunito:wght@700;800;900&display=block" rel="stylesheet">
+<style>
+/* purple + white, sampled from the first @zaalkids post */
+:root{--violet:#7b3aec;--ink:#461a8e}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden}
+body{background:var(--violet);font-family:'Nunito',sans-serif;position:relative}
+.a{position:absolute;will-change:transform}
+.fa{direction:rtl;font-family:'Lalezar',sans-serif;text-align:center;line-height:1.3}
+.fa .w{display:inline-block}
+.en{text-align:center;font-weight:900;line-height:1.25}
+</style></head>
+<body>
+<!-- big organic white blob with the question -->
+<svg class="a" id="blob" viewBox="0 0 1040 740" style="left:20px;top:220px;width:1040px;transform-origin:50% 50%" data-in=".05" data-anim="pop"><path fill="#fff" d="M118 150C176 52 352 58 468 92 560 120 650 54 790 66 940 80 1012 206 1000 340 988 482 900 572 760 612 620 652 520 610 420 664 300 726 152 714 92 610 34 510 76 428 56 338 38 252 70 206 118 150Z"/></svg>
+<div class="a" style="left:0;width:1080px;top:330px;display:flex;flex-direction:column;align-items:center;color:var(--ink)">
+  <div class="fa" style="font-size:112px;width:960px" data-words=".45" data-step=".5">اولین کلمه‌ی فارسی | بچه‌تون چی بود؟</div>
+  <div class="en" style="font-size:52px;margin-top:24px" data-in="3.5" data-anim="up">What was your child's<br>first Farsi word? 💬</div>
+</div>
+
+<!-- call to action, beside Mila -->
+<div class="a" style="right:50px;top:1160px;width:540px;white-space:nowrap;display:flex;flex-direction:column;align-items:center;color:#fff">
+  <div class="fa" style="font-size:62px" data-words="4.05" data-step=".3">تو کامنت‌ها بنویسید <span id="point">👇</span></div>
+  <div class="en" style="font-size:40px;font-weight:800;opacity:.92" data-in="5.0" data-anim="up">Tell us in the comments</div>
+</div>
+
+<img class="a" src="../shared/mila_waving_fixed.png" style="height:700px;left:30px;top:960px;transform-origin:50% 100%" data-in=".6" data-anim="rise" data-wave="1" data-pop="1">
+<img class="a" src="../../../assets/logo-white.webp" style="width:270px;right:70px;top:1450px" data-in=".4" data-anim="fade">
+
+<script>
+// split Farsi lines into words that pop in reading order; a lone "|" forces a line break; keep inline markup (the emoji span)
+document.querySelectorAll('[data-words]').forEach(el => {
+  const base = +el.dataset.words, step = +(el.dataset.step || 0.13); let n = 0;
+  const tail = el.querySelector('#point'); if (tail) tail.remove();
+  el.innerHTML = el.textContent.trim().split(/\s+/).map(w => w === '|' ? '<br>' :
+    `<span class="w" data-in="${(base + n++ * step).toFixed(2)}" data-anim="word">${w}</span>`).join(' ');
+  if (tail) { tail.className = 'w'; tail.dataset.in = (base + n * step).toFixed(2); tail.dataset.anim = 'word'; tail.dataset.bounce = '1'; el.append(' ', tail); }
+});
+
+window.DURATION = 9.0;
+window.layout = () => seek(0);
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const eo = x => 1 - Math.pow(1 - cl(x), 3);
+const back = x => { x = cl(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+
+// sound: Gemini voice (Callirrhoe, same as the app) + soft pops. [file, start, volume, kind, keep seconds]
+const VO = 'voices/';
+window.AUDIO = [
+  ['pop.wav', 0.07, 0.3],
+  ['pop.wav', 0.62, 0.3],
+  [VO + '1-full.wav', 0.25, 1, 'voice', 3.4],
+  [VO + '2-comments.wav', 3.9, 1, 'voice', 2.2],
+];
+
+function animate(e, t) {
+  const anim = e.dataset.anim, k = t - +(e.dataset.in || 0);
+  let op = 1, tf = '';
+  if (anim === 'pop') { op = cl(k / .15); tf += `scale(${back(k / .55)})`; }
+  else if (anim === 'word') { op = cl(k / .12); tf += `translateY(${(1 - eo(k / .45)) * 50}px) scale(${back(k / .45)})`; }
+  else if (anim === 'up') { op = cl(k / .3); tf += `translateY(${(1 - eo(k / .55)) * 80}px)`; }
+  else if (anim === 'rise') { op = cl(k / .2); tf += `translateY(${(1 - eo(k / .6)) * 500}px)`; }
+  else if (anim === 'fade') { op = cl(k / .5); }
+  if (anim && k < 0) op = 0;
+  // Mila: gentle bob and a little sway, like a wave hello
+  if (e.dataset.wave && k > 0) tf += ` translateY(${Math.sin(k * 3.2) * 10}px) rotate(${Math.sin(k * 4.5) * 2.5}deg)`;
+  // the pointing finger bounces toward the comments
+  if (e.dataset.bounce && k > .45) tf += ` translateY(${Math.abs(Math.sin((k - .45) * 5)) * 16}px)`;
+  e.style.opacity = op; e.style.transform = tf;
+}
+window.seek = t => document.querySelectorAll('[data-anim]').forEach(e => animate(e, t));
+document.fonts.ready.then(() => seek(0));
+</script>
+</body></html>

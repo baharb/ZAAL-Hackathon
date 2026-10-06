@@ -1,0 +1,176 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ZAAL untranslatable words reel</title>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Nunito:wght@700;800;900&display=block" rel="stylesheet">
+<style>
+/* palette from the green @zaalkids post; bubblegum replaces its white flower */
+:root{--bg:#7fe87f;--blob:#5cc85b;--ink:#1d5a1f;--ink2:#2f7d31;--gum:#ff4f9a}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden}
+body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--ink);position:relative}
+.a{position:absolute;will-change:transform}
+.blob{position:absolute;border-radius:48% 52% 60% 40%/50% 42% 58% 50%;background:var(--blob)}
+.scene{position:absolute;inset:0}
+.stack{position:absolute;left:0;width:1080px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.fa{direction:rtl;font-family:'Lalezar',sans-serif;line-height:1.3;text-wrap:balance}
+.fa .w{display:inline-block}
+.count{background:var(--gum);color:var(--ink);font-family:'Lalezar';font-size:54px;line-height:1;padding:18px 34px 8px;border-radius:60px}
+.tr{font-weight:900;font-size:60px;color:var(--ink2);margin-top:6px}
+.lit{font-weight:800;font-size:42px;margin-top:34px;max-width:900px;line-height:1.3}
+.mean{margin-top:26px;background:var(--gum);color:var(--ink);font-weight:900;font-size:50px;padding:16px 40px 14px;border-radius:60px}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <!-- daisy like the flower in the green post, in bubblegum -->
+  <g id="daisy"><g fill="var(--gum)">
+    <ellipse cx="50" cy="20" rx="11" ry="20"/><ellipse cx="50" cy="80" rx="11" ry="20"/><ellipse cx="20" cy="50" rx="20" ry="11"/><ellipse cx="80" cy="50" rx="20" ry="11"/>
+    <ellipse cx="29" cy="29" rx="11" ry="20" transform="rotate(-45 29 29)"/><ellipse cx="71" cy="71" rx="11" ry="20" transform="rotate(-45 71 71)"/>
+    <ellipse cx="71" cy="29" rx="11" ry="20" transform="rotate(45 71 29)"/><ellipse cx="29" cy="71" rx="11" ry="20" transform="rotate(45 29 71)"/>
+  </g><circle cx="50" cy="50" r="13" fill="#fff3f7"/></g>
+</defs></svg>
+
+<!-- persistent background shapes (like the green post) -->
+<!-- irregular organic shapes: a wavy splat (top left) and a lumpy blob (bottom right) -->
+<svg class="a" id="b1" viewBox="0 0 200 200" style="width:560px;left:-210px;top:200px"><path fill="var(--blob)" d="M100 12C122 10 128 40 146 44 168 48 190 40 192 66 194 90 166 96 170 116 174 138 196 156 180 176 164 194 140 176 120 184 100 192 86 200 68 186 50 172 62 150 46 138 28 124 4 128 6 104 8 80 34 84 38 64 42 44 22 26 42 16 62 6 80 14 100 12Z"/></svg>
+<svg class="a" id="b2" viewBox="0 0 200 200" style="width:520px;right:-150px;top:1230px"><path fill="var(--blob)" d="M62 28C96 4 132 22 150 40 170 60 196 58 192 92 188 120 168 124 176 150 186 182 150 200 118 188 92 178 82 198 50 186 18 174 28 144 16 120 2 92 12 70 30 56 42 46 46 40 62 28Z"/></svg>
+<svg class="a" id="f1" viewBox="0 0 100 100" style="width:209px;left:60px;top:240px"><use href="#daisy"/></svg>
+<svg class="a" id="f2" viewBox="0 0 100 100" style="width:110px;right:90px;top:1110px"><use href="#daisy"/></svg>
+
+<!-- S0 hook -->
+<div class="scene" data-seg="0">
+  <div class="stack" style="top:420px">
+    <div class="fa" style="font-size:112px;width:1000px;white-space:nowrap" data-words=".3" data-step=".55">۵ کلمه‌ی فارسی | که معادل انگلیسی | نداره 🥹</div>
+    <div class="lit" style="font-size:50px;font-weight:900;margin-top:30px" data-in="4.3" data-anim="up">5 Farsi words English<br>can't translate</div>
+  </div>
+  <img class="a" data-src="Neli/01_base_standing@2x.png" style="width:560px;left:260px;top:1100px" data-in=".35" data-anim="rise" data-bob="1">
+</div>
+
+<!-- S1..S5 the words -->
+<div class="scene" data-seg="1">
+  <div class="stack" style="top:330px">
+    <div class="count" data-in=".05" data-anim="pop">۱ / ۵</div>
+    <div class="fa" style="font-size:250px;line-height:1.15;margin-top:20px" data-words=".15">جان</div>
+    <div class="tr" data-in=".45" data-anim="up">jân</div>
+    <div class="lit" data-in=".7" data-anim="up">literally: “soul”</div>
+    <div class="mean" data-in="1.0" data-anim="pop">= dear, my love 💗</div>
+  </div>
+  <img class="a" data-src="Neli/07_sitting_2x.png" style="width:560px;left:-10px;top:1170px" data-in=".3" data-anim="rise" data-bob="1">
+</div>
+
+<div class="scene" data-seg="2">
+  <div class="stack" style="top:330px">
+    <div class="count" data-in=".05" data-anim="pop">۲ / ۵</div>
+    <div class="fa" style="font-size:190px;line-height:1.2;margin-top:20px" data-words=".15">قربونت برم</div>
+    <div class="tr" data-in=".55" data-anim="up">ghorboonet beram</div>
+    <div class="lit" data-in=".8" data-anim="up">literally: “may I be<br>sacrificed for you”</div>
+    <div class="mean" data-in="1.15" data-anim="pop">= I love you so much 💗</div>
+  </div>
+  <img class="a" data-src="Neli/02_nelli_big_teeth_smile_2x.png" style="width:600px;left:-30px;top:1110px" data-in=".3" data-anim="rise" data-bob="1">
+</div>
+
+<div class="scene" data-seg="3">
+  <div class="stack" style="top:330px">
+    <div class="count" data-in=".05" data-anim="pop">۳ / ۵</div>
+    <div class="fa" style="font-size:128px;line-height:1.25;margin-top:20px" data-words=".15">دلم برات تنگ شده</div>
+    <div class="tr" data-in=".6" data-anim="up">delam barât tang shode</div>
+    <div class="lit" data-in=".85" data-anim="up">literally: “my heart got<br>tight for you”</div>
+    <div class="mean" data-in="1.2" data-anim="pop">= I miss you 💗</div>
+  </div>
+  <img class="a" data-src="Neli/06_reading_book_2x.png" style="width:580px;left:-20px;top:1140px" data-in=".3" data-anim="rise" data-bob="1">
+</div>
+
+<div class="scene" data-seg="4">
+  <div class="stack" style="top:330px">
+    <div class="count" data-in=".05" data-anim="pop">۴ / ۵</div>
+    <div class="fa" style="font-size:200px;line-height:1.2;margin-top:20px" data-words=".15">نوش جان</div>
+    <div class="tr" data-in=".5" data-anim="up">nush-e jân</div>
+    <div class="lit" data-in=".75" data-anim="up">literally: “may it<br>nourish your soul”</div>
+    <div class="mean" data-in="1.1" data-anim="pop">= enjoy your meal 🍲</div>
+  </div>
+  <img class="a" data-src="Neli/17_cooking_clean.webp" style="width:480px;left:20px;top:1190px" data-in=".3" data-anim="rise" data-bob="1">
+</div>
+
+<div class="scene" data-seg="5">
+  <div class="stack" style="top:330px">
+    <div class="count" data-in=".05" data-anim="pop">۵ / ۵</div>
+    <div class="fa" style="font-size:190px;line-height:1.2;margin-top:20px" data-words=".15">خسته نباشی</div>
+    <div class="tr" data-in=".55" data-anim="up">khaste nabâshi</div>
+    <div class="lit" data-in=".8" data-anim="up">literally: “may you<br>not be tired”</div>
+    <div class="mean" data-in="1.15" data-anim="pop">= thank you for your hard work</div>
+  </div>
+  <img class="a" data-src="Neli/08_sleeping_side_2x.png" style="width:640px;left:-40px;top:1250px" data-in=".3" data-anim="rise" data-bob="1">
+</div>
+
+<!-- S6 share + follow -->
+<div class="scene" data-seg="6">
+  <div class="stack" style="top:430px">
+    <div class="fa" style="font-size:112px;width:940px" data-words=".35" data-step=".48">بفرستش برای کسی که | همیشه بهت می‌گه | قربونت برم 😍</div>
+    <div class="lit" style="font-size:50px;font-weight:900;margin-top:30px" data-in="4.9" data-anim="up">Send this to someone who always<br>says <span style="font-family:Lalezar;font-weight:400;font-size:1.15em">قربونت برم</span> to you</div>
+    <div class="mean" style="font-size:46px" data-in="5.4" data-anim="pop">Follow @zaalkids for part 2 ✨</div>
+  </div>
+  <img class="a" data-src="Neli/04_dancing_2x.png" style="width:640px;left:-40px;top:1150px" data-in=".3" data-anim="rise" data-bob="1">
+</div>
+
+<img class="a" id="wm" src="../../../assets/logo-white.webp" style="width:260px;right:60px;top:1440px">
+
+<script>
+const A = new URL('../../../assets/neli-world/characters/', location.href).href;  // the app's character art
+document.querySelectorAll('[data-src]').forEach(i => i.src = i.dataset.src.startsWith('LOCAL:') ? i.dataset.src.slice(6)
+  : new URL(i.dataset.src.split('/').map(encodeURIComponent).join('/'), A).href);
+document.querySelectorAll('[data-words]').forEach(el => {
+  const base = +el.dataset.words, step = +(el.dataset.step || 0.14); let n = 0;
+  el.innerHTML = el.textContent.trim().split(/\s+/).map(w => w === '|' ? '<br>' :
+    `<span class="w" data-in="${(base + n++ * step).toFixed(2)}" data-anim="word">${w}</span>`).join(' ');
+});
+
+// Timeline from the voice clips: each segment = lead-in + speech + hold. Filled in by build_words.js (SPEECH seconds per clip).
+const VO = 'voices/';
+const CLIPS = ['0-hook', '1-jan', '2-ghorboonet', '3-delam-tang', '4-noosh-jan', '5-khaste-nabashi', '6-send-v2'];
+const SPEECH = window.SPEECH || [[0.5, 4.7], [0.2, 1.2], [0.2, 1.6], [0.2, 2.4], [0.4, 1.9], [0.3, 2.0], [0.4, 4.9]];  // measured (Zephyr)  // [start, end] of speech in each clip
+const HOLD = [1.2, 2.2, 2.2, 2.2, 2.2, 2.2, 2.8];   // time after the speech, so the meaning can be read
+const LEAD = 0.25;
+const segs = []; let t = 0;
+SPEECH.forEach(([s, e], i) => { const len = LEAD + (e - s) + HOLD[i]; segs.push({ start: t, end: t + len, voiceAt: t + LEAD - s, keep: e + 0.12 }); t += len; });
+window.DURATION = +t.toFixed(2);
+const scenes = [...document.querySelectorAll('.scene')].map(el => ({ el, ...segs[+el.dataset.seg] }));
+
+window.AUDIO = [
+  ...segs.map((g, i) => [VO + CLIPS[i] + '.wav', +Math.max(0, g.voiceAt).toFixed(2), 1, 'voice', +g.keep.toFixed(2)]),
+  ...segs.map(g => ['pop.wav', +(g.start + 0.32).toFixed(2), 0.25]),
+];
+window.layout = () => seek(0);
+
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const eo = x => 1 - Math.pow(1 - cl(x), 3);
+const back = x => { x = cl(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+function animate(e, k) {
+  const anim = e.dataset.anim; k -= +(e.dataset.in || 0);
+  let op = 1, tf = '';
+  if (anim === 'pop') { op = cl(k / .15); tf += `scale(${back(k / .5)})`; }
+  else if (anim === 'word') { op = cl(k / .12); tf += `translateY(${(1 - eo(k / .45)) * 50}px) scale(${back(k / .45)})`; }
+  else if (anim === 'up') { op = cl(k / .3); tf += `translateY(${(1 - eo(k / .5)) * 70}px)`; }
+  else if (anim === 'rise') { op = cl(k / .2); tf += `translateY(${(1 - eo(k / .55)) * 520}px)`; }
+  if (anim && k < 0) op = 0;
+  if (e.dataset.bob && k > 0) tf += ` translateY(${Math.sin(k * 3.4) * 10}px) rotate(${Math.sin(k * 2.2) * 2}deg)`;
+  e.style.opacity = op; e.style.transform = tf;
+}
+window.seek = function (t) {
+  scenes.forEach(s => {
+    const vis = t >= s.start && t < s.end;
+    s.el.style.display = vis ? 'block' : 'none';
+    if (!vis) return;
+    const lt = t - s.start, out = cl((t - (s.end - 0.22)) / 0.22);   // quick exit before the next word
+    s.el.style.opacity = 1 - out;
+    s.el.style.transform = `translateY(${-out * 60}px) scale(${1 - out * 0.04})`;
+    s.el.querySelectorAll('[data-anim]').forEach(e => animate(e, lt));
+  });
+  // background shapes drift and the daisies turn slowly
+  document.getElementById('b1').style.transform = `rotate(${t * 6}deg)`;
+  document.getElementById('b2').style.transform = `rotate(${-t * 5}deg)`;
+  document.getElementById('f1').style.transform = `rotate(${t * 20}deg)`;
+  document.getElementById('f2').style.transform = `rotate(${-t * 28}deg)`;
+  // the small flower steps aside on the last page so it doesn't sit on the Follow pill
+  document.getElementById('f2').style.opacity = 1 - cl((t - scenes[scenes.length - 1].start) / 0.3);
+};
+document.fonts.ready.then(() => seek(0));
+</script>
+</body></html>
