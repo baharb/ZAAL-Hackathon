@@ -1,0 +1,9 @@
+{
+  "name": "zaal-reels",
+  "private": true,
+  "description": "Instagram reels and posts for ZAAL, rendered from HTML templates",
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "puppeteer-core": "^25.12.0"
+  }
+}

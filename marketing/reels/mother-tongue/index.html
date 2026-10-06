@@ -1,0 +1,193 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ZAAL mother tongue reel</title>
+<!-- Fonts match the @zaalkids posts: Lalezar (Farsi) + Nunito Black (English) -->
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Nunito:wght@800;900&display=block" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--plum:#341e60}
+.stack{color:var(--head)}
+.stack .en{color:var(--cap);opacity:1}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#000}
+body{font-family:'Nunito',sans-serif;font-weight:900;color:#fff}
+.scene{position:absolute;inset:0;overflow:hidden}
+.a{position:absolute;will-change:transform}
+.stack{position:absolute;left:0;width:1080px;display:flex;flex-direction:column;align-items:center;gap:10px;z-index:5}
+.stack>*{position:relative}
+
+.fa{direction:rtl;font-family:'Lalezar',sans-serif;font-weight:400;text-align:center;width:940px;line-height:1.4;text-wrap:balance}
+.fa .w{display:inline-block}
+.en{max-width:820px;text-align:center;font-weight:700;font-size:40px;line-height:1.3;letter-spacing:.3px;opacity:.82;text-wrap:balance;margin-top:22px}
+.num{width:150px;height:150px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Lalezar';font-size:110px;line-height:1;padding-top:14px}
+.blob{border-radius:48% 52% 60% 40%/50% 42% 58% 50%}
+.row{display:flex;flex-direction:column;align-items:center;gap:0}
+.row .rf{font-family:'Lalezar';font-size:96px;line-height:1.3;direction:rtl}
+.row .re{font-size:46px;opacity:.9;margin-top:-6px}
+#wm{position:absolute;right:44px;top:1450px;width:240px;z-index:999}
+</style></head>
+<body>
+<!-- Elements marked data-follow take their `top` as an offset from the bottom of the scene's text stack. -->
+
+<!-- S1 hook -->
+<div class="scene" id="s1" style="background:var(--bg);--bg:#9ef721;--blob:#fcbd22;--head:#06470f;--cap:#01692e;--hl:#ff7600" data-start="0" data-end="4.2">
+  <div class="a blob" style="width:860px;height:760px;background:var(--blob);right:-430px;top:-330px" data-in="0" data-anim="pop" data-spin="3"></div>
+  <div class="stack" style="top:250px">
+    <div class="fa" style="font-size:210px;line-height:1.15" data-words=".15">زبان مادری</div>
+    <div class="fa" style="font-size:120px;color:var(--hl);margin-top:-10px" data-words=".6">زبانِ دل است</div>
+    <div class="en" data-in="1.2" data-anim="up">Our mother tongue is<br>the language of the heart</div>
+  </div>
+  <img class="a" data-src="Dara/happy_baby_giraffe_with_a_big_grin.webp" style="width:600px;left:240px;top:20px" data-follow="1" data-in=".7" data-anim="pop" data-bob="12,3" data-pop="1">
+</div>
+
+<!-- S2 why -->
+<div class="scene" id="s2" style="background:var(--bg);--bg:#fcdf54;--blob:#ff7600;--head:#06470f;--cap:#01692e;--hl:#ff7600" data-start="4.2" data-end="7.6" data-ox="80" data-oy="20">
+  <div class="a blob" style="width:820px;height:700px;background:var(--blob);left:-330px;top:1300px" data-in=".1" data-anim="pop" data-spin="-3"></div>
+  <div class="stack" style="top:340px">
+    <div class="fa" style="font-size:220px;line-height:1.2" data-words=".2">چرا فارسی؟</div>
+    <div class="en" data-in=".8" data-anim="up">Why keep Farsi alive at home?</div>
+  </div>
+  <img class="a" data-src="Robo Boombo/thinking_2x_1024x1024.png" style="width:820px;left:130px;top:20px" data-follow="1" data-in=".6" data-anim="up" data-bob="10,3" data-pop="1">
+</div>
+
+<!-- S3 family -->
+<div class="scene" id="s3" data-dark="1" style="background:var(--bg);--bg:#ff7600;--blob:#fcdf54;--head:#06470f;--cap:#06470f;--hl:#06470f" data-start="7.6" data-end="11.6" data-ox="20" data-oy="80">
+  <div class="stack" style="top:250px">
+    <div class="fa" style="font-size:112px" data-words=".3">تا با مامان‌بزرگ و | بابابزرگ حرف بزنند</div>
+    <div class="en" data-in="1.1" data-anim="up">So they can talk with grandma &amp; grandpa</div>
+  </div>
+  <div class="a blob" style="width:820px;height:700px;background:var(--blob);left:130px;top:50px" data-follow="1" data-in=".1" data-anim="pop" data-spin="2"></div>
+  <img class="a" data-src="Lila/lila_waving@4x.png" style="width:620px;left:230px;top:20px" data-follow="1" data-in=".6" data-anim="pop" data-bob="10,3" data-pop="1">
+</div>
+
+<!-- S4 roots -->
+<div class="scene" id="s4" data-dark="1" style="background:var(--bg);--bg:#01692e;--blob:#9ef721;--head:#fcdf54;--cap:#9ef721;--hl:#fcdf54" data-start="11.6" data-end="15.6" data-ox="85" data-oy="75">
+  <div class="stack" style="top:250px">
+    <div class="fa" style="font-size:120px" data-words=".3">تا بدانند | ریشه‌شان از کجاست</div>
+    <div class="en" data-in="1.0" data-anim="up">So they know where their roots are</div>
+  </div>
+  <div class="a" style="width:740px;height:740px;border-radius:50%;background:var(--blob);left:170px;top:50px" data-follow="1" data-in=".1" data-anim="pop"></div>
+  <img class="a" data-src="Aidin/07_owl_celebration.webp" style="width:660px;left:210px;top:40px" data-follow="1" data-in=".6" data-anim="pop" data-bob="10,3" data-pop="1">
+</div>
+
+<!-- S5 two languages -->
+<div class="scene" id="s5" style="background:var(--bg);--bg:#fcbd22;--blob:#9ef721;--head:#06470f;--cap:#01692e;--hl:#06470f" data-start="15.6" data-end="19.6" data-ox="15" data-oy="25">
+  <div class="stack" style="top:250px">
+    <div class="fa" style="font-size:124px" data-words=".3">دو زبان، | دو برابر ماجرا!</div>
+    <div class="en" data-in="1.0" data-anim="up">Two languages, twice the adventures</div>
+  </div>
+  <div class="a blob" style="width:800px;height:700px;background:var(--blob);left:140px;top:60px" data-follow="1" data-in=".1" data-anim="pop" data-spin="-2"></div>
+  <img class="a" data-src="Dara/cheerful_dancing_giraffe_character.webp" style="width:720px;left:180px;top:0px" data-follow="1" data-in=".5" data-anim="up" data-bob="12,3.6" data-pop="1">
+</div>
+
+<!-- S6 culture -->
+<div class="scene" id="s6" data-dark="1" style="background:var(--bg);--bg:#ff7600;--blob:#9ef721;--head:#06470f;--cap:#06470f;--hl:#06470f" data-start="19.6" data-end="23.6" data-ox="50" data-oy="95">
+  <div class="stack" style="top:250px">
+    <div class="fa" style="font-size:108px" data-words=".3">شعر و قصه و نوروز، | مالِ آن‌ها هم هست</div>
+    <div class="en" data-in="1.1" data-anim="up">Poems, stories &amp; Nowruz are theirs too</div>
+  </div>
+  <div class="a blob" style="width:820px;height:700px;background:var(--blob);left:130px;top:60px" data-follow="1" data-in=".1" data-anim="pop" data-spin="2"></div>
+  <img class="a" data-src="Neli/06_reading_book_2x.png" style="width:600px;left:240px;top:20px" data-follow="1" data-in=".5" data-anim="up" data-bob="8,2.8" data-pop="1">
+</div>
+
+<!-- S7 every day -->
+<div class="scene" id="s7" style="background:var(--bg);--bg:#9ef721;--blob:#ff7600;--head:#06470f;--cap:#01692e;--hl:#ff7600" data-start="23.6" data-end="27.4" data-ox="90" data-oy="15">
+  <div class="a blob" style="width:760px;height:660px;background:var(--blob);left:-360px;top:-300px" data-in=".1" data-anim="pop" data-spin="3"></div>
+  <div class="stack" style="top:300px">
+    <div class="fa" style="font-size:150px" data-words=".2">هر روز | کمی فارسی</div>
+    <div class="en" data-in=".8" data-anim="up">A little Farsi, every day</div>
+  </div>
+  <img class="a" data-src="Neli/04_dancing_2x.png" style="width:620px;left:230px;top:60px" data-follow="1" data-in=".6" data-anim="up" data-bob="12,4" data-pop="1">
+</div>
+
+<!-- S8 outro -->
+<div class="scene" id="s8" style="background:var(--bg);--bg:#fcdf54;--blob:#ff7600;--head:#06470f;--cap:#01692e;--hl:#06470f" data-start="27.4" data-end="31.5" data-ox="50" data-oy="50">
+  <div class="stack" style="top:130px">
+    <img data-src="LOCAL:../shared/logo-color.png" style="width:640px" data-in=".1" data-anim="pop">
+    <div class="fa" style="font-size:108px;margin-top:30px" data-words=".4">زبان مادری، | هدیه‌ای برای همیشه</div>
+    <div class="en" data-in="1.0" data-anim="up">A gift that lasts forever</div>
+  </div>
+  <div class="a blob" style="width:980px;height:640px;background:var(--blob);left:50px;top:200px" data-follow="1" data-in=".1" data-anim="pop" data-spin="-2"></div>
+  <img class="a" data-src="Lila/lila_jumping@4x.png" style="width:380px;left:30px;top:120px" data-follow="1" data-in="1.5" data-anim="pop" data-bob="12,3.6" data-pop="1">
+  <img class="a" data-src="Aidin/02_owl_waving.webp" style="width:370px;left:680px;top:110px" data-follow="1" data-in="1.7" data-anim="pop" data-bob="12,4" data-pop="1">
+  <img class="a" data-src="Neli/04_dancing_2x.png" style="width:470px;left:305px;top:40px" data-follow="1" data-in="1.9" data-anim="pop" data-bob="14,4.2" data-pop="1">
+</div>
+
+<img id="wm" data-src="LOCAL:../shared/logo-color.png">
+
+<script>
+const A = new URL('../../../assets/neli-world/characters/', location.href).href;  // the app's character art
+document.querySelectorAll('[data-src]').forEach(i => i.src = i.dataset.src.startsWith('LOCAL:') ? i.dataset.src.slice(6) : new URL(i.dataset.src.split('/').map(encodeURIComponent).join('/'), A).href);
+
+// split kinetic Farsi lines into words that pop in reading order; a lone "|" forces a line break
+document.querySelectorAll('[data-words]').forEach(el => {
+  const base = +el.dataset.words;
+  let n = 0;
+  el.innerHTML = el.textContent.trim().split(/\s+/).map(w => w === '|' ? '<br>' :
+    `<span class="w" data-in="${(base + n++ * 0.13).toFixed(2)}" data-anim="word">${w}</span>`).join(' ');
+});
+
+const scenes = [...document.querySelectorAll('.scene')].map(s => ({ el: s, start: +s.dataset.start, end: +s.dataset.end, ox: s.dataset.ox ?? 50, oy: s.dataset.oy ?? 50 }));
+window.DURATION = 31.5;
+const WM_COLOR = '../shared/logo-color.png';
+const WM_WHITE = '../../../assets/logo-white.webp';
+
+// lay out "below the text" elements once fonts and images are in
+window.layout = function () {
+  scenes.forEach(s => {
+    const st = s.el.querySelector('.stack'); if (!st) return;
+    s.el.style.display = 'block';
+    const bottom = st.offsetTop + st.offsetHeight;
+    s.el.querySelectorAll('[data-follow]').forEach(e => {
+      if (e.dataset.base == null) e.dataset.base = parseFloat(e.style.top);
+      e.style.top = (bottom + +e.dataset.base) + 'px';
+    });
+  });
+  seek(0);
+};
+
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const eo = x => 1 - Math.pow(1 - cl(x), 3);
+const eio = x => { x = cl(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const back = x => { x = cl(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+
+// sound cues, read by render-mother.js: [file in assets/audio, start s, volume, kind]
+const SFX = [];
+scenes.forEach(s => s.el.querySelectorAll('[data-pop]').forEach(e => SFX.push(['pop.wav', +(s.start + +e.dataset.in + 0.02).toFixed(2), 0.5])));
+window.AUDIO = [
+  ['alphabet-train-music.wav', 0, 0.42, 'music'],
+  ...SFX,
+  ['yay-kids.wav', 29.4, 0.9],
+];
+
+function animate(e, lt) {
+  const anim = e.dataset.anim, k = lt - +(e.dataset.in || 0);
+  let op = 1, tf = '';
+  if (anim === 'pop') { op = cl(k / .15); tf += `scale(${back(k / .55)})`; }
+  else if (anim === 'word') { op = cl(k / .12); tf += `translateY(${(1 - eo(k / .45)) * 50}px) scale(${back(k / .45)})`; }
+  else if (anim === 'up') { op = cl(k / .3); tf += `translateY(${(1 - eo(k / .55)) * 90}px)`; }
+  if (anim && k < 0) op = 0;
+  if (e.dataset.bob) { const [amp, sp] = e.dataset.bob.split(',').map(Number); if (k > 0) tf += ` translateY(${Math.sin(k * sp) * amp}px) rotate(${Math.sin(k * sp * .5) * 1.5}deg)`; }
+  if (e.dataset.spin) tf += ` rotate(${lt * +e.dataset.spin}deg)`;
+  e.style.opacity = op; e.style.transform = tf;
+}
+
+window.seek = function (t) {
+  scenes.forEach((s, i) => {
+    const next = scenes[i + 1];
+    const vis = t >= s.start && t < (next ? next.start + .55 : 99);
+    s.el.style.display = vis ? 'block' : 'none';
+    if (!vis) return;
+    s.el.style.zIndex = i + 1;
+    const lt = t - s.start;
+    // wipe in: a circle of the new scene's colour grows from its origin point
+    s.el.style.clipPath = i === 0 ? 'none' : `circle(${eio(lt / .55) * 150}% at ${s.ox}% ${s.oy}%)`;
+    s.el.querySelectorAll('[data-anim],[data-spin],[data-bob]').forEach(e => animate(e, lt));
+  });
+  const wm = document.getElementById('wm');
+  const cur = scenes.filter(s => t >= s.start).pop();
+  const want = cur && cur.el.dataset.dark ? WM_WHITE : WM_COLOR;
+  if (wm.getAttribute('src') !== want) wm.setAttribute('src', want);
+  wm.style.opacity = t < 27.4 ? cl((t - .3) / .4) : 0;
+};
+document.fonts.ready.then(() => window.layout());
+</script>
+</body></html>

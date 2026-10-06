@@ -1,0 +1,198 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ZAAL Mehregan reel</title>
+<!-- Fonts match the @zaalkids posts: Lalezar (Farsi) + Nunito (English) -->
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Nunito:wght@700;800;900&display=block" rel="stylesheet">
+<style>
+/* Autumn palette sampled from the reference: gold sky, pumpkin orange, a little olive */
+:root{--gold:#e6ad16;--amber:#eeae40;--orange:#f96305;--burnt:#d24f00;--olive:#787913;--olive2:#6a6b0e}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#000}
+body{font-family:'Nunito',sans-serif;color:#fff}
+.scene{position:absolute;inset:0;overflow:hidden}
+.y{background:linear-gradient(180deg,var(--gold) 0%,var(--amber) 70%)}
+.o{background:var(--orange)}
+.a{position:absolute;will-change:transform}
+.stack{position:absolute;left:0;width:1080px;display:flex;flex-direction:column;align-items:center;z-index:5}
+.stack>*{position:relative}
+.fa{direction:rtl;font-family:'Lalezar',sans-serif;text-align:center;width:960px;line-height:1.35;text-wrap:balance;text-shadow:0 6px 0 rgba(120,60,0,.18)}
+.fa .w{display:inline-block}
+.en{max-width:860px;text-align:center;font-weight:800;font-size:44px;line-height:1.3;text-wrap:balance;margin-top:26px;opacity:.95;text-shadow:0 3px 0 rgba(120,60,0,.15)}
+/* landscape: a row of round bushes and an olive ground, like the reference */
+.bush{position:absolute;border-radius:50%}
+.ground{position:absolute;left:-100px;width:1280px;height:700px;top:1585px;border-radius:50% 50% 0 0/90px 90px 0 0;background:var(--olive)}
+.leaf{position:absolute;width:160px}
+#wm{position:absolute;right:56px;top:1410px;width:250px;z-index:999}
+#wm img{width:250px;display:block}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <!-- cartoon autumn leaves: body uses --lf, veins use --lv -->
+  <!-- chunky maple: broad lobes, tips rounded by a same-colour stroke -->
+  <g id="maple">
+    <path fill="var(--lf)" stroke="var(--lf)" stroke-width="7" stroke-linejoin="round" d="M50 6 58 21 67 15 65 30 81 22 78 37 94 39 84 51 91 59 74 62 72 71 58 67 52 79 48 79 42 67 28 71 26 62 9 59 16 51 6 39 22 37 19 22 35 30 33 15 42 21Z"/>
+    <path fill="none" stroke="var(--lv)" stroke-width="3.4" stroke-linecap="round" d="M50 96V20M50 60 26 35M50 60 74 35M50 67 15 53M50 67 85 53"/>
+  </g>
+  <!-- oak: lobes built from overlapping rounds -->
+  <g id="oak">
+    <g fill="var(--lf)"><circle cx="50" cy="18" r="13"/><circle cx="35" cy="30" r="12"/><circle cx="65" cy="30" r="12"/><circle cx="29" cy="47" r="13"/><circle cx="71" cy="47" r="13"/><circle cx="36" cy="64" r="12"/><circle cx="64" cy="64" r="12"/><ellipse cx="50" cy="46" rx="20" ry="30"/><circle cx="50" cy="72" r="11"/></g>
+    <path fill="none" stroke="var(--lv)" stroke-width="3.4" stroke-linecap="round" d="M50 97V14M50 32 64 26M50 32 36 26M50 48 70 43M50 48 30 43M50 64 64 61M50 64 36 61"/>
+  </g>
+  <!-- oval leaf with a soft point -->
+  <g id="oval">
+    <path fill="var(--lf)" d="M50 4C76 18 90 44 77 70 69 84 57 89 50 89 43 89 31 84 23 70 10 44 24 18 50 4Z"/>
+    <path fill="none" stroke="var(--lv)" stroke-width="3.4" stroke-linecap="round" d="M50 97V12M50 36 66 25M50 36 34 25M50 54 72 43M50 54 28 43M50 70 64 63M50 70 36 63"/>
+  </g>
+  <!-- badge maple: same outline, stem only, so nothing crosses the logo -->
+  <g id="maplebadge">
+    <path fill="var(--lf)" stroke="var(--lf)" stroke-width="7" stroke-linejoin="round" d="M50 6 58 21 67 15 65 30 81 22 78 37 94 39 84 51 91 59 74 62 72 71 58 67 52 79 48 79 42 67 28 71 26 62 9 59 16 51 6 39 22 37 19 22 35 30 33 15 42 21Z"/>
+    <path fill="none" stroke="var(--lv)" stroke-width="3.6" stroke-linecap="round" d="M50 78V97"/>
+  </g>
+</defs></svg>
+
+<!-- S1 hook: yellow -->
+<div class="scene y" id="s1" data-start="0" data-end="4.4" data-leaf="#e2560e,#a83c05">
+  <svg class="a leaf" viewBox="0 0 100 100" style="left:-10px;top:520px;--lf:#f08a1c;--lv:#c45a0a" data-fall="70,14,40"><use href="#oak"/></svg>
+  <svg class="a leaf" viewBox="0 0 100 100" style="left:940px;top:560px;width:120px;--lf:#e2560e;--lv:#a83c05" data-fall="95,10,-55"><use href="#maple"/></svg>
+  <div class="stack" style="top:300px">
+    <div class="fa" style="font-size:88px" data-words=".15">بچه‌ها هالووین رو می‌شناسن</div>
+    <div class="fa" style="font-size:136px;margin-top:6px" data-words="2.6">ولی مهرگان رو چی؟</div>
+    <div class="en" data-in="3.2" data-anim="up">Your kids know Halloween…<br>but do they know Mehregan?</div>
+  </div>
+  <div class="bush" style="width:640px;height:640px;left:-170px;top:1180px;background:var(--orange)"></div>
+  <div class="bush" style="width:380px;height:380px;left:780px;top:1420px;background:var(--orange)"></div>
+  <div class="ground"></div>
+  <img class="a" data-src="Lila/lila_thinking@4x.png" style="width:700px;left:-60px;top:1000px" data-in=".5" data-anim="up" data-bob="8,3" data-pop="1">
+</div>
+
+<!-- S2 what: orange -->
+<div class="scene o" id="s2" data-start="4.4" data-end="8.4" data-ox="85" data-oy="20" data-leaf="#c44200,#8f3000">
+  <svg class="a leaf" viewBox="0 0 100 100" style="left:930px;top:620px;--lf:#ffc23a;--lv:#d4880f" data-fall="65,16,-40"><use href="#oval"/></svg>
+  <div class="stack" style="top:300px">
+    <div class="fa" style="font-size:220px;line-height:1.2" data-words=".15">مهرگان</div>
+    <div class="fa" style="font-size:112px" data-words="1.4">جشن مهربونی و دوستی</div>
+    <div class="en" data-in="2.3" data-anim="up">The Persian festival of<br>kindness &amp; friendship</div>
+  </div>
+  <div class="bush" style="width:400px;height:400px;left:-100px;top:1410px;background:var(--amber)"></div>
+  <div class="bush" style="width:420px;height:420px;left:760px;top:1390px;background:var(--amber)"></div>
+  <div class="ground"></div>
+  <img class="a" data-src="Lila/lila_waving@4x.png" style="width:720px;left:-70px;top:985px" data-in=".4" data-anim="up" data-bob="8,3.2" data-pop="1">
+</div>
+
+<!-- S3 when: yellow -->
+<div class="scene y" id="s3" data-start="8.4" data-end="11.0" data-ox="15" data-oy="80" data-leaf="#e2560e,#a83c05">
+  <svg class="a leaf" viewBox="0 0 100 100" style="left:-10px;top:560px;width:130px;--lf:#e2560e;--lv:#a83c05" data-fall="80,12,50"><use href="#oak"/></svg>
+  <div class="stack" style="top:340px">
+    <div class="fa" style="font-size:280px;line-height:1.1" data-words=".15">۱۶ مهر</div>
+    <div class="en" style="font-size:64px;font-weight:900;margin-top:10px" data-in=".7" data-anim="up">October 8</div>
+  </div>
+  <div class="bush" style="width:640px;height:640px;left:-170px;top:1180px;background:var(--orange)"></div>
+  <div class="bush" style="width:380px;height:380px;left:780px;top:1420px;background:var(--orange)"></div>
+  <div class="ground"></div>
+  <img class="a" data-src="Lila/lila_running@4x.png" style="width:720px;left:-60px;top:990px" data-in=".35" data-anim="left" data-bob="10,5" data-pop="1">
+</div>
+
+<!-- S4 the phrase: orange -->
+<div class="scene o" id="s4" data-start="11.0" data-end="15.6" data-ox="85" data-oy="80" data-leaf="#c44200,#8f3000">
+  <svg class="a leaf" viewBox="0 0 100 100" style="left:-10px;top:560px;--lf:#ffc23a;--lv:#d4880f" data-fall="60,14,35"><use href="#maple"/></svg>
+  <div class="stack" style="top:330px">
+    <div class="fa" style="font-size:84px;opacity:.95" data-words=".15">امسال اینو یادشون بدید:</div>
+    <div class="fa" style="font-size:150px;line-height:1.3;margin-top:20px;white-space:nowrap" data-words="2.2">مهرتان افزون</div>
+    <div class="en" data-in="2.9" data-anim="up">Teach them: “May your kindness grow”</div>
+  </div>
+  <div class="bush" style="width:400px;height:400px;left:-100px;top:1410px;background:var(--amber)"></div>
+  <div class="bush" style="width:420px;height:420px;left:760px;top:1390px;background:var(--amber)"></div>
+  <div class="ground"></div>
+  <img class="a" data-src="Lila/lila_big_smile@4x.png" style="width:700px;left:-60px;top:1000px" data-in=".4" data-anim="up" data-bob="8,3" data-pop="1">
+</div>
+
+<!-- S5 greeting: yellow -->
+<div class="scene y" id="s5" data-start="15.6" data-end="19.2" data-ox="50" data-oy="50" data-leaf="#e2560e,#a83c05">
+  <svg class="a leaf" viewBox="0 0 100 100" style="left:-10px;top:560px;--lf:#e2560e;--lv:#a83c05" data-fall="70,14,45"><use href="#oval"/></svg>
+  <svg class="a leaf" viewBox="0 0 100 100" style="left:940px;top:520px;width:120px;--lf:#f08a1c;--lv:#c45a0a" data-fall="85,10,-50"><use href="#oak"/></svg>
+  <div class="stack" style="top:330px">
+    <div class="fa" style="font-size:190px;line-height:1.2" data-words=".2">مهرگان مبارک</div>
+    <div class="en" data-in=".9" data-anim="up">Happy Mehregan from ZAAL 🍂</div>
+  </div>
+  <div class="bush" style="width:640px;height:640px;left:-170px;top:1180px;background:var(--orange)"></div>
+  <div class="bush" style="width:380px;height:380px;left:780px;top:1420px;background:var(--orange)"></div>
+  <div class="ground"></div>
+  <img class="a" data-src="Lila/lila_jumping@4x.png" style="width:740px;left:-70px;top:900px" data-in=".4" data-anim="pop" data-bob="14,4.2" data-pop="1">
+</div>
+
+<!-- corner logo: white ZAAL -->
+<div id="wm">
+  <img src="../../../assets/logo-white.webp">
+</div>
+
+<script>
+const A = new URL('../../../assets/neli-world/characters/', location.href).href;  // the app's character art
+document.querySelectorAll('[data-src]').forEach(i => i.src = new URL(i.dataset.src.split('/').map(encodeURIComponent).join('/'), A).href);
+
+// split Farsi lines into words that pop in reading order; a lone "|" forces a line break
+document.querySelectorAll('[data-words]').forEach(el => {
+  const base = +el.dataset.words;
+  let n = 0;
+  el.innerHTML = el.textContent.trim().split(/\s+/).map(w => w === '|' ? '<br>' :
+    `<span class="w" data-in="${(base + n++ * 0.14).toFixed(2)}" data-anim="word">${w}</span>`).join(' ');
+});
+
+const scenes = [...document.querySelectorAll('.scene')].map(s => ({ el: s, start: +s.dataset.start, end: +s.dataset.end, ox: s.dataset.ox ?? 50, oy: s.dataset.oy ?? 50 }));
+window.DURATION = 19.2;
+window.layout = () => seek(0);
+
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const eo = x => 1 - Math.pow(1 - cl(x), 3);
+const eio = x => { x = cl(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const back = x => { x = cl(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+
+// sound cues for render-mother.js (no music: it gets added in Instagram)
+const SFX = [];
+scenes.forEach(s => s.el.querySelectorAll('[data-pop]').forEach(e => SFX.push(['pop.wav', +(s.start + +e.dataset.in + 0.02).toFixed(2), 0.3])));
+// Gemini TTS clips (Callirrhoe, same as the app). [file, start, volume, kind, keep seconds]: clips are cut just after the speech
+const VO = 'voices/';
+window.AUDIO = [
+  ...SFX,
+  [VO + '1a-halloween.wav', 0.1, 1, 'voice', 2.5],
+  [VO + '1b-mehregan.wav', 2.4, 1, 'voice', 2.0],
+  [VO + '2a-name.wav', 4.45, 1, 'voice', 1.5],
+  [VO + '2b-what.wav', 5.7, 1, 'voice', 2.6],
+  [VO + '3-date.wav', 8.55, 1, 'voice', 1.9],
+  [VO + '4a-teach.wav', 11.05, 1, 'voice', 2.2],
+  [VO + '4b-phrase-B.wav', 13.05, 1, 'voice', 2.2],
+  [VO + '5-greeting.wav', 15.75, 1, 'voice', 2.0],
+  ['yay-kids.wav', 17.7, 0.7],
+];
+
+function animate(e, lt) {
+  const anim = e.dataset.anim, k = lt - +(e.dataset.in || 0);
+  let op = 1, tf = '';
+  if (anim === 'pop') { op = cl(k / .15); tf += `scale(${back(k / .55)})`; }
+  else if (anim === 'word') { op = cl(k / .12); tf += `translateY(${(1 - eo(k / .45)) * 50}px) scale(${back(k / .45)})`; }
+  else if (anim === 'up') { op = cl(k / .3); tf += `translateY(${(1 - eo(k / .55)) * 110}px)`; }
+  else if (anim === 'left') { op = cl(k / .25); tf += `translateX(${-(1 - eo(k / .6)) * 600}px)`; }
+  if (anim && k < 0) op = 0;
+  if (e.dataset.bob) { const [amp, sp] = e.dataset.bob.split(',').map(Number); if (k > 0) tf += ` translateY(${Math.sin(k * sp) * amp}px) rotate(${Math.sin(k * sp * .5) * 1.5}deg)`; }
+  // falling leaf: drifts down, sways and turns
+  if (e.dataset.fall) { const [v, sway, rot] = e.dataset.fall.split(',').map(Number); tf += ` translate(${Math.sin(lt * 1.6) * sway * 3}px,${lt * v}px) rotate(${lt * rot}deg)`; }
+  e.style.opacity = op; e.style.transform = tf;
+}
+
+window.seek = function (t) {
+  let cur = scenes[0];
+  scenes.forEach((s, i) => {
+    const next = scenes[i + 1];
+    const vis = t >= s.start && t < (next ? next.start + .55 : 99);
+    s.el.style.display = vis ? 'block' : 'none';
+    if (t >= s.start) cur = s;
+    if (!vis) return;
+    s.el.style.zIndex = i + 1;
+    const lt = t - s.start;
+    s.el.style.clipPath = i === 0 ? 'none' : `circle(${eio(lt / .55) * 150}% at ${s.ox}% ${s.oy}%)`;
+    s.el.querySelectorAll('[data-anim],[data-bob],[data-fall]').forEach(e => animate(e, lt));
+  });
+  const wm = document.getElementById('wm');
+  wm.style.opacity = cl((t - .3) / .4);
+};
+document.fonts.ready.then(() => window.layout());
+</script>
+</body></html>

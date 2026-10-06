@@ -1,0 +1,5 @@
+node_modules/
+*.mp4
+_*.html
+*_[0-9]*.jpg
+*grid*.jpg
