@@ -1,0 +1,246 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Halloween in Farsi (YouTube)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Nunito:wght@700;800;900&display=block" rel="stylesheet">
+<style>
+/* the Halloween reel's night palette: plum background, tangerine shapes, white text */
+:root{--bg:#4b2a7a;--shape:#ff9a3c;--onshape:#3a1260;--ink:#fff;--ink2:#ffd9b0;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden}
+body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--ink);position:relative}
+.a{position:absolute;will-change:transform}
+.layer{position:absolute;inset:0;display:none}
+.fa{direction:rtl;font-family:'Lalezar',sans-serif;line-height:1.15;unicode-bidi:isolate}
+.en{font-weight:900}
+.pill{background:var(--shape);color:var(--onshape);font-weight:900;border-radius:60px;display:inline-block}
+.center{position:absolute;left:0;width:1920px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.emoji{display:flex;align-items:center;justify-content:center;line-height:1}
+/* word screen: the thing on the left, the word on the right */
+#art{position:absolute;left:240px;top:250px;width:620px;height:620px;font-size:460px}
+#art img{width:560px}
+#badge{position:absolute;left:1350px;top:120px;transform:translateX(-50%);font-family:Lalezar;font-size:56px;line-height:1;padding:18px 40px 8px;white-space:nowrap}
+#q{position:absolute;left:1150px;top:290px;width:400px;height:300px;border-radius:60px;border:12px dashed var(--shape);color:var(--shape);font-family:Lalezar;font-size:230px}
+#cd{position:absolute;left:1280px;top:620px;width:140px;height:140px;border-radius:50%;background:var(--shape);color:var(--onshape);font-weight:900;font-size:90px}
+#reveal{position:absolute;left:950px;top:260px;width:800px;display:flex;flex-direction:column;align-items:center}
+#wfa{font-size:230px}
+#wtr{font-size:66px;color:var(--ink2);margin-top:4px}
+#wen{font-size:54px;padding:12px 40px 10px;margin-top:18px}
+#say{position:absolute;left:1350px;top:820px;transform:translateX(-50%);display:flex;align-items:center;gap:30px;white-space:nowrap}
+#say .mic{position:relative;width:150px;height:150px;border-radius:50%;background:var(--card);font-size:86px}
+#say svg{position:absolute;inset:-12px;width:174px;height:174px;transform:rotate(-90deg)}
+#saytxt{font-size:84px}
+#sayen{font-size:38px;color:var(--ink2)}
+/* round 3: all ten together */
+.cell{position:absolute;width:300px;height:330px;background:var(--card);border-radius:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--onshape);box-shadow:0 12px 0 rgba(0,0,0,.18)}
+.cell .e{font-size:150px;line-height:1;height:170px;display:flex;align-items:center}
+.cell .e img{width:160px}
+.cell .fa{font-size:70px;margin-top:10px}
+.icon{width:200px;height:200px;border-radius:50px;box-shadow:0 12px 0 rgba(0,0,0,.25)}
+.sub-btn{background:#e8322e;color:#fff;font-weight:900;font-size:54px;border-radius:24px;padding:18px 48px 16px}
+</style></head>
+<body>
+<svg class="a" id="b1" viewBox="0 0 200 200" style="width:620px;left:-260px;top:-220px"><path fill="var(--shape)" d="M100 12C122 10 128 40 146 44 168 48 190 40 192 66 194 90 166 96 170 116 174 138 196 156 180 176 164 194 140 176 120 184 100 192 86 200 68 186 50 172 62 150 46 138 28 124 4 128 6 104 8 80 34 84 38 64 42 44 22 26 42 16 62 6 80 14 100 12Z"/></svg>
+<svg class="a" id="b2" viewBox="0 0 200 200" style="width:560px;right:-220px;bottom:-250px"><path fill="var(--shape)" d="M62 28C96 4 132 22 150 40 170 60 196 58 192 92 188 120 168 124 176 150 186 182 150 200 118 188 92 178 82 198 50 186 18 174 28 144 16 120 2 92 12 70 30 56 42 46 46 40 62 28Z"/></svg>
+
+<!-- title -->
+<div class="layer" id="title">
+  <div class="center" style="top:90px">
+    <div class="fa" style="font-size:230px" data-in=".1" data-anim="pop">هالووین</div>
+    <div class="fa" style="font-size:130px" data-in=".5" data-anim="pop">به فارسی! 🎃</div>
+    <div class="en" style="font-size:60px;margin-top:20px" data-in="1.0" data-anim="up">Halloween in Farsi · 10 words</div>
+    <div class="pill fa" style="font-size:66px;padding:18px 48px 8px;margin-top:30px" data-in="3.1" data-anim="pop">می‌تونی حدس بزنی؟ 👻</div>
+    <div class="en" style="font-size:42px;margin-top:14px" data-in="3.4" data-anim="up">Can you guess them?</div>
+  </div>
+  <div class="a emoji" style="left:120px;top:620px;width:380px;height:380px" data-in=".4" data-anim="pop" data-bob="1"><img id="pumpkinT" style="width:360px"></div>
+  <img class="a" id="neliT" style="width:400px;left:1440px;top:620px" data-in=".6" data-anim="rise" data-bob="1">
+</div>
+
+<!-- round cards -->
+<div class="layer" id="round">
+  <div class="center" style="top:300px">
+    <div class="pill" id="rnum" style="font-size:56px;padding:16px 44px 12px" data-in=".1" data-anim="pop"></div>
+    <div class="fa" id="rfa" style="font-size:160px;margin-top:30px" data-in=".35" data-anim="pop"></div>
+    <div class="en" id="ren" style="font-size:56px;margin-top:10px" data-in=".7" data-anim="up"></div>
+  </div>
+  <img class="a" id="neliR" style="width:340px;left:150px;top:640px" data-in=".3" data-anim="rise" data-bob="1">
+</div>
+
+<!-- one word -->
+<div class="layer" id="word">
+  <div class="pill" id="badge"></div>
+  <div class="emoji" id="art"></div>
+  <div class="emoji" id="q">؟</div>
+  <div class="emoji" id="cd">3</div>
+  <div id="reveal"><div class="fa" id="wfa"></div><div class="en" id="wtr"></div><div class="pill" id="wen"></div></div>
+  <div id="say">
+    <div class="mic emoji">🎤<svg viewBox="0 0 174 174"><circle cx="87" cy="87" r="80" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="12"/><circle id="arc" cx="87" cy="87" r="80" fill="none" stroke="var(--shape)" stroke-width="12" stroke-linecap="round" stroke-dasharray="503" stroke-dashoffset="503"/></svg></div>
+    <div><div class="fa" id="saytxt">تو بگو!</div><div class="en" id="sayen">Your turn, say it!</div></div>
+  </div>
+</div>
+
+<!-- round 3: all together -->
+<div class="layer" id="grid"></div>
+
+<!-- outro -->
+<div class="layer" id="outro">
+  <div class="center" style="top:110px">
+    <div class="fa" style="font-size:160px" data-in=".1" data-anim="pop">هالووین مبارک! 🎃</div>
+    <div class="en" style="font-size:60px" data-in=".5" data-anim="up">Happy Halloween!</div>
+    <div class="sub-btn" style="margin-top:46px" data-in="1.0" data-anim="pop">🔔 Subscribe for more Farsi with Neli</div>
+    <div style="display:flex;align-items:center;gap:30px;margin-top:46px" data-in="1.6" data-anim="pop">
+      <img class="icon" src="../../../assets/icon.png">
+      <div style="text-align:left"><div class="en" style="font-size:56px">Learn Farsi with ZAAL</div><div class="en" style="font-size:38px;color:var(--ink2)">Download · link in description</div></div>
+    </div>
+  </div>
+  <img class="a" id="neliO" style="width:360px;left:120px;top:660px" data-in=".4" data-anim="rise" data-bob="1">
+</div>
+
+<img class="a" id="wm" src="../../../assets/logo-white.webp" style="width:190px;right:40px;top:30px">
+
+<script>
+const CH = new URL('../../../assets/neli-world/characters/', location.href).href;
+const ASSET = p => new URL(p, CH).href;
+const PUMPKIN = ASSET('../vegetables/pumpkin@2x.webp');
+document.getElementById('pumpkinT').src = PUMPKIN;
+['neliT', 'neliO'].forEach(id => document.getElementById(id).src = ASSET('Neli/04_dancing_base.webp'));
+document.getElementById('neliR').src = ASSET('Neli/02_nelli_big_teeth_smile_base.webp');
+
+// the ten words: [voice clip, Farsi, transliteration, English, picture]
+const W = [
+  ['1-kadoo', 'کدو تنبل', 'kadoo tanbal', 'pumpkin', `<img src="${PUMPKIN}">`],
+  ['2-rooh', 'روح', 'rooh', 'ghost', '👻'],
+  ['3-jadoogar', 'جادوگر', 'jâdoogar', 'witch', '🧙‍♀️'],
+  ['4-khoffash', 'خفاش', 'khoffâsh', 'bat', '🦇'],
+  ['5-abnabat', 'آب‌نبات', 'âbnabât', 'candy', '🍬'],
+  ['6-ankaboot', 'عنکبوت', 'ankaboot', 'spider', '🕷️'],
+  ['7-mah', 'ماه', 'mâh', 'moon', '🌙'],
+  ['8-jaroo', 'جارو', 'jâroo', 'broom', '🧹'],
+  ['9-gorbe', 'گربه', 'gorbe', 'cat', '🐈‍⬛'],
+  ['10-sham', 'شمع', 'sham', 'candle', '🕯️'],
+];
+const FA = '۰۱۲۳۴۵۶۷۸۹', faNum = n => String(n).replace(/\d/g, d => FA[d]);
+// measured [start, end] of speech in each clip (Zephyr, the young-mother voice; same clips as the Halloween reel)
+const SP = { '0a-halloween': [0.30, 2.38], '0b-hads': [0.88, 2.56], '1-kadoo': [0.32, 1.62], '2-rooh': [0.42, 1.30], '3-jadoogar': [0.34, 2.00],
+  '4-khoffash': [0.32, 1.76], '5-abnabat': [0.36, 1.44], '6-ankaboot': [0.30, 1.62], '7-mah': [0.30, 1.42], '8-jaroo': [0.42, 1.46],
+  '9-gorbe': [0.26, 1.44], '10-sham': [0.26, 1.32], 'q-in-chie': [0.28, 1.40], 'r-afarin': [0.30, 1.36], '6a-mobarak': [0.38, 2.30],
+  '7-download': [0.26, 2.78], 'm-turn-first': [1.20, 3.40], 'm-say': [0.14, 0.80] };
+const dur = c => SP[c][1] - SP[c][0];
+// optional background music (set when chosen): a file under voices/, played quietly under everything
+const MUSIC = null;   // e.g. ['voices/music.mp3', 116]  (file, its length in seconds)
+
+const cues = []; let t = 0; const STEPS = [];
+const voice = (c, at) => cues.push(['voices/' + c + '.wav', +Math.max(0, at - SP[c][0]).toFixed(2), 1, 'voice', +(SP[c][1] + 0.12).toFixed(2)]);
+const sfx = (f, at, v = 0.3) => cues.push([f, +at.toFixed(2), v]);
+const add = st => { st.start = t; t += st.len; st.end = t; STEPS.push(st); return st; };
+
+// title
+add({ kind: 'title', len: 6.4 }); voice('0a-halloween', 0.6); voice('0b-hads', 0.6 + dur('0a-halloween') + 0.35); sfx('pop.wav', 0.15);
+// round 1: learn (guess, reveal, say it, hear it again)
+const round = (n, fa, en) => { const st = add({ kind: 'round', n, fa, en, len: 2.6 }); sfx('pop.wav', st.start + 0.1); };
+round(1, 'یاد بگیر!', 'Round 1: Learn the words');
+W.forEach((w, i) => {
+  const st = { kind: 'word', w, i, mode: 'learn', reveal: 2.0 };
+  st.start = t;
+  sfx('pop.wav', t + 0.2); [0, 1, 2].forEach(n => sfx('key-tap.wav', t + 0.5 + n * 0.5, 0.45)); sfx('pop.wav', t + st.reveal, 0.4);
+  voice(w[0], t + st.reveal + 0.05);
+  st.sayAt = st.againAt = Infinity;                                               // no prompt in round 1
+  st.len = st.reveal + 0.05 + dur(w[0]) + 1.2;
+  add(st);
+});
+// round 2: what is it? (mixed order, the child answers before the reveal)
+const r2 = add({ kind: 'round', n: 2, fa: 'نوبت توئه!', en: 'Round 2: Your turn! What is it?', len: 0.7 + dur('m-turn-first') + 0.9 }); sfx('pop.wav', r2.start + 0.1); voice('m-turn-first', r2.start + 0.7);
+const ORDER = [3, 0, 7, 1, 9, 4, 6, 2, 8, 5];
+ORDER.forEach((wi, j) => {
+  const w = W[wi], st = { kind: 'word', w, i: j, mode: 'quiz' };
+  st.start = t;
+  sfx('pop.wav', t + 0.2); voice('q-in-chie', t + 0.45);
+  st.micAt = 0.45 + dur('q-in-chie') + 0.15; st.wait = 3.0;
+  st.reveal = st.micAt + st.wait + 0.1; sfx('pop.wav', t + st.reveal, 0.4); voice(w[0], t + st.reveal + 0.05);
+  st.len = st.reveal + 0.05 + dur(w[0]) + 0.6;
+  if (j % 3 === 2) { voice('r-afarin', t + st.len - 0.2); st.len += dur('r-afarin') + 0.3; }   // a little praise now and then
+  add(st);
+});
+// round 3: all together, quick
+round(3, 'همه با هم!', 'Round 3: All together!');
+const g = add({ kind: 'grid', len: 1.0 + W.length * 3.0 + 0.8 });
+W.forEach((w, i) => { voice(w[0], g.start + 1.0 + i * 3.0); });
+// outro
+const o = add({ kind: 'outro', len: 13 }); voice('6a-mobarak', o.start + 0.3); voice('7-download', o.start + 3.2); sfx('yay-kids.wav', o.start + 1.0, 0.45);
+
+if (MUSIC) for (let m = 0; m < t; m += MUSIC[1]) cues.push([MUSIC[0], +m.toFixed(2), 0.1]);
+window.DURATION = +t.toFixed(2);
+window.AUDIO = cues;
+window.layout = () => seek(0);
+
+// grid cells for round 3
+document.getElementById('grid').innerHTML = W.map(([, fa, , , pic], i) =>
+  `<div class="cell" id="c${i}" style="left:${170 + (i % 5) * 330}px;top:${150 + Math.floor(i / 5) * 400}px"><div class="e">${pic}</div><div class="fa">${fa}</div></div>`).join('');
+
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const eo = x => 1 - Math.pow(1 - cl(x), 3);
+const back = x => { x = cl(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const $ = id => document.getElementById(id);
+function animate(e, k) {
+  const anim = e.dataset.anim; k -= +(e.dataset.in || 0);
+  let op = 1, tf = '';
+  if (anim === 'pop') { op = cl(k / .15); tf += `scale(${back(k / .5)})`; }
+  else if (anim === 'up') { op = cl(k / .3); tf += `translateY(${(1 - eo(k / .5)) * 60}px)`; }
+  else if (anim === 'rise') { op = cl(k / .2); tf += `translateY(${(1 - eo(k / .55)) * 500}px)`; }
+  if (anim && k < 0) op = 0;
+  if (e.dataset.bob && k > 0) tf += ` translateY(${Math.sin(k * 3.4) * 10}px) rotate(${Math.sin(k * 2.2) * 2}deg)`;
+  e.style.opacity = op; e.style.transform = tf;
+}
+const motion = (w, k) => w[3] === 'ghost' ? `translate(${Math.sin(k * 1.8) * 30}px, ${Math.sin(k * 3) * 22}px) rotate(${Math.sin(k * 1.8) * 6}deg)`
+  : w[3] === 'bat' ? `translateY(${Math.sin(k * 5) * 18}px) scaleX(${1 - .12 * Math.abs(Math.sin(k * 12))})`
+  : w[3] === 'spider' ? `translateY(${Math.sin(k * 2.2) * 26}px)` : `translateY(${Math.sin(k * 3.2) * 10}px) rotate(${Math.sin(k * 2.2) * 2}deg)`;
+let shown = null;
+
+window.seek = function (t) {
+  if (t < 1 / 60) t = 3.2;   // first frame = the title card, so it works as the default thumbnail
+  const st = STEPS.find(s => t >= s.start && t < s.end) || STEPS[STEPS.length - 1];
+  const k = t - st.start, fade = 1 - cl((t - (st.end - 0.2)) / 0.2);
+  ['title', 'round', 'word', 'grid', 'outro'].forEach(l => $(l).style.display = l === st.kind ? 'block' : 'none');
+  const L = $(st.kind); L.style.opacity = fade;
+  L.querySelectorAll('[data-anim]').forEach(e => animate(e, k));
+
+  if (st.kind === 'round') {
+    $('rnum').innerHTML = `Round ${st.n} – <span class="fa" style="font-size:1.1em">دور ${faNum(st.n)}</span>`; $('rfa').textContent = st.fa; $('ren').textContent = st.en;
+  }
+  if (st.kind === 'word') {
+    const [, fa, tr, en, pic] = st.w;
+    if (shown !== st) { $('art').innerHTML = pic; $('wfa').textContent = fa; $('wtr').textContent = tr; $('wen').textContent = '= ' + en; shown = st; }
+    $('badge').innerHTML = `<span dir="rtl" style="unicode-bidi:isolate">${st.mode === 'learn' ? 'یاد بگیر' : 'این چیه؟'} – ${faNum(st.i + 1)} از ۱۰</span>`;
+    $('art').style.opacity = cl((k - .2) / .15);
+    $('art').style.transform = `scale(${back((k - .2) / .5)}) ${motion(st.w, k)}`;
+    const before = k < st.reveal, o = cl((k - st.reveal) / .2);
+    // learn: ? card with a 3-2-1 countdown; quiz: ? card while the child answers
+    $('q').style.opacity = before ? cl((k - .35) / .15) : 1 - o;
+    $('q').style.transform = `scale(${before ? back((k - .35) / .5) : 1 - .5 * o})`;
+    const counting = st.mode === 'learn' && before;
+    $('cd').style.display = counting ? 'flex' : 'none';
+    if (counting) { const n = Math.max(1, 3 - Math.floor((k - 0.5) / 0.5)); $('cd').textContent = n; $('cd').style.opacity = cl((k - .35) / .15); $('cd').style.transform = `scale(${k > .5 ? 1 + .18 * (1 - cl((((k - .5) % .5) + .5) % .5 / .2)) : back((k - .35) / .5)})`; }
+    $('reveal').style.opacity = before ? 0 : cl((k - st.reveal) / .15);
+    $('reveal').style.transform = `scale(${before ? .6 : back((k - st.reveal) / .45)})`;
+    // the mic: after the reveal in learn ("say it"), before the reveal in quiz ("what is it?")
+    const micOn = st.mode === 'learn' ? (k >= st.sayAt && k < st.againAt) : (k >= st.micAt - .3 && k < st.reveal);
+    $('say').style.opacity = micOn ? 1 : 0;
+    if (st.mode === 'learn') { $('saytxt').textContent = st.prompt === 'm-turn-first' ? 'نوبت توئه! تو بگو!' : 'تو بگو!'; $('sayen').textContent = 'Your turn, say it!'; }
+    else { $('saytxt').textContent = 'این چیه؟'; $('sayen').textContent = 'What is it? Say it!'; }
+    $('say').style.top = st.mode === 'learn' ? '840px' : '660px';
+    $('arc').setAttribute('stroke-dashoffset', (503 * (1 - cl((k - st.micAt) / st.wait))).toFixed(1));
+  }
+  if (st.kind === 'grid') {
+    const cur = Math.floor((k - 1.0) / 3.0);
+    W.forEach((w, i) => {
+      const c = $('c' + i), pop = back((k - i * 0.06) / .5), on = i === cur && k >= 1.0;
+      c.style.opacity = cl((k - i * 0.06) / .15);
+      c.style.transform = `scale(${pop * (on ? 1.12 : 1)})`;
+      c.style.boxShadow = on ? '0 0 0 12px var(--shape), 0 12px 0 rgba(0,0,0,.18)' : '0 12px 0 rgba(0,0,0,.18)';
+    });
+  }
+  $('wm').style.opacity = st.kind === 'outro' ? 0 : 1;
+  $('b1').style.transform = `rotate(${t * 4}deg)`;
+  $('b2').style.transform = `rotate(${-t * 3.5}deg)`;
+};
+document.fonts.ready.then(() => seek(0));
+</script>
+</body></html>

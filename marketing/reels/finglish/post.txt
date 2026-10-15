@@ -1,0 +1,53 @@
+ZAAL reel: "بچه‌ت فارسی متوجه می‌شه ولی انگلیسی جواب می‌ده؟" (Finglish)
+====================================================================
+
+Video: ZAAL-finglish-reel-HQ.mp4 (1080x1920, 60fps, 34s; voices: mom Zephyr, Neli "Leda")
+       ZAAL-finglish-reel-upload.mp4 is the same reel under 10 MB, for uploading from Business Suite.
+Cover: cover.png (the hook page; it is also the video's first frame)
+
+
+CAPTION (copy everything between the lines)
+-------------------------------------------
+بچه‌ت فارسی متوجه می‌شه ولی انگلیسی جواب می‌ده؟ 🤔
+«مامان، من خیلی hungry ام!» 😂
+نگران نباش! زال اینجاست تا بچه‌ت با ذوق و با بازی فارسی حرف بزنه 💜
+
+Does your little one understand Farsi but answer in English? 😅
+You're not alone. ZAAL turns Finglish into Farsi, through play 💜
+
+📲 Download ZAAL: link in bio
+💬 What's the funniest Finglish sentence your kid has said? Tell us 👇
+
+#فینگلیش #فارسی_برای_کودکان #آموزش_فارسی #زبان_مادری #دوزبانه #مادر_ایرانی #ایرانیان_خارج_از_کشور #زال #Finglish #FarsiForKids #LearnFarsi #PersianForKids #BilingualKids #RaisingBilingualKids #IranianDiaspora #IranianMoms #ZAAL
+-------------------------------------------
+
+
+FIRST COMMENT (post it right after publishing, then pin it)
+-------------------------------------------
+بچه‌تون کدوم کلمه رو همیشه انگلیسی می‌گه؟ 😂👇
+Which word does your kid always say in English? Best answers might be in our next reel! 👇
+-------------------------------------------
+Promising a feature in the next reel gets far more replies, and gives you real Finglish lines for the next video.
+
+
+APP STORE CUSTOM PRODUCT PAGE (set up once in App Store Connect > the app > Custom Product Pages > +)
+-------------------------------------------
+Reference name: Reel - Finglish
+First 2-3 screenshots (same sizes as the main page): everyday words, the Alphabet Train, letter tracing
+App preview (optional): a cut of this reel at App Store preview specs
+Promotional text (127/170 characters):
+Understands Farsi but answers in English? ZAAL turns Finglish into Farsi through games, stories and songs made for little ones.
+-------------------------------------------
+Once Apple approves it, copy the page's URL (the App Store link + ?ppid=...) and make it the bio
+link (and any Story link sticker) while this reel is the newest post: captions aren't clickable,
+so "link in bio" has to land on this page. Compare its conversion with the default page in
+App Analytics.
+
+
+SETTINGS
+--------
+- Audio: original (voiceover). If you add a song, keep it low (15-25%).
+- Cover: the first frame is already the hook page; if Instagram asks, upload cover.png.
+- Share to Feed: ON. Trial Reels: worth trying if the switch shows up.
+- Alt text: Animated reel: Neli mixes English words into Farsi ("Maman, I'm so hungry!"), and each English word is taught in Farsi. Ends with "Download ZAAL" and App Store / Google Play buttons.
+- After posting: share to your Story with a link sticker to the app.

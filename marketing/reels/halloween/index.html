@@ -1,0 +1,186 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ZAAL halloween reel</title>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Nunito:wght@700;800;900&display=block" rel="stylesheet">
+<style>
+/* night: plum background, tangerine shapes, white text */
+:root{--bg:#4b2a7a;--shape:#ff9a3c;--onshape:#3a1260;--ink:#fff;--ink2:#ffd9b0;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden}
+body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--ink);position:relative}
+.a{position:absolute;will-change:transform}
+.scene{position:absolute;inset:0}
+/* Instagram safe area: keep text within x 130..950 and content above y ~1600 (caption/buttons) */
+.stack{position:absolute;left:0;width:1080px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.fa{direction:rtl;font-family:'Lalezar',sans-serif;line-height:1.3;text-wrap:balance;max-width:820px}
+.fa .w{display:inline-block}
+.en{font-weight:900;font-size:50px;line-height:1.25;margin-top:22px;max-width:820px}
+.count{background:var(--shape);color:var(--onshape);font-family:'Lalezar';font-size:54px;line-height:1;padding:18px 34px 8px;border-radius:60px}
+.tr{font-weight:900;font-size:58px;color:var(--ink2);margin-top:2px}
+.mean{margin-top:18px;background:var(--shape);color:var(--onshape);font-weight:900;font-size:48px;padding:14px 38px 12px;border-radius:60px}
+.pill{background:var(--shape);color:var(--onshape);font-weight:900;font-size:46px;padding:14px 38px 12px;border-radius:60px}
+/* the thing to guess: app art or a big emoji, centred under the badge */
+.art{left:310px;top:330px;width:460px;height:460px;display:flex;align-items:center;justify-content:center;font-size:340px;line-height:1}
+.art img{width:430px}
+/* guess area: a ? card with a 3-2-1 countdown, then the Farsi word */
+.guess{position:absolute;left:0;top:860px;width:1080px;height:470px}
+.q{position:absolute;left:340px;top:0;width:400px;height:300px;border-radius:60px;border:10px dashed var(--shape);display:flex;align-items:center;justify-content:center;font-family:Lalezar;font-size:220px;line-height:1;color:var(--shape)}
+.cd{position:absolute;left:465px;top:330px;width:150px;height:150px;border-radius:50%;background:var(--shape);color:var(--onshape);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:96px;line-height:1}
+.reveal{position:absolute;left:0;top:-20px;width:1080px;display:flex;flex-direction:column;align-items:center}
+/* hook */
+.big{font-family:Lalezar;direction:rtl;font-size:200px;line-height:1.05}
+/* download page */
+.icon{width:250px;height:250px;border-radius:66px;box-shadow:0 16px 0 rgba(0,0,0,.25)}
+.stores{display:flex;gap:24px;margin-top:30px}
+.store{background:#111;color:#fff;border-radius:26px;padding:16px 30px 14px;text-align:left;display:flex;align-items:center;gap:18px}
+.store svg{width:52px;height:52px}
+.store small{display:block;font-weight:800;font-size:22px;opacity:.85}
+.store span{display:block;font-weight:900;font-size:38px;line-height:1.05}
+</style></head>
+<body>
+<!-- irregular tangerine shapes -->
+<svg class="a" id="b1" viewBox="0 0 200 200" style="width:560px;left:-230px;top:110px"><path fill="var(--shape)" d="M100 12C122 10 128 40 146 44 168 48 190 40 192 66 194 90 166 96 170 116 174 138 196 156 180 176 164 194 140 176 120 184 100 192 86 200 68 186 50 172 62 150 46 138 28 124 4 128 6 104 8 80 34 84 38 64 42 44 22 26 42 16 62 6 80 14 100 12Z"/></svg>
+<svg class="a" id="b2" viewBox="0 0 200 200" style="width:520px;right:-110px;top:1090px"><path fill="var(--shape)" d="M62 28C96 4 132 22 150 40 170 60 196 58 192 92 188 120 168 124 176 150 186 182 150 200 118 188 92 178 82 198 50 186 18 174 28 144 16 120 2 92 12 70 30 56 42 46 46 40 62 28Z"/></svg>
+
+<!-- S0 hook -->
+<div class="scene" data-seg="0">
+  <div class="stack" style="top:260px">
+    <div class="big" data-in=".15" data-anim="pop">هالووین</div>
+    <div class="fa" style="font-size:120px;line-height:1.1" data-words=".55" data-step=".2">به فارسی! 🎃</div>
+    <div class="en" data-in="1.1" data-anim="up">Halloween… in Farsi!</div>
+    <div class="pill" style="margin-top:34px" data-in="2.55" data-anim="pop">Can you guess all 5? 👻</div>
+  </div>
+  <div class="a art" style="top:860px;left:290px" data-in=".4" data-anim="pop" data-bob="1"><img data-src="../vegetables/pumpkin@2x.webp"></div>
+</div>
+
+<!-- S1..S5 are built from WORDS below -->
+<div id="quiz"></div>
+
+<!-- S6 download -->
+<div class="scene" data-seg="6">
+  <div class="stack" style="top:150px">
+    <img class="icon" src="../../../assets/icon.png" data-in=".05" data-anim="pop">
+    <div class="fa" style="font-size:104px;line-height:1.2;margin-top:36px" data-words=".3" data-step=".2">هالووین مبارک! 🎃 | زال رو همین الان | دانلود کن! 📲</div>
+    <div class="stores" data-in="1.9" data-anim="pop">
+      <div class="store"><svg viewBox="0 0 24 24"><path fill="#fff" d="M16.4 12.6c0-2.5 2-3.6 2.1-3.7-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.1 2.5-1.8 3.1-.5 7.6 1.3 10.1.8 1.2 1.8 2.6 3.1 2.5 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8-.1 0-2.4-.9-2.4-3.6zM14 5.3c.7-.8 1.1-1.9 1-3-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.9-1.4z"/></svg><div><small>Download on the</small><span>App Store</span></div></div>
+      <div class="store"><svg viewBox="0 0 24 24"><path fill="#34d27b" d="M3.6 1.8 13.8 12 3.6 22.2c-.4-.2-.6-.6-.6-1.1V2.9c0-.5.2-.9.6-1.1z"/><path fill="#ffce3a" d="m17.2 15.4-3.4-3.4 3.4-3.4 4 2.3c1.1.6 1.1 1.7 0 2.3z"/><path fill="#ff4f5e" d="M17.2 15.4 13.8 12 3.6 22.2c.4.2.9.2 1.4-.1z"/><path fill="#3fa9ff" d="M17.2 8.6 5 1.9c-.5-.3-1-.3-1.4-.1L13.8 12z"/></svg><div><small>GET IT ON</small><span>Google Play</span></div></div>
+    </div>
+    <div class="pill" style="margin-top:32px" data-in="2.3" data-anim="pop">Learn Farsi through play · Link in bio ✨</div>
+  </div>
+  <img class="a" data-src="Neli/04_dancing_base.webp" style="width:400px;left:340px;top:1210px" data-in=".5" data-anim="rise" data-bob="1">
+</div>
+
+<img class="a" id="wm" src="../../../assets/logo-white.webp" style="width:240px;right:120px;top:1320px">
+
+<script>
+// the five words to guess: [Farsi, transliteration, English, art (emoji, or an image path), extra motion]
+const WORDS = [
+  ['کدو تنبل', 'kadoo tanbal', 'pumpkin', 'img:../vegetables/pumpkin@2x.webp', 'bob'],
+  ['روح', 'rooh', 'ghost', '👻', 'float'],
+  ['جادوگر', 'jâdoogar', 'witch', '🧙‍♀️', 'bob'],
+  ['خفاش', 'khoffâsh', 'bat', '🦇', 'flap'],
+  ['آب‌نبات', 'âbnabât', 'candy', '🍬', 'bob'],
+];
+const FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+const REVEAL = 2.0;   // seconds into each quiz page: 3-2-1 runs before this, then the word appears
+document.getElementById('quiz').outerHTML = WORDS.map(([fa, tr, en, art, mo], i) => `
+<div class="scene" data-seg="${i + 1}">
+  <div class="stack" style="top:200px"><div class="count" data-in=".05" data-anim="pop">${FA_DIGITS[i + 1]} / ۵</div></div>
+  <div class="a art" data-in=".15" data-anim="pop" data-${mo}="1">${art.startsWith('img:') ? `<img data-src="${art.slice(4)}">` : art}</div>
+  <div class="guess">
+    <div class="q" data-in=".35" data-anim="pop" data-out="${REVEAL}">؟</div>
+    <div class="cd" data-in=".35" data-anim="pop" data-out="${REVEAL}" data-cd="1">3</div>
+    <div class="reveal">
+      <div class="fa" style="font-size:${fa.length > 6 ? 170 : 190}px;line-height:1.15" data-words="${REVEAL}" data-step=".12">${fa}</div>
+      <div class="tr" data-in="${REVEAL + .3}" data-anim="up">${tr}</div>
+      <div class="mean" data-in="${REVEAL + .5}" data-anim="pop">= ${en}</div>
+    </div>
+  </div>
+</div>`).join('');
+
+const A = new URL('../../../assets/neli-world/characters/', location.href).href;  // the app's art lives in neli-world/
+document.querySelectorAll('[data-src]').forEach(i => i.src = new URL(i.dataset.src.split('/').map(encodeURIComponent).join('/'), A).href);
+document.querySelectorAll('[data-words]').forEach(el => {
+  const base = +el.dataset.words, step = +(el.dataset.step || 0.14); let n = 0;
+  el.innerHTML = el.textContent.trim().split(/\s+/).map(w => w === '|' ? '<br>' :
+    `<span class="w" data-in="${(base + n++ * step).toFixed(2)}" data-anim="word">${w}</span>`).join(' ');
+});
+
+// Timeline from the voice clips (Zephyr, young-mother prompt): measured [start, end] of speech in each file.
+const SP = { '0a-halloween': [0.30, 2.38], '0b-hads': [0.88, 2.56], '1-kadoo': [0.32, 1.62], '2-rooh': [0.42, 1.30], '3-jadoogar': [0.34, 2.00],
+  '4-khoffash': [0.32, 1.76], '5-abnabat': [0.36, 1.44], '6a-mobarak': [0.38, 2.30], '7-download': [0.26, 2.78] };
+const PAGES = [['0a-halloween', '0b-hads'], ['1-kadoo'], ['2-rooh'], ['3-jadoogar'], ['4-khoffash'], ['5-abnabat'], ['6a-mobarak', '7-download']];
+const LEAD = [0.3, REVEAL + 0.05, REVEAL + 0.05, REVEAL + 0.05, REVEAL + 0.05, REVEAL + 0.05, 0.35];
+const HOLD = [0.9, 1.2, 1.2, 1.2, 1.2, 1.2, 2.6];
+const segs = []; const cues = []; let t = 0;
+PAGES.forEach((clips, i) => {
+  let at = LEAD[i];
+  clips.forEach((c, j) => {
+    const [s, e] = SP[c];
+    if (j) at += 0.25;
+    if (e > 0) cues.push(['voices/' + c + '.wav', +Math.max(0, t + at - s).toFixed(2), 1, 'voice', +(e + 0.12).toFixed(2)]);
+    at += Math.max(e - s, 1.2);
+  });
+  const len = Math.max(at + HOLD[i], i === 0 ? 3.4 : 2.6);
+  segs.push({ start: t, end: t + len }); t += len;
+});
+window.DURATION = +t.toFixed(2);
+const scenes = [...document.querySelectorAll('.scene')].map(el => ({ el, ...segs[+el.dataset.seg] }));
+window.AUDIO = [
+  ...cues,
+  ...[1, 2, 3, 4, 5].flatMap(i => [
+    ['pop.wav', +(segs[i].start + 0.18).toFixed(2), 0.3],                                         // the thing pops in
+    ...[0, 1, 2].map(n => ['key-tap.wav', +(segs[i].start + 0.5 + n * 0.5).toFixed(2), 0.5]),     // 3-2-1 ticks
+    ['pop.wav', +(segs[i].start + REVEAL).toFixed(2), 0.4],                                       // reveal
+  ]),
+  ['pop.wav', +(segs[6].start + 0.08).toFixed(2), 0.3],
+  ['yay-kids.wav', +(segs[6].end - 2.2).toFixed(2), 0.5],
+];
+window.layout = () => seek(0);
+
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const eo = x => 1 - Math.pow(1 - cl(x), 3);
+const back = x => { x = cl(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+function animate(e, k) {
+  const anim = e.dataset.anim; const k0 = k; k -= +(e.dataset.in || 0);
+  let op = 1, tf = '';
+  if (anim === 'pop') { op = cl(k / .15); tf += `scale(${back(k / .5)})`; }
+  else if (anim === 'word') { op = cl(k / .12); tf += `translateY(${(1 - eo(k / .45)) * 50}px) scale(${back(k / .45)})`; }
+  else if (anim === 'up') { op = cl(k / .3); tf += `translateY(${(1 - eo(k / .5)) * 70}px)`; }
+  else if (anim === 'rise') { op = cl(k / .2); tf += `translateY(${(1 - eo(k / .55)) * 520}px)`; }
+  if (anim && k < 0) op = 0;
+  if (k > 0) {
+    if (e.dataset.bob) tf += ` translateY(${Math.sin(k * 3.4) * 10}px) rotate(${Math.sin(k * 2.2) * 2}deg)`;
+    if (e.dataset.float) tf += ` translate(${Math.sin(k * 1.8) * 30}px, ${Math.sin(k * 3) * 22}px) rotate(${Math.sin(k * 1.8) * 6}deg)`;   // the ghost drifts
+    if (e.dataset.flap) tf += ` translateY(${Math.sin(k * 5) * 18}px) scaleX(${1 - .12 * Math.abs(Math.sin(k * 12))})`;          // the bat flaps
+  }
+  // the ? card and the countdown shrink away at the reveal; the countdown shows 3, 2, 1
+  if (e.dataset.out) {
+    const o = (k0 - +e.dataset.out) / 0.2;
+    if (o > 0) { op *= 1 - cl(o); tf += ` scale(${1 - .5 * cl(o)})`; }
+  }
+  if (e.dataset.cd) {
+    const n = Math.max(1, 3 - Math.floor((k0 - 0.5) / 0.5));
+    e.textContent = n;
+    const tick = ((k0 - 0.5) % 0.5 + 0.5) % 0.5;
+    if (k0 > 0.5) tf += ` scale(${1 + .18 * (1 - cl(tick / .2))})`;
+  }
+  e.style.opacity = op; e.style.transform = tf;
+}
+window.seek = function (t) {
+  if (t < 1 / 60) t = 3.6;   // first frame = finished hook page, so it is Instagram's default cover
+  scenes.forEach(s => {
+    const vis = t >= s.start && t < s.end;
+    s.el.style.display = vis ? 'block' : 'none';
+    if (!vis) return;
+    const lt = t - s.start, out = cl((t - (s.end - 0.22)) / 0.22);
+    s.el.style.opacity = 1 - out;
+    s.el.style.transform = `translateY(${-out * 60}px)`;
+    s.el.querySelectorAll('[data-anim]').forEach(e => animate(e, lt));
+  });
+  document.getElementById('wm').style.opacity = t >= segs[6].start ? 0 : 1;
+  document.getElementById('b1').style.transform = `rotate(${t * 6}deg)`;
+  document.getElementById('b2').style.transform = `rotate(${-t * 5}deg)`;
+};
+document.fonts.ready.then(() => seek(0));
+</script>
+</body></html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Grandma's Call thumbnail</title>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Nunito:wght@900&display=block" rel="stylesheet">
+<style>
+/* YouTube thumbnail, 1280x720: two big faces, one short line, readable at phone size */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1280px;height:720px;overflow:hidden}
+body{background:#ff9b85;position:relative;font-family:Nunito,sans-serif;color:#7a2416}
+.a{position:absolute}
+.fa{font-family:Lalezar;direction:rtl;line-height:1}
+.phone{background:#fff;border-radius:50%;width:150px;height:150px;display:flex;align-items:center;justify-content:center;font-size:96px;box-shadow:0 10px 0 rgba(122,36,22,.18)}
+.tag{background:#ffd86b;border-radius:40px;padding:12px 30px 10px;font-size:42px}
+</style></head>
+<body>
+<svg class="a" viewBox="0 0 200 200" style="width:700px;left:-240px;top:-300px"><path fill="#ffd86b" d="M100 12C122 10 128 40 146 44 168 48 190 40 192 66 194 90 166 96 170 116 174 138 196 156 180 176 164 194 140 176 120 184 100 192 86 200 68 186 50 172 62 150 46 138 28 124 4 128 6 104 8 80 34 84 38 64 42 44 22 26 42 16 62 6 80 14 100 12Z"/></svg>
+<svg class="a" viewBox="0 0 200 200" style="width:620px;right:-230px;bottom:-300px"><path fill="#ffd86b" d="M62 28C96 4 132 22 150 40 170 60 196 58 192 92 188 120 168 124 176 150 186 182 150 200 118 188 92 178 82 198 50 186 18 174 28 144 16 120 2 92 12 70 30 56 42 46 46 40 62 28Z"/></svg>
+
+<!-- the two of them, big -->
+<img class="a" src="../shared/grandma.png" style="width:700px;left:-70px;top:130px">
+<img class="a" id="neli" style="width:600px;left:700px;top:160px">
+<div class="a phone" style="left:565px;top:330px;transform:rotate(-12deg)">📞</div>
+
+<!-- one short line -->
+<div class="a fa" style="left:0;width:1280px;text-align:center;top:34px;font-size:150px;color:#7a2416;text-shadow:0 6px 0 #fff">زنگ مامان‌بزرگ</div>
+<div class="a tag" style="left:50%;transform:translateX(-50%);top:206px;white-space:nowrap">Learn Farsi with Grandma!</div>
+<img class="a" src="../../../assets/logo-white.webp" style="width:170px;right:22px;bottom:18px">
+<script>
+document.getElementById('neli').src = new URL('../../../assets/neli-world/characters/Neli/02_nelli_big_teeth_smile_base.webp', location.href).href;
+</script>
+</body></html>

@@ -1,0 +1,55 @@
+ZAAL reel: "بیا قورمه‌سبزی بپزیم!" (cooking in Farsi)
+=====================================================
+
+Video: ZAAL-cooking-reel-HQ.mp4 (1080x1920, 60fps, 30s, Farsi voiceover in the Zephyr voice)
+Cover: cover.png (the hook page with chef Neli)
+
+
+CAPTION (copy everything between the lines)
+-------------------------------------------
+بیا قورمه‌سبزی بپزیم… به فارسی! 🍲
+گوشت · سبزی · لوبیا · پیاز · لیمو
+تو بازی آشپزی زال، بچه‌ها با هر ماده‌ی غذایی یه کلمه‌ی فارسی جدید یاد می‌گیرن 💜
+
+Let's cook ghormeh sabzi… in Farsi! 🍲
+goosht (meat) · sabzi (herbs) · loobia (beans) · piâz (onion) · limoo (lemon)
+In ZAAL's cooking game, kids learn a new Farsi word with every ingredient 💜
+
+Save this for dinner time and try the words with your little one 👩‍🍳
+Link in bio ✨
+
+#قورمه_سبزی #آشپزی_ایرانی #غذای_ایرانی #آموزش_فارسی #فارسی_برای_کودکان #زبان_مادری #زال #GhormehSabzi #PersianFood #PersianCooking #LearnFarsi #FarsiForKids #PersianForKids #BilingualKids #IranianDiaspora #IranianMoms #ZAAL
+-------------------------------------------
+
+
+FIRST COMMENT (post it right after publishing, then pin it)
+-------------------------------------------
+بچه‌تون کدوم غذای ایرانی رو از همه بیشتر دوست داره؟ 🍲👇
+Which Persian dish does your little one love most? Tell us below 👇
+-------------------------------------------
+The answers double as ideas for the next cooking reel. Reply to comments in the first hour; it helps the reel reach more people.
+
+
+APP STORE CUSTOM PRODUCT PAGE (set up once in App Store Connect > the app > Custom Product Pages > +)
+-------------------------------------------
+Reference name: Reel - Cooking
+First 2-3 screenshots (same sizes as the main page): the cooking game: ingredients dropping into the pot, then the finished dish
+App preview (optional): a cut of this reel at App Store preview specs
+Promotional text (151/170 characters):
+Kids cook Persian dishes in ZAAL and learn a Farsi word with every ingredient: goosht, sabzi, loobia, piaz, limoo. Persian food and language, together!
+-------------------------------------------
+Once Apple approves it, copy the page's URL (the App Store link + ?ppid=...) and make it the bio
+link (and any Story link sticker) while this reel is the newest post: captions aren't clickable,
+so "link in bio" has to land on this page. Compare its conversion with the default page in
+App Analytics.
+
+
+SETTINGS
+--------
+- Audio: the reel has the Farsi voiceover. If you add a song, keep it low (about 15-25%) and the original audio at 100%.
+- Cover: upload cover.png (Edit cover > Add from camera roll).
+- Share to Feed: ON
+- Alt text (Advanced settings > Accessibility):
+  Animated reel with Farsi narration: chef Neli cooks ghormeh sabzi, and each ingredient (meat, herbs, beans, onion, lemon) is named in Farsi before it drops into the pot.
+- Comments: ON.
+- Upload at highest quality: ON (Instagram app > Settings > Data usage and media quality).

@@ -1,0 +1,53 @@
+ZAAL reel: "هالووین به فارسی!" (Halloween in Farsi, guess-the-word)
+=========================================================
+
+Video: ZAAL-halloween-reel-HQ.mp4 (1080x1920, 60fps, 36s, Zephyr young-mother voice)
+       ZAAL-halloween-reel-upload.mp4 is the same reel under 10 MB, for Business Suite.
+Cover: cover.png (the hook page with the pumpkin; it is also the video's first frame)
+Best time to post: October 25-28.
+
+
+CAPTION (copy everything between the lines)
+-------------------------------------------
+هالووین به فارسی! 🎃 می‌تونی هر ۵ تا رو حدس بزنی؟ 👻
+کدو تنبل · روح · جادوگر · خفاش · آب‌نبات
+امسال هالووین رو با کلمه‌های فارسی جشن بگیرید 👻💜
+
+Halloween… in Farsi! 🎃 Can you guess all 5?
+kadoo tanbal (pumpkin) · rooh (ghost) · jâdoogar (witch) · khoffâsh (bat) · âbnabât (candy)
+Save this and try the words while trick-or-treating 🍬
+
+📲 More Farsi words in ZAAL: link in bio
+
+#هالووین #کدو_تنبل #فارسی_برای_کودکان #آموزش_فارسی #زبان_مادری #مادر_ایرانی #ایرانیان_خارج_از_کشور #زال #Halloween #HalloweenKids #FarsiForKids #LearnFarsi #PersianForKids #BilingualKids #IranianDiaspora #IranianMoms #ZAAL
+-------------------------------------------
+
+
+FIRST COMMENT (post it right after publishing, then pin it)
+-------------------------------------------
+بچه‌تون امسال برای هالووین چی می‌پوشه؟ 🎃👇
+What is your little one dressing up as this year? Tell us below 👇
+-------------------------------------------
+
+
+APP STORE CUSTOM PRODUCT PAGE (set up once in App Store Connect > the app > Custom Product Pages > +)
+-------------------------------------------
+Reference name: Reel - Halloween
+First 2-3 screenshots (same sizes as the main page): the word games (quiz, memory) and the characters
+App preview (optional): a cut of this reel at App Store preview specs
+Promotional text (105/170 characters):
+Halloween in Farsi! Kids learn kadoo tanbal, rooh, jadoogar and more through playful Farsi games in ZAAL.
+-------------------------------------------
+Once Apple approves it, copy the page's URL (the App Store link + ?ppid=...) and make it the bio
+link (and any Story link sticker) while this reel is the newest post: captions aren't clickable,
+so "link in bio" has to land on this page. Compare its conversion with the default page in
+App Analytics.
+Seasonal: after Halloween, edit the promotional text (no review or new build needed) or point the bio link back to the default page.
+
+
+SETTINGS
+--------
+- Audio: original (voiceover + pops). If you add a song, a playful spooky one at 15-25%.
+- Cover: the first frame is already the hook page; if Instagram asks, upload cover.png.
+- Share to Feed: ON.
+- Alt text: Animated guess-the-word reel: each Halloween item appears, a 3-2-1 countdown runs, then its Farsi word is revealed: pumpkin (kadoo tanbal), ghost (rooh), witch (jâdoogar), bat (khoffâsh) and candy (âbnabât), ending with Download ZAAL.
