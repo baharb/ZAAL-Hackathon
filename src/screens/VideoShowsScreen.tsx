@@ -524,8 +524,17 @@ function SequentialAlphabetShowPlayer({
     stopRef.current = stop;
     onCloseRef.current = onClose;
   }, [speak, stop, onClose]);
-  const characterSize = Math.max(150, Math.min(isWide ? 250 : 210, width * (isWide ? 0.22 : 0.38)));
-  const letterSize = Math.max(150, Math.min(isWide ? 230 : 200, width * (isWide ? 0.20 : 0.36)));
+  const baseCharacterSize = Math.max(150, Math.min(isWide ? 250 : 210, width * (isWide ? 0.22 : 0.38)));
+  const baseLetterSize = Math.max(150, Math.min(isWide ? 230 : 200, width * (isWide ? 0.20 : 0.36)));
+  // The push group and example card are sized from width alone, so on a short
+  // landscape phone they overflow the stage (the example word was cut off on
+  // the iPhone SE). Shrink everything, padding included, to the stage's real
+  // height. Tablets have room to spare, so k stays 1 there.
+  const [stageHeight, setStageHeight] = useState(0);
+  const naturalStageHeight = SEQ_STAGE_PAD_TOP + Math.max(baseCharacterSize * 1.24, baseLetterSize) + SEQ_EXAMPLE_GAP + SEQ_EXAMPLE_HEIGHT + SEQ_STAGE_PAD_BOTTOM;
+  const k = stageHeight > 0 ? Math.min(1, stageHeight / naturalStageHeight) : 1;
+  const characterSize = baseCharacterSize * k;
+  const letterSize = baseLetterSize * k;
   const letterLift = item.id === 'gheyn' ? -8 : 0;
   const characterLift = item.id === 'gheyn' ? -characterSize * 0.05 : 0;
 
@@ -698,7 +707,10 @@ function SequentialAlphabetShowPlayer({
         ))}
       </View>
 
-      <View style={styles.sequenceStage}>
+      <View
+        style={[styles.sequenceStage, { paddingTop: SEQ_STAGE_PAD_TOP * k, paddingBottom: SEQ_STAGE_PAD_BOTTOM * k }]}
+        onLayout={e => setStageHeight(e.nativeEvent.layout.height)}
+      >
         <Animated.View
           style={[
             styles.sequencePushGroup,
@@ -772,6 +784,11 @@ function SequentialAlphabetShowPlayer({
           style={[
             styles.sequenceExample,
             {
+              marginTop: SEQ_EXAMPLE_GAP * k,
+              minWidth: 260 * k,
+              paddingHorizontal: 22 * k,
+              paddingVertical: 13 * k,
+              borderRadius: 28 * k,
               opacity: motion.interpolate({
                 inputRange: [0, 0.86, 1, 1.6, 1.85, 2],
                 outputRange: [0, 0, 1, 1, 0.15, 0],
@@ -787,12 +804,12 @@ function SequentialAlphabetShowPlayer({
             },
           ]}
         >
-          <View style={styles.sequenceExampleImageWrap}>
+          <View style={[styles.sequenceExampleImageWrap, { width: 138 * k, height: 116 * k, borderRadius: 30 * k, marginBottom: 4 * k }]}>
             {exampleSource ? (
               <Image source={exampleSource} style={styles.sequenceExampleImage} resizeMode="contain" />
             ) : null}
           </View>
-          <Text style={styles.sequenceWord}>{item.wordFa}</Text>
+          <Text style={[styles.sequenceWord, { fontSize: 30 * k, lineHeight: 39 * k }]}>{item.wordFa}</Text>
         </Animated.View>
 
       </View>
@@ -800,6 +817,14 @@ function SequentialAlphabetShowPlayer({
     </View>
   );
 }
+
+// Vertical budget of the sequence stage at full size; see `k` in
+// SequentialAlphabetShowPlayer. SEQ_EXAMPLE_HEIGHT is the example card:
+// paddingVertical 13 + border 4 (x2), image 116 + 4, word line 39.
+const SEQ_STAGE_PAD_TOP = 54;
+const SEQ_STAGE_PAD_BOTTOM = 18;
+const SEQ_EXAMPLE_GAP = 18;
+const SEQ_EXAMPLE_HEIGHT = 2 * 13 + 2 * 4 + 116 + 4 + 39;
 
 export default function VideoShowsScreen() {
   const { reset } = useNav();

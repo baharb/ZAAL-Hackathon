@@ -1,6 +1,8 @@
 import React, { useContext, useState } from 'react';
 import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useWindowDimensions } from '../../layout/PortraitFallback';
 import { AppContext } from '../../store/AppContext';
 import { ff, dir } from '../../theme/fonts';
 import { C } from '../../theme/colors';
@@ -19,6 +21,13 @@ const COLORS = [
   { id: 'turquoise', fa: 'فیروزه‌ای', en: 'Turquoise', hex: '#14B8A6', accent: '#5EEAD4' },
 ];
 
+// Below this height (landscape phones) the prompt card and the four paint pots
+// sit side by side; stacked, the pots started below the bottom of the screen.
+const COMPACT_MAX_HEIGHT = 600;
+// The character art is drawn for a stage at least this tall (tablets), and
+// scales down with the stage below it.
+const STAGE_REFERENCE_HEIGHT = 240;
+
 function shuffle<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
 }
@@ -30,13 +39,24 @@ function makeRound() {
 }
 
 function PaintCharacter({ color, accent, characterId }: { color: string; accent: string; characterId: string }) {
+  const [stageHeight, setStageHeight] = useState(0);
+  const k = stageHeight > 0 ? Math.min(1, stageHeight / STAGE_REFERENCE_HEIGHT) : 1;
   return (
-    <ImageBackground source={neliWorldAssets.rooms.gardenWide} style={styles.characterStage} imageStyle={styles.characterBg}>
+    <ImageBackground
+      source={neliWorldAssets.rooms.gardenWide}
+      style={styles.characterStage}
+      imageStyle={styles.characterBg}
+      onLayout={e => setStageHeight(e.nativeEvent.layout.height)}
+    >
       <View style={styles.sceneWash} />
-      <View style={[styles.paintHalo, { backgroundColor: accent }]} />
-      <CharacterAvatar characterId={characterId} size={176} />
-      <Image source={neliWorldAssets.ui.paintbrush} style={styles.colorBrush} resizeMode="contain" />
-      <View style={styles.shadow} />
+      <View style={[styles.paintHalo, { backgroundColor: accent, width: 220 * k, height: 220 * k, borderRadius: 110 * k }]} />
+      <CharacterAvatar characterId={characterId} size={176 * k} />
+      <Image
+        source={neliWorldAssets.ui.paintbrush}
+        style={[styles.colorBrush, { right: 48 * k, bottom: 38 * k, width: 74 * k, height: 74 * k }]}
+        resizeMode="contain"
+      />
+      <View style={[styles.shadow, { width: 132 * k, height: 20 * k, borderRadius: 10 * k, marginTop: -6 * k }]} />
     </ImageBackground>
   );
 }
@@ -58,6 +78,10 @@ export default function ColorMatchGame() {
   const [score, setScore] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+  const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const compact = height < COMPACT_MAX_HEIGHT;
+  const sidePad = Math.max(16, insets.left, insets.right);
 
   const handlePick = (id: string) => {
     if (feedback) return;
@@ -83,8 +107,8 @@ export default function ColorMatchGame() {
       <View style={[StyleSheet.absoluteFill, { backgroundColor: '#E9F7FF' }]} />
       <TopBar title="Color Match" titleFa="بازی رنگ‌ها" showClose dark={false} rightContent={<Text style={styles.score}>{score}</Text>} />
 
-      <View style={styles.content}>
-        <View style={styles.promptCard}>
+      <View style={[styles.content, compact && [styles.contentCompact, { paddingHorizontal: sidePad, paddingBottom: Math.max(16, insets.bottom) }]]}>
+        <View style={[styles.promptCard, compact && styles.promptCardCompact]}>
           <Text style={[styles.promptTiny, { fontFamily: ff(lang, 'bold') }, dir(lang)]}>
             {lang === 'fa' ? 'رنگ دوست را پیدا کن' : 'Find the friend’s color'}
           </Text>
@@ -94,7 +118,7 @@ export default function ColorMatchGame() {
           <PaintCharacter color={round.correct.hex} accent={round.correct.accent} characterId={selectedCharacterId} />
         </View>
 
-        <View style={styles.options}>
+        <View style={[styles.options, compact && styles.optionsCompact]}>
           {round.options.map(opt => {
             const selectedThis = selected === opt.id;
             const showCorrect = feedback && opt.id === round.correct.id;
@@ -106,6 +130,7 @@ export default function ColorMatchGame() {
                 activeOpacity={0.86}
                 style={[
                   styles.option,
+                  compact && styles.optionCompact,
                   showCorrect && styles.optionCorrect,
                   showWrong && styles.optionWrong,
                 ]}
@@ -147,6 +172,7 @@ const styles = StyleSheet.create({
     paddingTop: 9,
   },
   content: { flex: 1, padding: 16, paddingTop: 8 },
+  contentCompact: { flexDirection: 'row', gap: 12 },
   promptCard: {
     flex: 1,
     minHeight: 320,
@@ -160,6 +186,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 9 },
     elevation: 4,
   },
+  promptCardCompact: { minHeight: 0, padding: 14 },
   promptTiny: { color: C.purple, fontSize: 14, marginBottom: 4 },
   promptTitle: { color: C.textDark, fontSize: 34, lineHeight: 42 },
   characterStage: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 28, overflow: 'hidden' },
@@ -178,6 +205,7 @@ const styles = StyleSheet.create({
   smile: { position: 'absolute', bottom: 38, width: 42, height: 22, borderBottomWidth: 5, borderBottomColor: '#1B1238', borderRadius: 22 },
   shadow: { width: 132, height: 20, borderRadius: 10, backgroundColor: 'rgba(45,27,105,0.12)', marginTop: -6 },
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingTop: 16 },
+  optionsCompact: { flex: 1, paddingTop: 0, alignContent: 'center' },
   option: {
     width: '48%',
     minHeight: 132,
@@ -194,6 +222,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
+  optionCompact: { minHeight: 0, flexGrow: 1, flexBasis: '45%', padding: 8 },
   optionCorrect: { borderColor: '#22C55E', backgroundColor: '#F0FFF4' },
   optionWrong: { borderColor: '#FF6B6B', backgroundColor: '#FFF1F2' },
   paintPot: { height: 62, width: 70, alignItems: 'center', justifyContent: 'flex-end', marginBottom: 6 },
