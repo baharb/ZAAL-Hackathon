@@ -153,11 +153,13 @@ function shuffledSlotOrder(count: number): number[] {
   return order;
 }
 
-function getCounterSlots(width: number, height: number, target: Rect, count: number, vessel: Recipe['vessel'], ingredientSize: number, maxLineY = Infinity): CounterLayout {
+function getCounterSlots(width: number, height: number, target: Rect, count: number, vessel: Recipe['vessel'], ingredientSize: number, maxLineY = Infinity, sideInset = 0): CounterLayout {
   const isLandscape = width > height;
   const cardW = Math.min(isLandscape ? 104 : 88, Math.max(68, Math.floor(width * 0.11)));
   const cardH = Math.min(isLandscape ? 92 : 80, Math.max(64, Math.floor(height * 0.09)));
-  const margin = 10;
+  // Clear of the notch / Dynamic Island on a landscape iPhone (~59pt), not
+  // just the screen edge — the outermost ingredient used to sit under it.
+  const margin = Math.max(10, sideInset);
   const leftCount = Math.ceil(count / 2);
   const rightCount = count - leftCount;
 
@@ -672,7 +674,8 @@ export default function CookingGame() {
   // more steps than the screen has room for at that size (see
   // getCounterSlots) — every ingredient-sized render below uses this
   // resolved value so a shrunk slot and its art never disagree.
-  const { slots, tileSize } = useMemo(() => getCounterSlots(width, height, target, recipe.steps.length, recipe.vessel, ingredientSize, maxIngredientLineY), [height, recipe.steps.length, recipe.vessel, target, width, ingredientSize, maxIngredientLineY]);
+  const sideInset = Math.max(insets.left, insets.right);
+  const { slots, tileSize } = useMemo(() => getCounterSlots(width, height, target, recipe.steps.length, recipe.vessel, ingredientSize, maxIngredientLineY, sideInset), [height, recipe.steps.length, recipe.vessel, target, width, ingredientSize, maxIngredientLineY, sideInset]);
   // Which slot each step's ingredient sits in. Shuffled per recipe (and per
   // replay, via resetToken) so the counter isn't laid out in the order the
   // voice asks for them — the child has to find each one. Never the identity
