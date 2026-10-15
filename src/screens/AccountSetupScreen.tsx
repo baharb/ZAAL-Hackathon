@@ -444,23 +444,40 @@ export default function AccountSetupScreen() {
     }
   };
 
-  const confirmCode = async () => {
-    if (!detected) return;
-    if (!/^\d{6}$/.test(code)) {
+  // A ref, not `busy`: the auto-submit below fires from onChangeText, before
+  // a re-render could disable anything, so state alone can't stop a second
+  // verify (e.g. SMS autofill followed by the keyboard's Done key).
+  const verifying = useRef(false);
+  const confirmCode = async (value: string = code) => {
+    if (!detected || verifying.current) return;
+    if (!/^\d{6}$/.test(value)) {
       setError(t(lang, 'errCodeIncomplete'));
       return;
     }
+    verifying.current = true;
     setBusy(true);
     setError('');
     try {
-      await verifyCode(detected, code);
+      await verifyCode(detected, value);
       setPassword('');
       setStep('password');
     } catch (err) {
+      // Empty the circles so the parent can type the code again straight
+      // away; the error stays up until they start typing.
+      setCode('');
       setError(verifyCodeErrorMessage(lang, err));
     } finally {
+      verifying.current = false;
       setBusy(false);
     }
+  };
+
+  // No button press needed: the sixth digit submits the code by itself.
+  const onCodeChange = (value: string) => {
+    tick(code, value);
+    setCode(value);
+    setError('');
+    if (value.length === 6 && code.length < 6) confirmCode(value);
   };
 
   const finish = async () => {
@@ -728,14 +745,14 @@ export default function AccountSetupScreen() {
               <CodeCircles
                 length={6}
                 value={code}
-                onChangeText={value => { tick(code, value); setCode(value); setError(''); }}
+                onChangeText={onCodeChange}
                 autoFocus
                 oneTimeCode
-                onSubmitEditing={confirmCode}
+                onSubmitEditing={() => confirmCode()}
                 lang={lang}
               />
               {error ? <Text style={[styles.error, { fontFamily: ff(lang, 'bold') }, textDir]}>{error}</Text> : null}
-              <TouchableOpacity style={styles.primaryButton} onPress={confirmCode} disabled={busy} activeOpacity={0.86}>
+              <TouchableOpacity style={styles.primaryButton} onPress={() => confirmCode()} disabled={busy} activeOpacity={0.86}>
                 {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[styles.primaryText, { fontFamily: ff(lang, 'black') }]}>{t(lang, 'confirmCode')}</Text>}
               </TouchableOpacity>
               <TouchableOpacity onPress={resendCode} disabled={busy || cooldown > 0} activeOpacity={0.7} style={styles.linkRow}>
