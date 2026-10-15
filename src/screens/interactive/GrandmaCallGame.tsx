@@ -96,9 +96,25 @@ export default function GrandmaCallGame() {
   const { width, height } = useLandscapeDimensions();
   const showEnglish = lang !== 'fa' && lang !== 'ar';
 
-  const availH = height - topBarHeight(height, insets.top, { topInset: 10 });
+  // the home-indicator strip stays clear: the answer cards sit right at the bottom
+  const availH = height - topBarHeight(height, insets.top, { topInset: 10 }) - insets.bottom;
   const k = Math.min(availH / REF_H, width / REF_W);
   const s = (n: number) => Math.round(n * k);
+  // Phones are far wider than the reference area for their height, so the tablet layout,
+  // shrunk to fit the height, leaves the sides empty and the answer cards small. There the
+  // two video tiles stack in a column on the left and the panel gets the rest of the screen.
+  // two video tiles stacked in a column on the left and the panel beside it. Used only
+  // where it makes the panel clearly bigger (not on a 16:9 phone like the iPhone SE).
+  const sideL = Math.max(s(24), insets.left + 8);
+  const sideR = Math.max(s(24), insets.right + 8);
+  const TILE_TOP = 34; // below the call timer at the top
+  const colTileH = Math.floor((availH - s(TILE_TOP) - s(16) - s(12)) / 2);
+  const colTileW = Math.round(colTileH * 1.45);
+  const colPanelLeft = sideL + colTileW + s(24);
+  const colPanelW = width - colPanelLeft - sideR;
+  // 768 x 300: three answer cards with their gaps, and the question above them, on the reference layout
+  const colKp = Math.min(colPanelW / 768, (availH - s(14)) / 300);
+  const compact = colKp > k * 1.1;
 
   const call = GRANDMA_CALLS[0];
   const [stepIdx, setStepIdx] = useState(-1); // -1 = the phone is ringing
@@ -288,8 +304,10 @@ export default function GrandmaCallGame() {
   };
 
   // ---------------------------------------------------------------- drawing
-  const faText = (size: number, color = COLORS.ink) => ({ fontFamily: ff('fa', 'black'), fontSize: s(size), lineHeight: s(size * 1.35), color, writingDirection: 'rtl' as const, textAlign: 'center' as const });
-  const enText = (size: number, color = COLORS.ink2) => ({ fontFamily: ff('en', 'black'), fontSize: s(size), lineHeight: s(size * 1.3), color, textAlign: 'center' as const });
+  const faTextAt = (scale: (n: number) => number) => (size: number, color = COLORS.ink) => ({ fontFamily: ff('fa', 'black'), fontSize: scale(size), lineHeight: scale(size * 1.35), color, writingDirection: 'rtl' as const, textAlign: 'center' as const });
+  const enTextAt = (scale: (n: number) => number) => (size: number, color = COLORS.ink2) => ({ fontFamily: ff('en', 'black'), fontSize: scale(size), lineHeight: scale(size * 1.3), color, textAlign: 'center' as const });
+  const faText = faTextAt(s);
+  const enText = enTextAt(s);
 
   const Blobs = (
     <>
@@ -301,49 +319,62 @@ export default function GrandmaCallGame() {
   // render helpers (plain functions, not components: a component declared inside the
   // render is a new type every render, so its images remount on every sound-bar tick)
   const bars = (on: boolean) => (
-    <View style={[styles.bars, { right: s(26), top: s(22), height: s(46), gap: s(6), opacity: on ? 1 : 0.25 }]}>
+    <View style={[styles.bars, { right: s(compact ? 14 : 26), top: s(compact ? 14 : 22), height: s(46), gap: s(6), opacity: on ? 1 : 0.25 }]}>
       {[0, 1, 2, 3].map(i => (
         <View key={i} style={{ width: s(11), borderRadius: s(6), backgroundColor: COLORS.ink, height: s(on ? 12 + 34 * Math.abs(Math.sin(barsTick * (0.9 + i * 0.37) + i)) : 12) }} />
       ))}
     </View>
   );
 
-  const tileW = s(400), tileH = s(optionsVisible() ? 200 : 240), tileGap = s(30);
-  const TILE_TOP = 34; // below the call timer at the top
   function optionsVisible() { return options.length > 0 || (step?.kind === 'words'); }
-  const tilesLeft = (width - (tileW * 2 + tileGap)) / 2;
+  const tileW = compact ? colTileW : s(400);
+  const tileH = compact ? colTileH : s(optionsVisible() ? 200 : 240);
+  const tileGap = compact ? s(16) : s(30);
+  const tilesLeft = compact ? sideL : (width - (tileW * 2 + tileGap)) / 2;
+  const tileAt = (who: 'grandma' | 'neli') => compact
+    ? { left: tilesLeft, top: s(TILE_TOP) + (who === 'grandma' ? 0 : tileH + tileGap) }
+    : { left: tilesLeft + (who === 'grandma' ? 0 : tileW + tileGap), top: s(TILE_TOP) };
 
-  const tile = (who: 'grandma' | 'neli', left: number) => {
+  const tile = (who: 'grandma' | 'neli') => {
     const on = speaker === who;
     return (
       <View key={who} style={[styles.tile, {
-        left, top: s(TILE_TOP), width: tileW, height: tileH, borderRadius: s(46),
+        ...tileAt(who), width: tileW, height: tileH, borderRadius: s(compact ? 34 : 46),
         borderWidth: on ? s(8) : 0, transform: [{ scale: on ? 1.03 : 0.97 }], opacity: speaker === 'you' ? 0.8 : 1,
       }]}>
+        {/* in the narrower column tiles the character sits left of centre, clear of the sound bars */}
         {who === 'grandma'
-          ? <Image source={GRANDMA} style={{ position: 'absolute', alignSelf: 'center', top: s(10), width: tileH * 1.02, height: tileH * 1.02 }} resizeMode="contain" />
-          : <View style={{ position: 'absolute', alignSelf: 'center', top: s(6) }}><NeliBlink size={tileH * 0.92} /></View>}
+          ? <Image source={GRANDMA} style={{ position: 'absolute', top: s(10), width: tileH * 1.02, height: tileH * 1.02, ...(compact ? { left: s(6) } : { alignSelf: 'center' }) }} resizeMode="contain" />
+          : <View style={{ position: 'absolute', top: s(6), ...(compact ? { left: s(14) } : { alignSelf: 'center' }) }}><NeliBlink size={tileH * 0.92} /></View>}
         {bars(on)}
       </View>
     );
   };
 
-  const panelTop = s(TILE_TOP) + tileH + s(10);
+  const panelLeft = compact ? colPanelLeft : 0;
+  const panelW = compact ? colPanelW : width;
+  const panelTop = compact ? s(8) : s(TILE_TOP) + tileH + s(10);
   const panelH = availH - panelTop - s(6);
+  // what's in the panel is laid out with its own scale: k on a tablet, and as big as the
+  // panel allows beside the column on a phone
+  const kp = compact ? colKp : k;
+  const sp = (n: number) => Math.round(n * kp);
+  const pFa = faTextAt(sp);
+  const pEn = enTextAt(sp);
 
   const optionCard = (pick: Pick, cardW: number, cardH: number) => {
     const isWrong = wrong === pick.id;
     const isPicked = picked === pick.id;
     const dim = !!picked && !isPicked;
     return (
-      <Animated.View key={pick.id} style={{ transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }, { translateX: isWrong ? shake.interpolate({ inputRange: [-1, 1], outputRange: [-s(10), s(10)] }) : 0 }], opacity: dim ? 0.45 : 1 }}>
+      <Animated.View key={pick.id} style={{ transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }, { translateX: isWrong ? shake.interpolate({ inputRange: [-1, 1], outputRange: [-sp(10), sp(10)] }) : 0 }], opacity: dim ? 0.45 : 1 }}>
         <TouchableOpacity activeOpacity={0.85} onPress={() => choose(pick)} style={[styles.card, {
-          width: cardW, height: cardH, borderRadius: s(30), padding: s(10),
-          borderWidth: s(6), borderColor: isPicked ? COLORS.green : 'transparent',
+          width: cardW, height: cardH, borderRadius: sp(30), padding: sp(10),
+          borderWidth: sp(6), borderColor: isPicked ? COLORS.green : 'transparent',
         }]}>
           <PickArt pick={pick} size={cardH * (options.length === 1 ? 0.5 : 0.58)} />
-          <Text style={faText(options.length === 1 ? 28 : 26)} numberOfLines={2}>{pick.fa}</Text>
-          {showEnglish && <Text style={enText(16)} numberOfLines={1}>{pick.en}</Text>}
+          <Text style={pFa(options.length === 1 ? 28 : 26)} numberOfLines={2}>{pick.fa}</Text>
+          {showEnglish && <Text style={pEn(16)} numberOfLines={1}>{pick.en}</Text>}
         </TouchableOpacity>
       </Animated.View>
     );
@@ -354,12 +385,12 @@ export default function GrandmaCallGame() {
     return (
       <Animated.View key={pick.id} style={{ transform: [{ scale: Animated.multiply(pop.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }), on ? 1.06 : 1) }] }}>
         <TouchableOpacity activeOpacity={0.85} onPress={() => replayWord(i, pick)} style={[styles.card, {
-          width: cardW, height: cardH, borderRadius: s(30), padding: s(8), borderWidth: s(6), borderColor: on ? COLORS.shape : 'transparent',
+          width: cardW, height: cardH, borderRadius: sp(30), padding: sp(8), borderWidth: sp(6), borderColor: on ? COLORS.shape : 'transparent',
         }]}>
           <PickArt pick={pick} size={cardH * 0.46} />
-          <Text style={faText(42)}>{pick.fa}</Text>
-          <Text style={enText(20)}>{pick.translit}{showEnglish ? ` = ${pick.en}` : ''}</Text>
-          <Text style={{ position: 'absolute', top: s(8), right: s(12), fontSize: s(22) }}>🔊</Text>
+          <Text style={pFa(42)}>{pick.fa}</Text>
+          <Text style={pEn(20)}>{pick.translit}{showEnglish ? ` = ${pick.en}` : ''}</Text>
+          <Text style={{ position: 'absolute', top: sp(8), right: sp(12), fontSize: sp(22) }}>🔊</Text>
         </TouchableOpacity>
       </Animated.View>
     );
@@ -368,46 +399,47 @@ export default function GrandmaCallGame() {
   const renderPanel = () => {
     if (!step) return null;
     if (step.kind === 'words') {
-      const cardH = Math.min(panelH - s(4), s(240)), cardW = s(220);
+      const cardH = Math.min(panelH - sp(4), sp(240)), cardW = sp(220);
       return (
-        <View style={[styles.row, { gap: s(28) }]}>
-          <View style={[styles.newWord, { paddingHorizontal: s(20), paddingVertical: s(6), borderRadius: s(30) }]}>
-            <Text style={faText(24)}>کلمه‌ی جدید</Text>
-            {showEnglish && <Text style={enText(15)}>New word</Text>}
+        <View style={[styles.row, { gap: sp(28) }]}>
+          <View style={[styles.newWord, { paddingHorizontal: sp(20), paddingVertical: sp(6), borderRadius: sp(30) }]}>
+            <Text style={pFa(24)}>کلمه‌ی جدید</Text>
+            {showEnglish && <Text style={pEn(15)}>New word</Text>}
           </View>
           {step.words.map((w, i) => wordCard(w, i, cardW, cardH))}
         </View>
       );
     }
     if (options.length) {
-      const questionH = s(48);
-      const cardH = Math.min(panelH - questionH - s(8), s(210));
-      const cardW = options.length === 1 ? s(360) : Math.min(s(240), (width - s(60)) / options.length - s(20));
+      const questionH = sp(48);
+      const cardW = options.length === 1 ? sp(360) : Math.min(sp(240), (panelW - sp(60)) / options.length - sp(20));
+      // beside the column there is height to spare, so the cards grow taller (bigger pictures)
+      const cardH = Math.min(panelH - questionH - sp(8), compact ? Math.max(sp(210), cardW * 1.08) : sp(210));
       return (
         <View style={{ alignItems: 'center' }}>
-          <View style={{ height: questionH, flexDirection: 'row', alignItems: 'center', gap: s(14) }}>
-            {speaker === 'you' && <Text style={{ fontSize: s(30) }}>🎤</Text>}
-            <Text style={faText(30)}>{step.kind === 'quiz' ? step.fa : 'تو جواب بده!'}</Text>
-            {showEnglish && <Text style={enText(18)}>{step.kind === 'quiz' ? step.en : 'Tap to answer'}</Text>}
+          <View style={{ height: questionH, flexDirection: 'row', alignItems: 'center', gap: sp(14) }}>
+            {speaker === 'you' && <Text style={{ fontSize: sp(30) }}>🎤</Text>}
+            <Text style={pFa(30)}>{step.kind === 'quiz' ? step.fa : 'تو جواب بده!'}</Text>
+            {showEnglish && <Text style={pEn(18)}>{step.kind === 'quiz' ? step.en : 'Tap to answer'}</Text>}
           </View>
-          <View style={[styles.row, { gap: s(24), marginTop: s(8) }]}>
+          <View style={[styles.row, { gap: sp(24), marginTop: sp(8) }]}>
             {options.map(p => optionCard(p, cardW, cardH))}
           </View>
         </View>
       );
     }
     if (!line) return null;
-    if (line.icon) return <Text style={{ fontSize: s(120), lineHeight: s(150) }}>{line.icon}</Text>;
+    if (line.icon) return <Text style={{ fontSize: sp(120), lineHeight: sp(150) }}>{line.icon}</Text>;
     if (line.pics) {
       // Neli's answer shows as the things she names, picture and word, not her whole sentence
-      const picH = Math.min(panelH - s(8), s(200));
+      const picH = Math.min(panelH - sp(8), sp(200));
       return (
-        <View style={[styles.row, { gap: s(22) }]}>
+        <View style={[styles.row, { gap: sp(22) }]}>
           {line.pics.map(p => (
-            <View key={p.id} style={[styles.card, { width: s(180), height: picH, borderRadius: s(28), padding: s(8) }]}>
+            <View key={p.id} style={[styles.card, { width: sp(180), height: picH, borderRadius: sp(28), padding: sp(8) }]}>
               <PickArt pick={p} size={picH * 0.56} />
-              <Text style={faText(36)}>{p.fa}</Text>
-              {showEnglish && <Text style={enText(17)}>{p.en}</Text>}
+              <Text style={pFa(36)}>{p.fa}</Text>
+              {showEnglish && <Text style={pEn(17)}>{p.en}</Text>}
             </View>
           ))}
         </View>
@@ -415,8 +447,8 @@ export default function GrandmaCallGame() {
     }
     return (
       <View style={{ alignItems: 'center' }}>
-        <Text style={faText(46)}>{line.fa}</Text>
-        {showEnglish && <Text style={enText(22)}>{line.en}</Text>}
+        <Text style={pFa(46)}>{line.fa}</Text>
+        {showEnglish && <Text style={pEn(22)}>{line.en}</Text>}
       </View>
     );
   };
@@ -453,20 +485,23 @@ export default function GrandmaCallGame() {
                 </Animated.View>
               </View>
             </View>
-            <View style={{ position: 'absolute', left: s(70), bottom: 0 }}>
+            <View style={{ position: 'absolute', left: Math.max(s(70), sideL), bottom: insets.bottom }}>
               <NeliBlink size={s(250)} />
             </View>
           </View>
         ) : (
           // ------------------------------------------------ the video call
           <View style={styles.fill}>
-            <View style={[styles.clock, { top: s(4), paddingHorizontal: s(18), paddingVertical: s(4), borderRadius: s(20) }]}>
-              <View style={{ width: s(12), height: s(12), borderRadius: s(6), backgroundColor: COLORS.green }} />
-              <Text style={enText(18, COLORS.ink)}>{`${String(Math.floor(clock / 60)).padStart(2, '0')}:${String(clock % 60).padStart(2, '0')}`}</Text>
+            {/* the call timer, centred over the tiles: across the top, or over the column */}
+            <View style={[styles.clockRow, { top: s(4), left: compact ? tilesLeft : 0, width: compact ? tileW : width }]}>
+              <View style={[styles.clock, { paddingHorizontal: s(18), paddingVertical: s(4), borderRadius: s(20) }]}>
+                <View style={{ width: s(12), height: s(12), borderRadius: s(6), backgroundColor: COLORS.green }} />
+                <Text style={enText(18, COLORS.ink)}>{`${String(Math.floor(clock / 60)).padStart(2, '0')}:${String(clock % 60).padStart(2, '0')}`}</Text>
+              </View>
             </View>
-            {tile('grandma', tilesLeft)}
-            {tile('neli', tilesLeft + tileW + tileGap)}
-            <View style={[styles.panel, { top: panelTop, height: panelH }]}>{renderPanel()}</View>
+            {tile('grandma')}
+            {tile('neli')}
+            <View style={[styles.panel, { top: panelTop, height: panelH, left: panelLeft, width: panelW }]}>{renderPanel()}</View>
           </View>
         )}
       </View>
@@ -486,8 +521,9 @@ const styles = StyleSheet.create({
   callBtn: { alignItems: 'center', justifyContent: 'center' },
   tile: { position: 'absolute', backgroundColor: COLORS.card, borderColor: COLORS.ink, overflow: 'hidden', alignItems: 'center' },
   bars: { position: 'absolute', flexDirection: 'row', alignItems: 'flex-end' },
-  clock: { position: 'absolute', zIndex: 2, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.card },
-  panel: { position: 'absolute', left: 0, right: 0, alignItems: 'center', justifyContent: 'center' },
+  clockRow: { position: 'absolute', zIndex: 2, alignItems: 'center' },
+  clock: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.card },
+  panel: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   card: { backgroundColor: COLORS.card, alignItems: 'center', justifyContent: 'center', shadowColor: COLORS.ink, shadowOpacity: 0.14, shadowRadius: 0, shadowOffset: { width: 0, height: 8 }, elevation: 3 },
   newWord: { backgroundColor: COLORS.shape, alignItems: 'center' },
