@@ -15,9 +15,10 @@ import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAs
 import CharacterAvatar from '../../components/CharacterAvatar';
 import BlinkingNeliImage from '../../components/BlinkingNeliImage';
 import TopBar, { topBarHeight } from '../../components/TopBar';
+import PopperCelebration from '../../components/PopperCelebration';
 import { AppContext } from '../../store/AppContext';
 import { useNav } from '../../store/NavContext';
-import { getClothesAudioKey, playFaAudio, speakWithGeneratedVoice } from '../../utils/faAudio';
+import { getClothesAudioKey, getFeedbackAudioKey, playFaAudio, speakWithGeneratedVoice } from '../../utils/faAudio';
 import { useLandscapeDimensions } from '../../hooks/useLandscapeDimensions';
 import { dir, ff } from '../../theme/fonts';
 
@@ -837,9 +838,9 @@ export default function DressUpGame() {
     sunglasses: null,
     shoes: null,
   });
-  const [done, setDone] = useState(false);
+  const celebratedRef = useRef(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   const [draggingSlot, setDraggingSlot] = useState<Slot | null>(null);
-  const doneSlide = useRef(new Animated.Value(420)).current;
   const neliScale = useRef(new Animated.Value(1)).current;
   const flightAnim = useRef(new Animated.Value(0)).current;
   const anims = useRef<Record<string, Animated.Value>>({});
@@ -908,8 +909,8 @@ export default function DressUpGame() {
       sunglasses: null,
       shoes: null,
     });
-    setDone(false);
-    doneSlide.setValue(420);
+    celebratedRef.current = false;
+    setShowCelebration(false);
     setFlight(null);
     flightAnim.setValue(0);
     anims.current = {};
@@ -1004,18 +1005,6 @@ export default function DressUpGame() {
         next.pants = true;
       }
       next[item.slot] = true;
-      const hasRequiredHat = outfitHatItems.length === 0 || outfitHatItems.some(piece => next[piece.slot]);
-      const hasRequiredDress = outfitDressItems.length === 0 || outfitDressItems.some(piece => next[piece.slot]);
-      const hasRequiredSunglasses = outfitSunglassesItems.length === 0 || outfitSunglassesItems.some(piece => next[piece.slot]);
-      const hasRequiredShoes = outfitShoesItems.length === 0 || outfitShoesItems.some(piece => next[piece.slot]);
-      const hasAllOtherItems = outfit.items.every(piece => isHatSlot(piece.slot) || isDressSlot(piece.slot) || isSunglassesSlot(piece.slot) || isShoesSlot(piece.slot) || next[piece.slot]);
-      if (hasRequiredHat && hasRequiredDress && hasRequiredSunglasses && hasRequiredShoes && hasAllOtherItems) {
-        setTimeout(() => {
-          setDone(true);
-          addStars(5);
-          Animated.spring(doneSlide, { toValue: 0, tension: 48, friction: 7, useNativeDriver: true }).start();
-        }, 500);
-      }
       return next;
     });
     if (!immediate) {
@@ -1025,6 +1014,58 @@ export default function DressUpGame() {
     }
     addStars(1);
   };
+
+  // The look is complete once Neli wears one of each core piece the tab
+  // offers: hat, sunglasses, a dress (or the shirt+shorts pair) and shoes.
+  // Extras like the bag or scarf are optional.
+  const lookComplete =
+    (outfitHatItems.length === 0 || selectedHatSlot !== null) &&
+    (outfitSunglassesItems.length === 0 || selectedSunglassesSlot !== null) &&
+    ((outfitDressItems.length === 0 && outfitBodyPairItems.length === 0) || selectedDressSlot !== null || !!worn.shirt) &&
+    (outfitShoesItems.length === 0 || selectedShoesSlot !== null);
+
+  React.useEffect(() => {
+    if (!lookComplete || celebratedRef.current) return;
+    celebratedRef.current = true;
+    // Cancelled if the look stops being complete first — a manual tab switch
+    // resets `worn` — so a stale sequence can't skip the new tab.
+    let cancelled = false;
+    const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+    void (async () => {
+      // Let the last piece land and its name finish playing.
+      await wait(500);
+      if (cancelled) return;
+      setShowCelebration(true);
+      addStars(5);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await wait(600);
+      if (cancelled) return;
+      // «آفرین! نلی آماده شد!» — one recorded clip when it exists; until then
+      // the recorded «آفرین» followed by TTS (silent on iOS, which has no
+      // Persian voice).
+      const readyKey = getFeedbackAudioKey('neli-ready');
+      if (readyKey) {
+        await playFaAudio(readyKey, { awaitFinish: true });
+      } else {
+        const afarinKey = getFeedbackAudioKey('afarin');
+        if (afarinKey) await playFaAudio(afarinKey, { awaitFinish: true });
+        if (cancelled) return;
+        await new Promise<void>(resolve => {
+          const timer = setTimeout(resolve, 3000);
+          const finish = () => { clearTimeout(timer); resolve(); };
+          void speakWithGeneratedVoice('نلی آماده شد', 'fa-IR', { interrupt: false, rate: 0.7, pitch: 1.16, onDone: finish, onError: finish });
+        });
+      }
+      await wait(700);
+      if (cancelled) return;
+      // On to the next look; the last tab wraps around to the first.
+      setOutfitIdx(idx => (idx + 1) % OUTFITS.length);
+      reset();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [lookComplete]);
 
   const launchFlight = (path: FlightPath) => {
     setFlight(path);
@@ -1205,14 +1246,8 @@ export default function DressUpGame() {
         </Animated.View>
       ) : null}
 
-      <Animated.View style={[styles.doneCard, { transform: [{ translateY: doneSlide }] }]}>
-        <Text style={[styles.doneTitle, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
-          {isFa ? 'نلی آماده است!' : 'Neli is dressed!'}
-        </Text>
-        <TouchableOpacity style={styles.doneBtn} onPress={reset}>
-          <Text style={[styles.doneBtnTxt, { fontFamily: ff(lang, 'bold') }]}>{isFa ? 'دوباره' : 'Again'}</Text>
-        </TouchableOpacity>
-      </Animated.View>
+
+      <PopperCelebration visible={showCelebration} onComplete={() => setShowCelebration(false)} />
     </View>
   );
 }
@@ -1296,21 +1331,6 @@ const styles = StyleSheet.create({
   hangerGlyph: { alignItems: 'center', justifyContent: 'flex-start' },
   neliStage: { position: 'absolute', alignItems: 'center', justifyContent: 'flex-end', overflow: 'visible', zIndex: 3, elevation: 3 },
   dressBlinkImage: { position: 'absolute', zIndex: 41, elevation: 41 },
-  doneCard: {
-    position: 'absolute',
-    left: 18,
-    right: 18,
-    bottom: 16,
-    borderRadius: 26,
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    alignItems: 'center',
-    gap: 10,
-    zIndex: 100,
-  },
-  doneTitle: { color: '#25105C', fontSize: 20, fontWeight: '900', textAlign: 'center' },
-  doneBtn: { minWidth: 150, borderRadius: 999, paddingVertical: 12, paddingHorizontal: 18, backgroundColor: '#7C3AED', alignItems: 'center' },
-  doneBtnTxt: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
   neliBlinkOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 5,

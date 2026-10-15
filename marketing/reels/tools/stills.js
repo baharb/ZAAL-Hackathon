@@ -12,7 +12,7 @@ async function open() {
     args: ['--allow-file-access-from-files'],
   });
   const pg = await b.newPage();
-  await pg.setViewport({ width: 1080, height: +(process.env.H || 1920) });   // H=1350 for 4:5 image posts
+  await pg.setViewport({ width: +(process.env.W || 1080), height: +(process.env.H || 1920) });   // H=1350 for 4:5 posts; W=1920 H=1080 for YouTube
   await pg.goto(pathToFileURL(path.resolve(process.env.HTML)).href, { waitUntil: 'networkidle0' });
   await pg.evaluate(() => document.fonts.ready);
   await pg.evaluate(() => window.layout && window.layout());

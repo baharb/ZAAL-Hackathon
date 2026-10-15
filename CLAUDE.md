@@ -12,6 +12,10 @@ committed, so this is the only iOS orientation config there is), and
 `android:screenOrientation="landscape"` on `MainActivity` directly (bare
 workflow — app.json's `orientation` is ignored there once a native `android/`
 dir exists, the same way `android.package` is).
+**Android 16 ignores that attribute on large screens** (sw >= 600dp) at
+targetSdk 36 (SDK 54's default), so the manifest also sets
+`android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY` to opt back
+in. That opt-out stops working at targetSdk 37.
 
 There used to be a **runtime** lock too — `OrientationGate` in `App.tsx`
 called `expo-screen-orientation`'s `lockAsync()` on mount, originally to give
