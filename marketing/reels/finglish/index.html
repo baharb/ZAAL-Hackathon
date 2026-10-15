@@ -1,0 +1,194 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ZAAL finglish reel</title>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Nunito:wght@700;800;900&display=block" rel="stylesheet">
+<style>
+/* palette 12: honey + berry, deep plum text */
+:root{--bg:#ffcb6b;--shape:#c2457a;--onshape:#fff;--ink:#5c1238;--ink2:#7d1d4c;--card:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden}
+body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--ink);position:relative}
+.a{position:absolute;will-change:transform}
+.scene{position:absolute;inset:0}
+/* Instagram safe area: keep text within x 130..950 and content above y ~1600 (caption/buttons) */
+.stack{position:absolute;left:0;width:1080px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.fa{direction:rtl;font-family:'Lalezar',sans-serif;line-height:1.3;text-wrap:balance;max-width:820px}
+.fa .w{display:inline-block}
+.en{font-weight:900;font-size:50px;line-height:1.25;margin-top:22px;max-width:820px}
+.pill{background:var(--shape);color:var(--onshape);font-weight:900;font-size:48px;padding:14px 40px 12px;border-radius:60px}
+.pill b{font-family:Lalezar;font-weight:400;font-size:1.2em;unicode-bidi:isolate}
+.tag{background:var(--card);color:var(--ink);font-weight:900;font-size:40px;padding:12px 32px 10px;border-radius:60px}
+
+/* the kid's speech bubble: Farsi with one English word dropped in */
+.bubble{position:relative;background:var(--card);border-radius:64px;padding:46px 56px 50px;max-width:880px}
+.bubble:after{content:'';position:absolute;bottom:-46px;left:28%;border:34px solid transparent;border-top:50px solid var(--card)}
+.say{font-family:Lalezar;font-size:116px;line-height:1.25;text-wrap:balance;direction:rtl}
+.say .w{display:inline-block}
+.say .fw{font-family:Nunito;font-weight:900;font-size:.82em;background:var(--shape);color:var(--onshape);padding:0 24px 4px;border-radius:26px;direction:ltr;unicode-bidi:isolate}
+
+/* download page */
+.icon{width:260px;height:260px;border-radius:70px;box-shadow:0 16px 0 rgba(92,18,56,.18)}
+.stores{display:flex;gap:24px;margin-top:34px}
+.store{background:#111;color:#fff;border-radius:26px;padding:16px 30px 14px;text-align:left;display:flex;align-items:center;gap:18px}
+.store svg{width:52px;height:52px}
+.store small{display:block;font-weight:800;font-size:22px;opacity:.85}
+.store span{display:block;font-weight:900;font-size:38px;line-height:1.05}
+</style></head>
+<body>
+<!-- irregular berry shapes -->
+<svg class="a" id="b1" viewBox="0 0 200 200" style="width:560px;left:-230px;top:110px"><path fill="var(--shape)" d="M100 12C122 10 128 40 146 44 168 48 190 40 192 66 194 90 166 96 170 116 174 138 196 156 180 176 164 194 140 176 120 184 100 192 86 200 68 186 50 172 62 150 46 138 28 124 4 128 6 104 8 80 34 84 38 64 42 44 22 26 42 16 62 6 80 14 100 12Z"/></svg>
+<svg class="a" id="b2" viewBox="0 0 200 200" style="width:520px;right:-110px;top:1090px"><path fill="var(--shape)" d="M62 28C96 4 132 22 150 40 170 60 196 58 192 92 188 120 168 124 176 150 186 182 150 200 118 188 92 178 82 198 50 186 18 174 28 144 16 120 2 92 12 70 30 56 42 46 46 40 62 28Z"/></svg>
+
+<!-- S0 hook -->
+<div class="scene" data-seg="0">
+  <div class="stack" style="top:300px">
+    <div class="fa" style="font-size:104px;line-height:1.2" data-words=".2" data-step=".22">بچه‌ت فارسی متوجه می‌شه | ولی انگلیسی | جواب می‌ده؟ 🤔</div>
+    <div class="en" data-in="1.6" data-anim="up">Understands Farsi,<br>but answers in English?</div>
+  </div>
+  <img class="a" data-src="Neli/02_nelli_big_teeth_smile_base.webp" style="width:430px;left:190px;top:1080px" data-in=".3" data-anim="rise" data-bob="1">
+</div>
+
+<!-- S1..S3: a Finglish sentence, then what the Farsi word means -->
+<div class="scene" data-seg="1">
+  <div class="stack" style="top:250px"><div class="tag" data-in=".05" data-anim="pop">😂 Finglish · ۱</div></div>
+  <div class="stack" style="top:420px">
+    <div class="bubble" data-in=".12" data-anim="pop"><div class="say" data-say=".3">مامان، من خیلی {hungry} ام!</div></div>
+    <div class="pill" style="margin-top:80px" data-in="1.6" data-anim="pop">hungry = <b dir="rtl">گرسنه</b> gorosne 🍽️</div>
+  </div>
+  <img class="a" data-src="Neli/01_base_standing.webp" style="width:520px;left:140px;top:1100px" data-in=".1" data-anim="rise" data-bob="1">
+</div>
+<div class="scene" data-seg="2">
+  <div class="stack" style="top:250px"><div class="tag" data-in=".05" data-anim="pop">😂 Finglish · ۲</div></div>
+  <div class="stack" style="top:420px">
+    <div class="bubble" data-in=".12" data-anim="pop"><div class="say" data-say=".3">بابا، این خیلی {yummy} ـه!</div></div>
+    <div class="pill" style="margin-top:80px" data-in="1.6" data-anim="pop">yummy = <b dir="rtl">خوشمزه</b> khoshmaze 😋</div>
+  </div>
+  <img class="a" data-src="Neli/04_dancing_base.webp" style="width:520px;left:140px;top:1100px" data-in=".1" data-anim="rise" data-bob="1">
+</div>
+<div class="scene" data-seg="3">
+  <div class="stack" style="top:250px"><div class="tag" data-in=".05" data-anim="pop">😂 Finglish · ۳</div></div>
+  <div class="stack" style="top:420px">
+    <div class="bubble" data-in=".12" data-anim="pop"><div class="say" data-say=".3">من اون {blue} رو می‌خوام!</div></div>
+    <div class="pill" style="margin-top:80px" data-in="1.6" data-anim="pop">blue = <b dir="rtl">آبی</b> âbi 💙</div>
+  </div>
+  <img class="a" data-src="Neli/02_nelli_big_teeth_smile_base.webp" style="width:400px;left:190px;top:1100px" data-in=".1" data-anim="rise" data-bob="1">
+</div>
+
+<!-- S4 the parent's worry, and the answer -->
+<div class="scene" data-seg="4">
+  <div class="stack" style="top:280px">
+    <div class="fa" style="font-size:140px;line-height:1.2" data-words=".2" data-step=".25">نگران نباش! 🤗</div>
+    <div class="en" data-in=".8" data-anim="up">Don't worry!</div>
+  </div>
+  <div class="stack" style="top:620px">
+    <div class="bubble" style="padding:40px 60px 34px" data-in="1.4" data-anim="pop">
+      <div class="fa" style="font-size:96px;line-height:1.2" data-words="1.6" data-step=".18">زال اینجاست تا بچه‌ت | با ذوق فارسی | حرف بزنه 💜</div>
+    </div>
+    <div class="en" style="margin-top:64px" data-in="2.6" data-anim="up">ZAAL is here so your kid<br>speaks Farsi, happily</div>
+  </div>
+  <img class="a" data-src="Neli/01_base_standing.webp" style="width:360px;left:180px;top:1250px" data-in="2.2" data-anim="rise" data-bob="1">
+</div>
+
+<!-- S5 download -->
+<div class="scene" data-seg="5">
+  <div class="stack" style="top:150px">
+    <img class="icon" src="../../../assets/icon.png" data-in=".05" data-anim="pop">
+    <div class="fa" style="font-size:112px;line-height:1.2;margin-top:40px" data-words=".35" data-step=".25">زال رو | دانلود کن! 📲</div>
+    <div class="en" data-in="1.3" data-anim="up">From Finglish to Farsi,<br>through play 💜</div>
+    <div class="stores" data-in="1.8" data-anim="pop">
+      <div class="store"><svg viewBox="0 0 24 24"><path fill="#fff" d="M16.4 12.6c0-2.5 2-3.6 2.1-3.7-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.1 2.5-1.8 3.1-.5 7.6 1.3 10.1.8 1.2 1.8 2.6 3.1 2.5 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8-.1 0-2.4-.9-2.4-3.6zM14 5.3c.7-.8 1.1-1.9 1-3-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.9-1.4z"/></svg><div><small>Download on the</small><span>App Store</span></div></div>
+      <div class="store"><svg viewBox="0 0 24 24"><path fill="#34d27b" d="M3.6 1.8 13.8 12 3.6 22.2c-.4-.2-.6-.6-.6-1.1V2.9c0-.5.2-.9.6-1.1z"/><path fill="#ffce3a" d="m17.2 15.4-3.4-3.4 3.4-3.4 4 2.3c1.1.6 1.1 1.7 0 2.3z"/><path fill="#ff4f5e" d="M17.2 15.4 13.8 12 3.6 22.2c.4.2.9.2 1.4-.1z"/><path fill="#3fa9ff" d="M17.2 8.6 5 1.9c-.5-.3-1-.3-1.4-.1L13.8 12z"/></svg><div><small>GET IT ON</small><span>Google Play</span></div></div>
+    </div>
+    <div class="pill" style="margin-top:36px" data-in="2.3" data-anim="pop">Link in bio ✨</div>
+  </div>
+  <img class="a" data-src="Neli/04_dancing_base.webp" style="width:400px;left:340px;top:1210px" data-in=".5" data-anim="rise" data-bob="1">
+</div>
+
+<img class="a" id="wm" src="../../../assets/logo-white.webp" style="width:240px;right:120px;top:1320px">
+
+<script>
+const A = new URL('../../../assets/neli-world/characters/', location.href).href;  // the app's art lives in neli-world/
+document.querySelectorAll('[data-src]').forEach(i => i.src = new URL(i.dataset.src.split('/').map(encodeURIComponent).join('/'), A).href);
+document.querySelectorAll('[data-words]').forEach(el => {
+  const base = +el.dataset.words, step = +(el.dataset.step || 0.14); let n = 0;
+  el.innerHTML = el.textContent.trim().split(/\s+/).map(w => w === '|' ? '<br>' :
+    `<span class="w" data-in="${(base + n++ * step).toFixed(2)}" data-anim="word">${w}</span>`).join(' ');
+});
+// kid's sentences: Farsi words pop in one by one, the {English} word stands out in a highlight
+document.querySelectorAll('[data-say]').forEach(el => {
+  const base = +el.dataset.say; let n = 0;
+  el.innerHTML = el.textContent.trim().split(/\s+/).map(w => {
+    const m = w.match(/^\{(.+)\}(.*)$/);
+    const at = (base + n++ * 0.16).toFixed(2);
+    return m ? `<span class="w" data-in="${(+at + 0.15).toFixed(2)}" data-anim="word"><span class="fw">${m[1]}</span>${m[2]}</span>`
+             : `<span class="w" data-in="${at}" data-anim="word">${w}</span>`;
+  }).join(' ');
+});
+
+// Timeline from the voice clips: measured [start, end] of speech in each file.
+// Mom (narrator, and the Farsi word after each Finglish line) is Zephyr; Neli is Leda with a five-year-old prompt.
+const SP = {
+  '0-hook-v2': [0.28, 4.74], '1-hungry': [0.26, 3.30], '1m-goresne': [0.28, 1.50], '2-yummy': [0.40, 3.44], '2m-khoshmaze': [0.44, 2.06],
+  '3-blue-kid': [0.24, 2.30], '3m-abi': [0.28, 1.00], '4a-negaran': [0.28, 1.70], '4b-zaal': [0.26, 4.98], '5-download': [0.26, 2.78],
+};
+const PAGES = [['0-hook-v2'], ['1-hungry', '1m-goresne'], ['2-yummy', '2m-khoshmaze'], ['3-blue-kid', '3m-abi'], ['4a-negaran', '4b-zaal'], ['5-download']];
+const LEAD = [0.3, 0.4, 0.4, 0.4, 0.3, 0.5];    // page start -> first voice
+const GAP = [0, 0.25, 0.25, 0.25, 0.25, 0];      // first voice end -> second voice
+const HOLD = [0.6, 0.8, 0.8, 0.8, 1.3, 2.8];    // last voice end -> next page
+const segs = []; const cues = []; let t = 0;
+PAGES.forEach((clips, i) => {
+  let at = LEAD[i]; const g = { start: t, at: [] };
+  clips.forEach((c, j) => {
+    const [s, e] = SP[c];
+    if (j) at += GAP[i];
+    g.at.push(at);
+    cues.push(['voices/' + c + '.wav', +Math.max(0, t + at - s).toFixed(2), 1, 'voice', +(e + 0.12).toFixed(2)]);
+    at += e - s;
+  });
+  g.end = t + Math.max(at + HOLD[i], i === 0 ? 3.4 : 2.8); segs.push(g); t = g.end;
+});
+window.DURATION = +t.toFixed(2);
+const scenes = [...document.querySelectorAll('.scene')].map(el => ({ el, ...segs[+el.dataset.seg] }));
+// the meaning pill pops as mom says the Farsi word; on the reassurance page the answer waits for its voice
+[1, 2, 3].forEach(i => scenes[i].el.querySelector('.pill').dataset.in = (segs[i].at[1] - 0.05).toFixed(2));
+const shift = segs[4].at[1] - 1.6;
+scenes[4].el.querySelectorAll('.stack:nth-of-type(2) [data-in], img[data-in]').forEach(e => e.dataset.in = (+e.dataset.in + shift).toFixed(2));
+window.AUDIO = [
+  ...cues,
+  ['pop.wav', +(segs[5].start + 0.08).toFixed(2), 0.3],     // the app icon
+  ['yay-kids.wav', +(segs[5].start + segs[5].at[0] + 2.2).toFixed(2), 0.5],
+];
+window.layout = () => seek(0);
+
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const eo = x => 1 - Math.pow(1 - cl(x), 3);
+const back = x => { x = cl(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+function animate(e, k) {
+  const anim = e.dataset.anim; k -= +(e.dataset.in || 0);
+  let op = 1, tf = '';
+  if (anim === 'pop') { op = cl(k / .15); tf += `scale(${back(k / .5)})`; }
+  else if (anim === 'word') { op = cl(k / .12); tf += `translateY(${(1 - eo(k / .45)) * 50}px) scale(${back(k / .45)})`; }
+  else if (anim === 'up') { op = cl(k / .3); tf += `translateY(${(1 - eo(k / .5)) * 70}px)`; }
+  else if (anim === 'rise') { op = cl(k / .2); tf += `translateY(${(1 - eo(k / .55)) * 520}px)`; }
+  if (anim && k < 0) op = 0;
+  if (e.dataset.bob && k > 0) tf += ` translateY(${Math.sin(k * 3.4) * 10}px) rotate(${Math.sin(k * 2.2) * 2}deg)`;
+  e.style.opacity = op; e.style.transform = tf;
+}
+window.seek = function (t) {
+  if (t < 1 / 60) t = 2.6;   // first frame = finished hook page, so it is Instagram's default cover
+  scenes.forEach(s => {
+    const vis = t >= s.start && t < s.end;
+    s.el.style.display = vis ? 'block' : 'none';
+    if (!vis) return;
+    const lt = t - s.start, out = cl((t - (s.end - 0.22)) / 0.22);
+    s.el.style.opacity = 1 - out;
+    s.el.style.transform = `translateY(${-out * 60}px)`;
+    s.el.querySelectorAll('[data-anim]').forEach(e => animate(e, lt));
+  });
+  // the logo sits on the download page's own icon, so hide the corner one there
+  document.getElementById('wm').style.opacity = t >= segs[5].start ? 0 : 1;
+  document.getElementById('b1').style.transform = `rotate(${t * 6}deg)`;
+  document.getElementById('b2').style.transform = `rotate(${-t * 5}deg)`;
+};
+document.fonts.ready.then(() => seek(0));
+</script>
+</body></html>

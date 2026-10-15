@@ -1,0 +1,30 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ZAAL Kids channel banner</title>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Nunito:wght@900&display=block" rel="stylesheet">
+<style>
+/* YouTube banner 2560x1440. Only the centre 1546x423 shows on every device, so everything important sits there. */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:2560px;height:1440px;overflow:hidden}
+body{background:#ff9b85;position:relative;font-family:Nunito,sans-serif;color:#7a2416}
+.a{position:absolute}
+.safe{position:absolute;left:507px;top:508px;width:1546px;height:423px;display:flex;align-items:center;justify-content:center;gap:40px}
+.fa{font-family:Lalezar;direction:rtl;line-height:1}
+.tag{background:#ffd86b;border-radius:40px;padding:12px 30px 10px;font-size:40px;display:inline-block}
+</style></head>
+<body>
+<svg class="a" viewBox="0 0 200 200" style="width:1100px;left:-300px;top:-350px"><path fill="#ffd86b" d="M100 12C122 10 128 40 146 44 168 48 190 40 192 66 194 90 166 96 170 116 174 138 196 156 180 176 164 194 140 176 120 184 100 192 86 200 68 186 50 172 62 150 46 138 28 124 4 128 6 104 8 80 34 84 38 64 42 44 22 26 42 16 62 6 80 14 100 12Z"/></svg>
+<svg class="a" viewBox="0 0 200 200" style="width:1000px;right:-260px;bottom:-380px"><path fill="#ffd86b" d="M62 28C96 4 132 22 150 40 170 60 196 58 192 92 188 120 168 124 176 150 186 182 150 200 118 188 92 178 82 198 50 186 18 174 28 144 16 120 2 92 12 70 30 56 42 46 46 40 62 28Z"/></svg>
+
+<div class="safe">
+  <img src="../shared/grandma.png" style="height:420px;margin-top:20px">
+  <div style="text-align:center">
+    <img src="../../../assets/logo-white.webp" style="height:150px;filter:drop-shadow(0 6px 0 rgba(122,36,22,.25))">
+    <div class="fa" style="font-size:84px;margin-top:6px;white-space:nowrap">فارسی، با بازی و قصه 💜</div>
+    <div class="tag" style="margin-top:16px;white-space:nowrap;font-size:36px">Learn Farsi for kids · New episode every week</div>
+  </div>
+  <img id="neli" style="height:420px;margin-top:20px">
+</div>
+<script>
+document.getElementById('neli').src = new URL('../../../assets/neli-world/characters/Neli/04_dancing_base.webp', location.href).href;
+</script>
+</body></html>

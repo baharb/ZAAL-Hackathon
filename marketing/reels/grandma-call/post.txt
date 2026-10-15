@@ -1,0 +1,53 @@
+ZAAL reel: "وقتی مامان‌بزرگ زنگ می‌زنه" (When grandma calls…)
+==============================================================
+
+Video: ZAAL-grandma-call-reel-HQ.mp4 (1080x1920, 60fps, 22s, voices: narrator Zephyr, Neli "Leda", grandma Zephyr)
+Cover: cover.png (the ringing call screen)
+Under 10 MB, so it uploads straight from Business Suite too.
+
+
+CAPTION (copy everything between the lines)
+-------------------------------------------
+وقتی مامان‌بزرگ زنگ می‌زنه و نوه‌اش به فارسی جواب می‌ده… 🥹📞
+«سلام مامان‌جون! دلم برات تنگ شده!»
+فارسی پلِ بین بچه‌های ما و خونه‌ست 💜
+
+When grandma calls… and your little one answers in Farsi 🥹
+Farsi keeps them close to the people who love them most 💜
+
+💌 Send this to a Farsi family, or to a grandma who'd love it
+ZAAL: Farsi games & stories for kids · Link in bio ✨
+
+#مامان_بزرگ #زبان_مادری #فارسی_برای_کودکان #آموزش_فارسی #ایرانیان_خارج_از_کشور #مادر_ایرانی #زال #PersianGrandma #Maman #FarsiForKids #LearnFarsi #PersianForKids #BilingualKids #IranianDiaspora #IranianMoms #HeritageLanguage #ZAAL
+-------------------------------------------
+
+
+FIRST COMMENT (post it right after publishing, then pin it)
+-------------------------------------------
+بچه‌تون به مامان‌بزرگ چی می‌گه؟ مامان‌جون؟ مامانی؟ ننه‌جون؟ 👵💬
+What does your little one call grandma? Tell us below 👇
+-------------------------------------------
+This invites lots of short answers (every family has its own word), which helps the reel spread.
+
+
+APP STORE CUSTOM PRODUCT PAGE (set up once in App Store Connect > the app > Custom Product Pages > +)
+-------------------------------------------
+Reference name: Reel - Grandma call
+First 2-3 screenshots (same sizes as the main page): everyday words with audio, stories/audiobooks, the characters
+App preview (optional): a cut of this reel at App Store preview specs
+Promotional text (130/170 characters):
+Help your kids answer grandma in Farsi! ZAAL teaches everyday Farsi words through games and stories, so they stay close to family.
+-------------------------------------------
+Once Apple approves it, copy the page's URL (the App Store link + ?ppid=...) and make it the bio
+link (and any Story link sticker) while this reel is the newest post: captions aren't clickable,
+so "link in bio" has to land on this page. Compare its conversion with the default page in
+App Analytics.
+
+
+SETTINGS
+--------
+- Audio: original audio only (voiceover + soft ringtone). If you add a song, keep it low (15-25%).
+- Cover: cover.png (Edit cover > Add from camera roll).
+- Share to Feed: ON. Trial Reels: try it if the switch shows up.
+- Alt text: Animated reel: a phone rings with "Grandma" calling; Neli answers in Farsi, "Hi Grandma! I miss you!", and grandma replies "Oh, my sweetheart!".
+- Upload at highest quality: ON.

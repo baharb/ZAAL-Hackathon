@@ -1,0 +1,27 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Halloween in Farsi thumbnail</title>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Nunito:wght@900&display=block" rel="stylesheet">
+<style>
+/* YouTube thumbnail, 1280x720: one big line, the pumpkin, a ghost and Neli; readable at phone size */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1280px;height:720px;overflow:hidden}
+body{background:#4b2a7a;position:relative;font-family:Nunito,sans-serif;color:#fff}
+.a{position:absolute}
+.fa{font-family:Lalezar;direction:rtl;line-height:1}
+.tag{background:#ff9a3c;color:#3a1260;border-radius:40px;padding:12px 30px 10px;font-size:44px;white-space:nowrap}
+</style></head>
+<body>
+<svg class="a" viewBox="0 0 200 200" style="width:640px;left:-250px;top:-280px"><path fill="#ff9a3c" d="M100 12C122 10 128 40 146 44 168 48 190 40 192 66 194 90 166 96 170 116 174 138 196 156 180 176 164 194 140 176 120 184 100 192 86 200 68 186 50 172 62 150 46 138 28 124 4 128 6 104 8 80 34 84 38 64 42 44 22 26 42 16 62 6 80 14 100 12Z"/></svg>
+<svg class="a" viewBox="0 0 200 200" style="width:600px;right:-250px;bottom:-290px"><path fill="#ff9a3c" d="M62 28C96 4 132 22 150 40 170 60 196 58 192 92 188 120 168 124 176 150 186 182 150 200 118 188 92 178 82 198 50 186 18 174 28 144 16 120 2 92 12 70 30 56 42 46 46 40 62 28Z"/></svg>
+<div class="a fa" style="left:0;width:1280px;text-align:center;top:52px;font-size:150px;text-shadow:0 8px 0 #2b1450">هالووین به فارسی</div>
+<div class="a tag" style="left:50%;transform:translateX(-50%);top:236px">Halloween in Farsi · 10 words 🎃</div>
+<img class="a" id="pumpkin" style="width:420px;left:40px;top:300px">
+<div class="a" style="font-size:230px;left:470px;top:360px;transform:rotate(-8deg)">👻</div>
+<img class="a" id="neli" style="width:430px;left:800px;top:300px">
+<img class="a" src="../../../assets/logo-white.webp" style="width:120px;right:16px;top:612px">
+<script>
+const CH = new URL('../../../assets/neli-world/characters/', location.href).href;
+document.getElementById('pumpkin').src = new URL('../vegetables/pumpkin@2x.webp', CH).href;
+document.getElementById('neli').src = new URL('Neli/02_nelli_big_teeth_smile_base.webp', CH).href;
+</script>
+</body></html>

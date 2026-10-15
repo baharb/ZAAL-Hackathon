@@ -1,0 +1,398 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Grandma's Call ep1</title>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Nunito:wght@700;800;900&display=block" rel="stylesheet">
+<style>
+/* same coral + butter as the "Grandma calls" reel, so the series looks like one family */
+:root{--bg:#ff9b85;--shape:#ffd86b;--ink:#7a2416;--ink2:#9a3320;--card:#fff;--hot:#7a2416}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden}
+body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--ink);position:relative}
+.a{position:absolute;will-change:transform}
+.layer{position:absolute;inset:0;display:none}
+.fa{direction:rtl;font-family:'Lalezar',sans-serif;line-height:1.25;unicode-bidi:isolate}
+.en{font-weight:900}
+.pill{background:var(--shape);color:var(--ink);font-weight:900;border-radius:60px;display:inline-block}
+.center{position:absolute;left:0;width:1920px;display:flex;flex-direction:column;align-items:center;text-align:center}
+
+/* title */
+#title .big{font-size:210px;line-height:1.05}
+/* ringing */
+.callcard{width:560px;background:var(--card);border-radius:64px;padding:40px 36px 40px;display:flex;flex-direction:column;align-items:center;box-shadow:0 16px 0 rgba(122,36,22,.14)}
+.avatar{position:relative;border-radius:50%;background:var(--shape);display:flex;align-items:center;justify-content:center;line-height:1}
+.ring{position:absolute;inset:0;border-radius:50%;border:10px solid var(--shape)}
+.btns{display:flex;gap:140px;margin-top:26px}
+.btn{width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.btn svg{width:58px}
+/* the call: two video tiles and a subtitle panel */
+.tile{position:absolute;top:96px;width:700px;height:560px;background:var(--card);border-radius:60px;overflow:hidden;box-shadow:0 14px 0 rgba(122,36,22,.14);border:0 solid var(--hot)}
+.tile .label{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);font-family:Lalezar;font-size:52px;line-height:1;padding:16px 40px 6px;border-radius:50px;background:var(--shape);color:var(--ink);white-space:nowrap}
+.bars{position:absolute;right:34px;top:30px;display:flex;gap:8px;align-items:flex-end;height:60px}
+.bars i{width:14px;border-radius:7px;background:var(--hot);display:block}
+#sub{position:absolute;left:160px;top:700px;width:1600px;height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+#sub .fa{font-size:104px}
+#sub .en{font-size:46px;margin-top:4px;color:var(--ink2)}
+#timer{position:absolute;left:50%;top:22px;transform:translateX(-50%);background:var(--card);border-radius:40px;padding:10px 28px 8px;font-weight:900;font-size:30px;display:flex;gap:12px;align-items:center;white-space:nowrap}
+#timer i{width:16px;height:16px;border-radius:50%;background:#35c46a;display:inline-block}
+/* part 2: the child's turn to answer Grandma */
+#turn{position:absolute;left:0;top:700px;width:1920px;height:320px;display:none;align-items:center;justify-content:center;gap:56px}
+#turn .mic{position:relative;width:230px;height:230px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:130px;line-height:1;box-shadow:0 12px 0 rgba(122,36,22,.14)}
+#turn svg{position:absolute;inset:-16px;width:262px;height:262px;transform:rotate(-90deg)}
+#turn .fa{font-size:120px;line-height:1.1}
+#turn .en{font-size:48px;color:var(--ink2)}
+/* word card */
+#wcard{position:absolute;left:560px;top:110px;width:800px;height:820px;background:var(--card);border-radius:70px;box-shadow:0 16px 0 rgba(122,36,22,.14);display:flex;flex-direction:column;align-items:center;justify-content:center}
+#wimg{height:380px;display:flex;align-items:center;justify-content:center;font-size:300px;line-height:1}
+#wimg img{max-height:380px;max-width:520px}
+#wfa{font-size:170px;line-height:1.1;margin-top:6px}
+#wtr{font-weight:900;font-size:56px;color:var(--ink2)}
+#wen{font-size:46px;padding:10px 34px 8px;margin-top:14px}
+#whead{position:absolute;left:50%;top:26px;transform:translateX(-50%);font-size:38px;padding:10px 32px 8px}
+#say{position:absolute;left:1430px;top:380px;width:380px;display:flex;flex-direction:column;align-items:center}
+#say .mic{position:relative;width:220px;height:220px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:120px;line-height:1}
+#say svg{position:absolute;inset:-14px;width:248px;height:248px;transform:rotate(-90deg)}
+#say .t1{font-size:70px;margin-top:22px}
+#say .t2{font-size:38px}
+.red{width:330px;height:330px;border-radius:46% 54% 50% 50%/55% 45% 55% 45%;background:#e8322e}
+/* outro */
+.icon{width:200px;height:200px;border-radius:50px;box-shadow:0 12px 0 rgba(0,0,0,.15)}
+.sub-btn{background:#e8322e;color:#fff;font-weight:900;font-size:56px;border-radius:24px;padding:18px 48px 16px}
+</style></head>
+<body>
+<svg class="a" id="b1" viewBox="0 0 200 200" style="width:620px;left:-260px;top:-200px"><path fill="var(--shape)" d="M100 12C122 10 128 40 146 44 168 48 190 40 192 66 194 90 166 96 170 116 174 138 196 156 180 176 164 194 140 176 120 184 100 192 86 200 68 186 50 172 62 150 46 138 28 124 4 128 6 104 8 80 34 84 38 64 42 44 22 26 42 16 62 6 80 14 100 12Z"/></svg>
+<svg class="a" id="b2" viewBox="0 0 200 200" style="width:560px;right:-200px;bottom:-230px"><path fill="var(--shape)" d="M62 28C96 4 132 22 150 40 170 60 196 58 192 92 188 120 168 124 176 150 186 182 150 200 118 188 92 178 82 198 50 186 18 174 28 144 16 120 2 92 12 70 30 56 42 46 46 40 62 28Z"/></svg>
+
+<!-- title card -->
+<div class="layer" id="title">
+  <div class="center" style="top:150px">
+    <div class="fa big" data-in=".1" data-anim="pop">زنگ مامان‌بزرگ 📞</div>
+    <div class="en" style="font-size:72px;margin-top:6px" data-in=".6" data-anim="up">Grandma's Call</div>
+    <div class="pill" style="font-size:44px;padding:16px 44px 12px;margin-top:40px" data-in="1.1" data-anim="pop">Episode 1 · <span class="fa" style="font-size:1.15em">امروز چی خوردی؟</span> · What did you eat today?</div>
+  </div>
+  <img class="a" data-src="Neli/04_dancing_base.webp" style="width:420px;left:1440px;top:640px" data-in=".4" data-anim="rise" data-bob="1">
+  <img class="a" src="../shared/grandma.png" style="width:440px;left:60px;top:620px" data-in=".6" data-anim="rise" data-bob="1">
+</div>
+
+<!-- grandma is calling -->
+<div class="layer" id="ring">
+  <div class="center" style="top:60px"><div class="fa" style="font-size:96px" data-in=".1" data-anim="pop">مامان‌بزرگ زنگ زده! 📞</div>
+    <div class="en" style="font-size:44px" data-in=".5" data-anim="up">Grandma's calling!</div></div>
+  <div class="center" style="top:300px">
+    <div class="callcard" data-in=".2" data-anim="pop">
+      <div class="avatar" id="ravatar" style="width:200px;height:200px"><div class="ring" id="r1"></div><div class="ring" id="r2"></div><img src="../shared/grandma_head.png" style="width:200px;height:200px;border-radius:50%"></div>
+      <div class="fa" style="font-size:80px;margin-top:20px">مامان‌بزرگ</div>
+      <div class="btns">
+        <div class="btn" style="background:#ff5a5a"><svg viewBox="0 0 24 24"><path fill="#fff" d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 0 1 0-1.41C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28a11.27 11.27 0 0 0-2.67-1.85.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></div>
+        <div class="btn" id="accept" style="background:#35c46a"><svg viewBox="0 0 24 24"><path fill="#fff" d="M6.62 10.79a15.15 15.15 0 0 0 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C10.61 21 3 13.39 3 4c0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></div>
+      </div>
+    </div>
+  </div>
+  <img class="a" data-src="Neli/02_nelli_big_teeth_smile_base.webp" style="width:330px;left:170px;top:560px" data-in=".3" data-anim="rise" data-bob="1">
+</div>
+
+<!-- the call -->
+<div class="layer" id="call">
+  <div id="timer"><i></i><span id="clock">00:00</span> · <span class="fa" style="font-size:34px">مامان‌بزرگ</span></div>
+  <div class="tile" id="tg" style="left:200px">
+    <img src="../shared/grandma.png" style="position:absolute;left:120px;top:30px;width:460px">
+    <div class="bars" id="bg"><i></i><i></i><i></i><i></i></div>
+    <div class="label">مامان‌بزرگ</div>
+  </div>
+  <div class="tile" id="tn" style="left:1020px">
+    <img data-src="Neli/01_base_standing.webp" style="position:absolute;left:120px;top:30px;width:460px">
+    <div class="bars" id="bn"><i></i><i></i><i></i><i></i></div>
+    <div class="label">نلی</div>
+  </div>
+  <div id="sub"><div class="fa" id="subfa"></div><div class="en" id="suben"></div></div>
+  <div id="turn">
+    <div class="mic" id="tmic">🎤<svg viewBox="0 0 262 262"><circle cx="131" cy="131" r="122" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="16"/><circle id="tarc" cx="131" cy="131" r="122" fill="none" stroke="var(--hot)" stroke-width="16" stroke-linecap="round" stroke-dasharray="767" stroke-dashoffset="767"/></svg></div>
+    <div style="text-align:center"><div class="fa" id="turnfa">نوبت توئه! تو بگو!</div><div class="en" id="turnen">Your turn! Answer Grandma 🎤</div></div>
+  </div>
+</div>
+
+<!-- word card, repeat after me -->
+<div class="layer" id="word">
+  <div class="pill" id="whead"></div>
+  <div id="wcard"><div id="wimg"></div><div class="fa" id="wfa"></div><div id="wtr"></div><div class="pill" id="wen"></div></div>
+  <img class="a" id="wneli" data-src="Neli/01_base_standing.webp" style="width:420px;left:110px;top:470px">
+  <div id="say">
+    <div class="mic">🎤<svg viewBox="0 0 248 248"><circle cx="124" cy="124" r="116" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="14"/><circle id="arc" cx="124" cy="124" r="116" fill="none" stroke="var(--hot)" stroke-width="14" stroke-linecap="round" stroke-dasharray="729" stroke-dashoffset="729"/></svg></div>
+    <div class="fa t1" id="saytxt">تو هم بگو!</div>
+    <div class="en t2" id="sayen">Your turn, say it!</div>
+  </div>
+</div>
+
+<!-- outro -->
+<div class="layer" id="outro">
+  <div class="center" style="top:120px">
+    <div class="fa" style="font-size:150px" data-in=".1" data-anim="pop">دفعه‌ی بعد می‌بینمت! 👋</div>
+    <div class="en" style="font-size:60px" data-in=".5" data-anim="up">See you next time!</div>
+    <div class="sub-btn" style="margin-top:50px" data-in="1.0" data-anim="pop">🔔 Subscribe for more calls with Grandma</div>
+    <div style="display:flex;align-items:center;gap:30px;margin-top:50px" data-in="1.6" data-anim="pop">
+      <img class="icon" src="../../../assets/icon.png">
+      <div style="text-align:left"><div class="en" style="font-size:56px">Learn Farsi with ZAAL</div><div class="en" style="font-size:38px;color:var(--ink2)">Download free · link in description</div></div>
+    </div>
+  </div>
+  <img class="a" data-src="Neli/04_dancing_base.webp" style="width:360px;left:120px;top:660px" data-in=".4" data-anim="rise" data-bob="1">
+  <img class="a" src="../shared/grandma.png" style="width:380px;left:1480px;top:650px" data-in=".6" data-anim="rise" data-bob="1">
+</div>
+
+<img class="a" id="wm" src="../../../assets/logo-white.webp" style="width:190px;right:40px;top:30px">
+
+<script>
+const A = new URL('../../../assets/neli-world/characters/', location.href).href;
+document.querySelectorAll('[data-src]').forEach(i => i.src = new URL(i.dataset.src.split('/').map(encodeURIComponent).join('/'), A).href);
+const ART = p => `<img src="${new URL(p, A).href}">`;
+
+// the words: [voice clip, Farsi, transliteration, English, picture]
+const W = {
+  khoobam: ['n-khoobam', 'خوبم', 'khoobam', "I'm good", '😊'],
+  noon: ['n-noon', 'نون', 'noon', 'bread', ART('../persian-foods/lavash.webp')],
+  panir: ['n-panir', 'پنیر', 'panir', 'cheese', ART('../ingredients/cheese@2x.webp')],
+  berenj: ['n-berenj', 'برنج', 'berenj', 'rice', ART('../ingredients/rice@2x.webp')],
+  morgh: ['n-morgh', 'مرغ', 'morgh', 'chicken', '🍗'],
+  sib: ['n-sib', 'سیب', 'sib', 'apple', ART('../fruits/apple_1024.webp')],
+  ghermez: ['n-ghermez', 'قرمز', 'ghermez', 'red', '<div class="red"></div>'],
+};
+
+// Measured [start, end] of speech in each voice clip; [0, 0] = not recorded yet (the step uses a placeholder length)
+const SP = {
+  // re-recorded with the Grandma reel's voice settings
+  'g02-sobhoone-v2': [0.28, 2.04],
+  'g03-nahar-v2': [0.26, 2.04],
+  'g04-mive-v2': [0.36, 2.34],
+  'g05-afarin-v2': [0.90, 3.90],
+  'g06-bye-v2': [0.30, 3.34],
+  'n-ghermez-v2': [0.28, 1.44],
+  'n-khoobam-v2': [0.28, 1.26],
+  'n-noon-v2': [0.24, 1.36],
+  'n-now-v2': [0.32, 2.02],
+  'n-panir-v2': [0.24, 1.48],
+  'n-review-v2': [0.26, 2.14],
+  'n-say-v2': [0.28, 1.46],
+  'n-sib-v2': [0.26, 0.96],
+  'n-turn-v2': [0.30, 2.58],
+  'n00-ring-v2': [0.28, 2.28],
+  'n01-salam-v2': [0.28, 3.32],
+  'n03-noon-panir-v2': [0.28, 2.26],
+  'n05-sib-v2': [0.30, 2.58],
+  'n06-dooset-v2': [0.34, 2.42],
+  'n07-bye-v2': [0.28, 1.54],
+  'n08-next-v2': [0.28, 2.62],
+  'g01-salam': [0.30, 2.80],
+  'g02-sobhoone': [0.28, 2.12],
+  'g03-nahar': [0.24, 1.86],
+  'g04-mive': [0.30, 1.78],
+  'g05-afarin': [0.24, 3.02],
+  'g06-bye': [0.24, 3.62],
+  'n-berenj': [0.28, 1.40],
+  'n-ghermez': [0.28, 1.64],
+  'n-khoobam': [0.32, 1.22],
+  'n-morgh': [0.20, 1.28],
+  'n-noon': [0.28, 1.06],
+  'n-panir': [0.26, 1.24],
+  'n-review': [0.28, 2.12],
+  'n-say': [0.36, 1.48],
+  'n-sib': [0.32, 1.20],
+  'n00-ring': [0.54, 2.60],
+  'n01-salam': [0.28, 3.62],
+  'n03-noon-panir': [0.20, 2.24],
+  'n04-berenj-morgh': [0.30, 2.80],
+  'n05-sib': [0.26, 3.26],
+  'n06-dooset': [0.26, 2.14],
+  'n08-next': [0.28, 2.34],
+};
+
+// The episode, step by step
+const G = 'g', N = 'n';
+const say = (who, clip, fa, en) => ({ kind: 'call', who, clip, fa, en });
+const word = (k, review) => ({ kind: 'word', k, review });
+const ask = (clip, fa, en, answer) => ({ kind: 'ask', clip, fa, en, answer });   // part 2: grandma asks, the child answers, then Neli does
+const STEPS = [
+  { kind: 'title', len: 4.5 },
+  { kind: 'ring', clip: 'n00-ring' },
+  say(G, 'g01-salam', 'سلام عزیزم! خوبی؟', 'Hi sweetheart! How are you?'),
+  say(N, 'n01-salam', 'سلام مامان‌جون! خوبم، مرسی!', "Hi Grandma! I'm good, thanks!"),
+  word('khoobam'),
+  say(G, 'g02-sobhoone', 'صبحونه چی خوردی؟', 'What did you have for breakfast?'),
+  say(N, 'n03-noon-panir', 'نون و پنیر خوردم!', 'I had bread and cheese!'),
+  word('noon'), word('panir'),
+  say(G, 'g03-nahar', 'ناهار چی خوردی؟', 'What did you have for lunch?'),
+  say(N, 'n04-berenj-morgh', 'برنج و مرغ خوردم!', 'I had rice and chicken!'),
+  word('berenj'), word('morgh'),
+  say(G, 'g04-mive', 'چه میوه‌ای دوست داری؟', 'Which fruit do you like?'),
+  say(N, 'n05-sib', 'سیب! سیب قرمز!', 'Apple! A red apple!'),
+  word('sib'), word('ghermez'),
+  say(G, 'g05-afarin', 'آفرین! نوش جان!', 'Well done! Enjoy!'),
+  // part 2: now the child answers grandma
+  say(N, 'n-now', 'حالا تو جواب بده!', 'Now you answer Grandma!'),
+  ask('g02-sobhoone', 'صبحونه چی خوردی؟', 'What did you have for breakfast?', 'n03-noon-panir'),
+  ask('g03-nahar', 'ناهار چی خوردی؟', 'What did you have for lunch?', 'n04-berenj-morgh'),
+  ask('g04-mive', 'چه میوه‌ای دوست داری؟', 'Which fruit do you like?', 'n05-sib'),
+  say(G, 'g05-afarin', 'آفرین! نوش جان!', 'Well done! Enjoy!'),
+  // review
+  say(N, 'n-review', 'بیا با هم تکرار کنیم!', "Let's say them all together!"),
+  ...['khoobam', 'noon', 'panir', 'berenj', 'morgh', 'sib', 'ghermez'].map(k => word(k, true)),
+  // goodbye
+  say(N, 'n06-dooset', 'دوستت دارم مامان‌جون!', 'I love you, Grandma!'),
+  say(G, 'g06-bye', 'منم دوستت دارم عزیزم! خداحافظ!', 'I love you too, sweetheart! Bye!'),
+  say(N, 'n07-bye', 'خداحافظ!', 'Bye!'),
+  { kind: 'outro', clip: 'n08-next', len: 14 },
+];
+const ANSWER_LINES = { 'n03-noon-panir': ['نون و پنیر خوردم!', 'I had bread and cheese!'], 'n04-berenj-morgh': ['برنج و مرغ خوردم!', 'I had rice and chicken!'], 'n05-sib': ['سیب! سیب قرمز!', 'Apple! A red apple!'] };
+
+// lay the steps out in time from the clip lengths
+const dur = c => { const s = SP[c]; return s && s[1] > 0 ? s[1] - s[0] : 1.6; };
+const cues = []; let t = 0; let firstSay = true;
+// re-recorded lines ("-v2", same voice settings as the Grandma reel) replace the first takes
+const FILE = {};
+Object.keys(SP).filter(k => k.endsWith('-v2')).forEach(k => { const base = k.slice(0, -3); SP[base] = SP[k]; FILE[base] = k; });
+// Neli's final takes: re-recorded at low temperature with the Grandma reel's Neli settings, each within ~10% of that reel's pitch
+// the adult prompt on word cards (Zephyr, warm young mother): the full line the first time, then just «تو بگو!» (cut from the end of it)
+SP['m-turn-first'] = [1.20, 3.40]; SP['m-say'] = [0.14, 0.80];
+const NELI = {
+  'n00-ring': ['n00-ring-fix', 0.24, 2.28],
+  'n01-salam': ['n01-salam-v4', 0.30, 3.64],
+  'n-say': ['n-say-fix', 0.30, 1.40],
+  'n-khoobam': ['n-khoobam-v3', 0.32, 1.36],
+  'n03-noon-panir': ['n03-noon-panir-v3', 0.28, 2.16],
+  'n-noon': ['n-noon-v3', 0.28, 1.14],
+  'n-panir': ['n-panir-v3', 0.28, 1.52],
+  'n04-berenj-morgh': ['n04-berenj-morgh-v3', 0.28, 2.30],
+  'n-berenj': ['n-berenj-v4', 0.26, 1.46],
+  'n-morgh': ['n-morgh-v3', 0.24, 1.12],
+  'n05-sib': ['n05-sib-v3', 0.28, 2.86],
+  'n-sib': ['n-sib-v3', 0.30, 1.30],
+  'n-ghermez': ['n-ghermez-v3', 0.28, 1.72],
+  'n-review': ['n-review-fix', 0.26, 2.40],
+  'n06-dooset': ['n06-dooset-v4', 0.28, 2.30],
+  'n07-bye': ['n07-bye-v4', 0.32, 1.96],
+  'n08-next': ['n08-next-v5', 0.26, 2.50],
+  'n-turn': ['n-turn-v3', 0.26, 2.86],
+  'n-now': ['n-now-fix', 0.30, 2.70],
+};
+Object.entries(NELI).forEach(([base, [file, s, e]]) => { SP[base] = [s, e]; FILE[base] = file; });
+// «تو هم بگو!» came out shouty, so it plays quieter than the other lines
+const VOL = { 'n-say': 0.45 };
+const voice = (c, at) => { const s = SP[c]; if (s && s[1] > 0) cues.push(['voices/' + (FILE[c] || c) + '.wav', +Math.max(0, at - s[0]).toFixed(2), (FILE[c] ? 1 : VOL[c]) || 1, 'voice', +(s[1] + 0.12).toFixed(2)]); };
+STEPS.forEach(st => {
+  st.start = t;
+  if (st.kind === 'title') { st.len = 4.5; cues.push(['pop.wav', 0.15, 0.3]); }
+  else if (st.kind === 'ring') { cues.push(['voices/ring.wav', t + 0.3, 0.25]); voice(st.clip, t + 1.0); st.len = 1.0 + dur(st.clip) + 1.8; cues.push(['key-tap.wav', +(t + st.len - 0.2).toFixed(2), 0.6]); }
+  else if (st.kind === 'call') { voice(st.clip, t + 0.35); st.len = 0.35 + dur(st.clip) + 1.0; }
+  else if (st.kind === 'word') {
+    const [clip] = W[st.k];
+    cues.push(['pop.wav', +(t + 0.1).toFixed(2), 0.3]);
+    st.wAt = 0.5; voice(clip, t + st.wAt);
+    if (st.review) { st.sayAt = st.wAt + dur(clip) + 0.3; st.wait = 2.6; }
+    else { st.sayAt = Infinity; st.wait = 0; }
+    st.len = st.review ? st.sayAt + st.wait + 0.4 : st.wAt + dur(clip) + 0.9;
+  }
+  else if (st.kind === 'ask') {
+    voice(st.clip, t + 0.35);
+    st.turnAt = 0.35 + dur(st.clip) + 0.3;
+    st.turnClip = firstSay ? 'm-turn-first' : 'm-say'; firstSay = false;
+    voice(st.turnClip, t + st.turnAt + 0.2); cues.push(['pop.wav', +(t + st.turnAt).toFixed(2), 0.3]);
+    st.micAt = st.turnAt + 0.2 + dur(st.turnClip) + 0.1; st.wait = st.micAt - st.turnAt + 3.0;
+    st.ansAt = st.turnAt + st.wait + 0.2; voice(st.answer, t + st.ansAt);
+    st.len = st.ansAt + dur(st.answer) + 1.0;
+  }
+  else if (st.kind === 'outro') { voice(st.clip, t + 0.4); cues.push(['yay-kids.wav', +(t + 1.2).toFixed(2), 0.4]); }
+  t += st.len; st.end = t;
+});
+window.DURATION = +t.toFixed(2);
+window.AUDIO = cues;
+window.layout = () => seek(0);
+
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const eo = x => 1 - Math.pow(1 - cl(x), 3);
+const back = x => { x = cl(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+function animate(e, k) {
+  const anim = e.dataset.anim; k -= +(e.dataset.in || 0);
+  let op = 1, tf = '';
+  if (anim === 'pop') { op = cl(k / .15); tf += `scale(${back(k / .5)})`; }
+  else if (anim === 'up') { op = cl(k / .3); tf += `translateY(${(1 - eo(k / .5)) * 60}px)`; }
+  else if (anim === 'rise') { op = cl(k / .2); tf += `translateY(${(1 - eo(k / .55)) * 500}px)`; }
+  if (anim && k < 0) op = 0;
+  if (e.dataset.bob && k > 0) tf += ` translateY(${Math.sin(k * 3.4) * 10}px) rotate(${Math.sin(k * 2.2) * 2}deg)`;
+  e.style.opacity = op; e.style.transform = tf;
+}
+const $ = id => document.getElementById(id);
+const show = id => ['title', 'ring', 'call', 'word', 'outro'].forEach(l => $(l).style.display = l === id ? 'block' : 'none');
+function bars(el, on, k) {
+  [...el.children].forEach((b, i) => b.style.height = (on ? 14 + 46 * Math.abs(Math.sin(k * (9 + i * 2.3) + i)) : 14) + 'px');
+  el.style.opacity = on ? 1 : .25;
+}
+let lastText = null;
+const setText = (fa, en) => { if (lastText !== fa + en) { $('subfa').textContent = fa; $('suben').textContent = en; lastText = fa + en; } };
+
+window.seek = function (t) {
+  if (t < 1 / 60) t = 2.4;   // first frame = the title card, so it works as the default thumbnail
+  const st = STEPS.find(s => t >= s.start && t < s.end) || STEPS[STEPS.length - 1];
+  const k = t - st.start;
+  const fade = 1 - cl((t - (st.end - 0.2)) / 0.2);
+  const layer = st.kind === 'ask' ? 'call' : st.kind;
+  show(layer);
+  const L = $(layer);
+  L.style.opacity = st.kind === 'call' || st.kind === 'ask' ? 1 : fade;   // the call stays put between lines
+  L.querySelectorAll('[data-anim]').forEach(e => animate(e, k));
+
+  if (st.kind === 'ring') {
+    [['r1', 0], ['r2', .5]].forEach(([id, off]) => { const p = (t + off) % 1; $(id).style.transform = `scale(${1 + p * .55})`; $(id).style.opacity = (1 - p) * .9; });
+    $('ravatar').style.transform = `rotate(${Math.sin(k * 40) * 4 * (Math.sin(k * Math.PI) > 0)}deg)`;
+    $('accept').style.transform = `scale(${1 + .1 * Math.max(0, Math.sin(t * 7))})`;
+  }
+  if (st.kind === 'call' || st.kind === 'ask') {
+    const callStart = STEPS.find(s => s.kind === 'call').start;
+    const secs = Math.max(0, Math.floor(t - callStart));
+    $('clock').textContent = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
+    let who = st.who, fa = st.fa, en = st.en, talking = k > 0.3 && k < st.len - 0.8;
+    if (st.kind === 'ask') {
+      if (k < st.turnAt) { who = G; talking = k > 0.3 && k < st.turnAt - 0.2; }
+      else if (k < st.ansAt) { who = 'you'; talking = false; }
+      else { who = N; [fa, en] = ANSWER_LINES[st.answer]; talking = k < st.len - 0.8; }
+    }
+    const turn = st.kind === 'ask' && k >= st.turnAt && k < st.ansAt;
+    $('turn').style.display = turn ? 'flex' : 'none';
+    $('sub').style.display = turn ? 'none' : 'flex';
+    if (turn) {
+      $('turnfa').textContent = st.turnClip === 'm-turn-first' ? 'نوبت توئه! تو بگو!' : 'تو بگو!';
+      $('turnen').textContent = st.turnClip === 'm-turn-first' ? 'Your turn! Answer Grandma 🎤' : 'Your turn 🎤';
+      const p = (k - st.micAt) / (st.ansAt - 0.2 - st.micAt);
+      $('turn').style.opacity = cl((k - st.turnAt) / .2);
+      $('turn').style.transform = `scale(${back((k - st.turnAt) / .45)})`;
+      $('tmic').style.transform = `scale(${1 + .06 * Math.sin(k * 7)})`;
+      $('tarc').setAttribute('stroke-dashoffset', (767 * (1 - cl(p))).toFixed(1));
+    }
+    setText(fa, en);
+    $('sub').style.opacity = cl(k / 0.15) * (st.kind === 'ask' ? 1 : fade);
+    [['tg', G], ['tn', N]].forEach(([id, w]) => {
+      const on = who === w;
+      $(id).style.transform = `scale(${on ? 1.04 : 0.96})`;
+      $(id).style.borderWidth = on ? '10px' : '0px';
+      $(id).style.opacity = who === 'you' ? .75 : on ? 1 : .8;
+    });
+    bars($('bg'), who === G && talking, t); bars($('bn'), who === N && talking, t);
+  }
+  if (st.kind === 'word') {
+    const [, fa, tr, en, pic] = W[st.k];
+    if ($('wfa').textContent !== fa) { $('wfa').textContent = fa; $('wtr').textContent = tr; $('wen').textContent = '= ' + en; $('wimg').innerHTML = pic; }
+    $('whead').innerHTML = st.review ? '<span class="fa" style="font-size:1.2em">مرور</span> · Review' : '<span class="fa" style="font-size:1.2em">کلمه‌ی جدید</span> · New word';
+    $('whead').style.fontFamily = 'Nunito';
+    $('wcard').style.transform = `scale(${back(k / .5)})`; $('wcard').style.opacity = cl(k / .15);
+    $('wimg').style.transform = `translateY(${Math.sin(k * 3) * 8}px)`;
+    $('wneli').style.transform = `translateY(${Math.sin(k * 3.4) * 8}px)`;
+    // the mic and its countdown ring: the child's turn to say it
+    const s = (k - st.sayAt) / st.wait;
+    $('say').style.opacity = st.review ? cl((k - st.sayAt + .2) / .2) : 0;
+    $('say').style.transform = `scale(${s > 0 && s < 1 ? 1 + .05 * Math.sin(k * 8) : 1})`;
+    $('saytxt').innerHTML = st.review ? 'تکرار کن!' : st.sayClip === 'm-turn-first' ? 'نوبت توئه!<br>تو بگو!' : 'تو بگو!';
+    $('sayen').textContent = st.review ? 'Say it with Neli!' : st.sayClip === 'm-turn-first' ? 'Your turn, say it!' : 'Say it!';
+    $('arc').setAttribute('stroke-dashoffset', (729 * (1 - cl(s))).toFixed(1));
+  }
+  $('wm').style.opacity = layer === 'outro' ? 0 : 1;
+  $('b1').style.transform = `rotate(${t * 4}deg)`;
+  $('b2').style.transform = `rotate(${-t * 3.5}deg)`;
+};
+document.fonts.ready.then(() => seek(0));
+</script>
+</body></html>

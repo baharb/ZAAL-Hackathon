@@ -1,0 +1,36 @@
+ZAAL Kids: YouTube channel setup
+================================
+
+Name:    ZAAL Kids
+Handle:  @zaalkids  (same as Instagram, if it is free)
+Profile picture: profile.png (800x800, the app icon; YouTube shows it as a circle)
+Banner:  banner.jpg (2560x1440; everything important is inside the centre 1546x423 that every device shows)
+
+
+DESCRIPTION (Studio > Customization > Basic info)
+-------------------------------------------------
+زال: فارسی، با بازی و قصه 💜
+ویدیوهای شاد و کوتاه برای بچه‌هایی که خارج از ایران بزرگ می‌شن: با نلی و مامان‌بزرگ کلمه‌های فارسی رو یاد بگیرید، تکرار کنید و با خانواده فارسی حرف بزنید.
+
+ZAAL helps kids growing up outside Iran learn Farsi through play.
+Join Neli and Grandma for short, cheerful episodes: new words, real conversations, and a turn for your little one to answer in Farsi.
+
+🆕 A new episode every week
+📲 ZAAL app (iPhone & iPad): https://apps.apple.com/app/id6813150773
+📷 Instagram: https://www.instagram.com/zaalkids/
+
+
+LINKS (Basic info > Links)
+--------------------------
+ZAAL app      https://apps.apple.com/app/id6813150773
+Instagram     https://www.instagram.com/zaalkids/
+
+
+SETTINGS
+--------
+- Studio > Settings > Channel > Advanced: "Yes, set this channel as made for kids" (every video on it is for children).
+- Studio > Settings > Channel > Basic info: country, and keywords:
+  learn farsi, farsi for kids, persian for kids, آموزش فارسی کودکان, فارسی برای کودکان, bilingual kids, iranian kids, ZAAL
+- Studio > Settings > Channel > Feature eligibility: verify by phone (needed for custom thumbnails).
+- Studio > Settings > Upload defaults: category Education, language Persian, so every upload starts with them.
+- Customization > Layout: put the "Grandma's Call" playlist first.
