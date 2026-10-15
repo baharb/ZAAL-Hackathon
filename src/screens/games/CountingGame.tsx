@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useWindowDimensions } from '../../layout/PortraitFallback';
 import * as Haptics from 'expo-haptics';
@@ -8,7 +8,7 @@ import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAs
 import { characterAssets } from '../../assets/characterAssets';
 import { AppContext } from '../../store/AppContext';
 import { useNav } from '../../store/NavContext';
-import { FA_AUDIO_KEYS, getCountingNumberAudioKey, playFaAudioSequence, playFaAudio, speakWithGeneratedVoice, stopFaAudio } from '../../utils/faAudio';
+import { FA_AUDIO_KEYS, getCountingNumberAudioKey, getFeedbackAudioKey, playFaAudioSequence, speakWithGeneratedVoice, stopFaAudio } from '../../utils/faAudio';
 import { C } from '../../theme/colors';
 import { dir, ff } from '../../theme/fonts';
 
@@ -32,6 +32,10 @@ const objectTransforms: Array<any[]> = [
 ];
 
 const FA_NUMBERS = ['\u06cc\u06a9', '\u062f\u0648', '\u0633\u0647', '\u0686\u0647\u0627\u0631', '\u067e\u0646\u062c', '\u0634\u0634', '\u0647\u0641\u062a', '\u0647\u0634\u062a', '\u0646\u0647', '\u062f\u0647'];
+// Shortest time an answer stays on screen before the next question, even if
+// the voice is missing or cut short.
+const MIN_FEEDBACK_MS = 1800;
+
 const FA_DIGITS = ['\u06f0', '\u06f1', '\u06f2', '\u06f3', '\u06f4', '\u06f5', '\u06f6', '\u06f7', '\u06f8', '\u06f9'];
 
 function toFaDigits(value: number | string) {
@@ -99,7 +103,15 @@ export default function CountingGame() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const handleAnswer = (n: number) => {
+  // Leaving the screen mid-feedback must not advance a round on an unmounted
+  // component, and must stop the voice.
+  const mountedRef = useRef(true);
+  useEffect(() => () => {
+    mountedRef.current = false;
+    void stopFaAudio();
+  }, []);
+
+  const handleAnswer = async (n: number) => {
     if (feedback !== null) return;
     const correct = n === round.count;
     setFeedback(correct);
@@ -107,21 +119,33 @@ export default function CountingGame() {
       addStars(2);
       setScore(prev => prev + 1);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const correctKey = getCountingNumberAudioKey(round.count);
-      if (correctKey) { void playFaAudio(correctKey); }
-      else { void speakWithGeneratedVoice(FA_NUMBERS[round.count - 1] ?? String(round.count), 'fa-IR', { interrupt: true, rate: 0.74, pitch: 1.14 }); }
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      // Say correct answer: number audio + "\u0628\u0648\u062f" prefix via TTS if no clip
-      const correctKey = getCountingNumberAudioKey(round.count);
-      if (correctKey) { void playFaAudio(correctKey); }
-      else { void speakWithGeneratedVoice(`\u0628\u0648\u062f ${FA_NUMBERS[round.count - 1] ?? round.count}`, 'fa-IR', { interrupt: true, rate: 0.72, pitch: 1.12 }); }
     }
-    setTimeout(() => {
-      setFeedback(null);
-      setCountedItems([]);
-      setRound(makeRound());
-    }, 950);
+
+    // Right: \u00ab\u0622\u0641\u0631\u06cc\u0646\u00bb + number. Wrong: \u00ab\u0627\u0634\u062a\u0628\u0627\u0647\u0647\u00bb + right number + \u00ab\u062f\u0631\u0633\u062a\u0647\u00bb.
+    // A clip with no recording is skipped rather than spoken by TTS (iOS has
+    // no Persian voice).
+    const numberKey = getCountingNumberAudioKey(round.count);
+    const keys = correct
+      ? [getFeedbackAudioKey('afarin'), numberKey]
+      : [getFeedbackAudioKey('wrong'), numberKey, getFeedbackAudioKey('correct')];
+    const startedAt = Date.now();
+    if (numberKey) {
+      await playFaAudioSequence(keys.filter((k): k is NonNullable<typeof k> => k !== null), 120);
+    } else {
+      await speakWithGeneratedVoice(FA_NUMBERS[round.count - 1] ?? String(round.count), 'fa-IR', { interrupt: true, rate: 0.74, pitch: 1.14 });
+    }
+
+    // Hold the highlighted answer on screen after the voice so the child
+    // can see it: a little longer after a mistake, never under MIN_FEEDBACK_MS.
+    const holdMs = correct ? 900 : 1400;
+    const remaining = Math.max(holdMs, MIN_FEEDBACK_MS - (Date.now() - startedAt));
+    await new Promise(resolve => setTimeout(resolve, remaining));
+    if (!mountedRef.current) return;
+    setFeedback(null);
+    setCountedItems([]);
+    setRound(makeRound());
   };
 
   return (
@@ -205,7 +229,9 @@ export default function CountingGame() {
         {feedback !== null ? (
           <View style={[styles.feedback, { bottom: trayH + 6 }, feedback ? styles.feedbackGood : styles.feedbackBad]}>
             <Text style={[styles.feedbackText, { fontFamily: ff(isFa ? 'fa' : lang, 'black') }]}>
-              {feedback ? (isFa ? '\u062f\u0631\u0633\u062a \u0628\u0648\u062f!' : 'That is right!') : (isFa ? `\u0628\u0648\u062f ${toFaDigits(round.count)}` : `It was ${round.count}`)}
+              {feedback
+                ? (isFa ? `\u0622\u0641\u0631\u06cc\u0646! ${toFaDigits(round.count)}` : `Well done! ${round.count}`)
+                : (isFa ? `\u0627\u0634\u062a\u0628\u0627\u0647\u0647! ${toFaDigits(round.count)} \u062f\u0631\u0633\u062a\u0647` : `Oops! ${round.count} is right`)}
             </Text>
           </View>
         ) : null}

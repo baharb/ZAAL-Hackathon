@@ -10,7 +10,7 @@ const audioPath = f => f.startsWith('voices/') ? path.join(HTML_DIR, f) : (/^[A-
 
 // HQ=1: master for Instagram upload (lossless PNG frames, 60fps, near-lossless H.264, 256k audio)
 const HQ = !!process.env.HQ;
-const FPS = HQ ? 60 : 30;
+const FPS = +(process.env.FPS || (HQ ? 60 : 30));   // FPS=30 for long YouTube episodes
 const AUD = path.join(__dirname, '../../../assets/audio/');   // the app's own sound files
 const HTML_DIR = path.dirname(path.resolve(process.env.HTML));
 const OUT = path.resolve(process.env.OUT || path.join(HTML_DIR, 'reel.mp4'));
@@ -26,7 +26,10 @@ const OUT = path.resolve(process.env.OUT || path.join(HTML_DIR, 'reel.mp4'));
 
   const args = ['-y', '-f', 'image2pipe', '-framerate', String(FPS), '-i', '-'];
   cues.forEach(([f]) => args.push('-i', audioPath(f)));
-  const chains = cues.map(([, at, vol, kind, keep], i) => {
+  // no sounds yet (e.g. a first-page preview): feed a silent track so the mix still has an input
+  if (!cues.length) { args.push('-f', 'lavfi', '-t', String(dur), '-i', 'anullsrc=r=48000:cl=stereo'); cues.push(['__silence__', 0, 1]); }
+  const chains = cues.map(([f, at, vol, kind, keep], i) => {
+    if (f === '__silence__') return `[${i + 1}:a]anull[a${i}]`;
     const ms = Math.round(at * 1000);
     const shape = kind === 'music' ? `atrim=0:${dur},afade=t=in:d=0.4,afade=t=out:st=${dur - 1.6}:d=1.6,`
       : kind === 'voice' ? `atrim=0:${keep},afade=t=out:st=${keep - 0.15}:d=0.15,` : '';

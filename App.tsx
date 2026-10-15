@@ -48,6 +48,7 @@ import DressUpGame         from './src/screens/interactive/DressUpGame';
 import CookingGame         from './src/screens/interactive/CookingGame';
 import ToothBrushGame      from './src/screens/interactive/ToothBrushGame';
 import ConversationGame    from './src/screens/interactive/ConversationGame';
+import GrandmaCallGame     from './src/screens/interactive/GrandmaCallGame';
 import SolarSystemPuzzleGame from './src/screens/interactive/SolarSystemPuzzleGame';
 import GameLandscapeFrame  from './src/components/GameLandscapeFrame';
 import PortraitFallback    from './src/layout/PortraitFallback';
@@ -94,6 +95,7 @@ function Router() {
     case 'Cooking':          return <GameLandscapeFrame><CookingGame /></GameLandscapeFrame>;
     case 'ToothBrush':       return <GameLandscapeFrame><ToothBrushGame /></GameLandscapeFrame>;
     case 'ConversationGame':  return <GameLandscapeFrame><ConversationGame /></GameLandscapeFrame>;
+    case 'GrandmaCall':       return <GameLandscapeFrame><GrandmaCallGame /></GameLandscapeFrame>;
     case 'SolarPuzzle':      return <GameLandscapeFrame><SolarSystemPuzzleGame /></GameLandscapeFrame>;
     case 'TimeUp':           return <TimeUpScreen />;
     default:                 return <SplashScreen />;

@@ -17,6 +17,11 @@ character art, logo and sounds straight from `../../assets/`, so nothing is dupl
 Each reel folder has `index.html` (the template), `post.txt` (caption, hashtags, first
 comment, settings), the cover, and `voices/` (the Gemini TTS clips plus the CSVs that made them).
 
+Feature reels (`cooking`, `finglish`, `grandma-call`, `halloween`) also have an **App Store
+Custom Product Page** section in `post.txt`: the screenshots to lead with and the promotional
+text (170 characters max) for a page that matches the reel. The approved page's URL goes in the
+bio link while that reel is the newest post.
+
 ## Setup
 
 ```bash

@@ -12,7 +12,7 @@ import { neliWorldAssets, roomBackgroundPickers } from '../assets/neliWorldAsset
 import { SOLAR_SYSTEM_BACKGROUND, SOLAR_SYSTEM_PLANETS } from '../assets/solarSystemPuzzle';
 import { BOX_CHARACTER_WIDTH } from '../theme/characterSizes';
 
-type Kind = 'talk' | 'dress' | 'tooth' | 'animal' | 'cook' | 'paint' | 'routine' | 'room' | 'memory' | 'quiz' | 'color' | 'count' | 'culture' | 'tracing' | 'firstTracing' | 'alphabet' | 'alphabetTrain' | 'video' | 'solarPuzzle';
+type Kind = 'talk' | 'grandma' | 'dress' | 'tooth' | 'animal' | 'cook' | 'paint' | 'routine' | 'room' | 'memory' | 'quiz' | 'color' | 'count' | 'culture' | 'tracing' | 'firstTracing' | 'alphabet' | 'alphabetTrain' | 'video' | 'solarPuzzle';
 type Tile = {
   id: string;
   route: any;
@@ -29,6 +29,7 @@ type Tile = {
 
 const GAMES: Tile[] = [
   { id: 'talk', route: { name: 'ConversationGame' }, en: 'Talk with Neli', fa: 'گفت و گو', descEn: 'Listen and answer', descFa: 'بشنو و جواب بده', kind: 'talk', color: '#6C4EFF', accent: '#FACC15', group: 'play' },
+  { id: 'grandma', route: { name: 'GrandmaCall' }, en: "Grandma's Call", fa: 'زنگ مامان‌بزرگ', descEn: 'Answer Grandma in Farsi', descFa: 'به مامان‌بزرگ جواب بده', kind: 'grandma', color: '#FF7A5C', accent: '#FFD86B', group: 'play' },
   { id: 'animals', route: { name: 'FeedAnimals' }, en: 'Feed Animals', fa: 'غذا بده', descEn: 'Drag food to animals', descFa: 'غذا را به حیوان بده', kind: 'animal', color: '#22C55E', accent: '#FACC15', group: 'play' },
   { id: 'teeth', route: { name: 'ToothBrush' }, en: 'Brush Teeth', fa: 'مسواک بزن', descEn: 'Move the brush', descFa: 'مسواک را حرکت بده', kind: 'tooth', color: '#38BDF8', accent: '#6C4EFF', group: 'play' },
   { id: 'counting', route: { name: 'Game', gameId: 'counting' }, en: 'Counting', fa: 'بشمار', descEn: 'Count with pictures', descFa: 'با تصویر بشمار', kind: 'count', color: '#F72585', accent: '#FFE45E', group: 'learn' },
@@ -49,6 +50,7 @@ const solarPlanetSource = (id: string) => SOLAR_SYSTEM_PLANETS.find(planet => pl
 // instead of 1.39x, which is why small screens look crowded. Scaling by the
 // real card keeps that intended 1.39x crop identical on every device.
 const TILE_REFERENCE_BOX = 373;
+const GRANDMA_ART = require('../../assets/neli-world/characters/Grandma/grandma_standing.webp');
 
 const MEMORY_CARD_BACKS = [
   { bg: '#38BDF8', rot: '-10deg', left: 14, top: 24 as number | 'mid' },
@@ -58,6 +60,16 @@ const MEMORY_CARD_BACKS = [
 
 function TileArt({ kind, color, accent, characterId, box }: { kind: Kind; color: string; accent: string; characterId: string; box: number }) {
   const k = box / TILE_REFERENCE_BOX;
+  if (kind === 'grandma') {
+    // the call screen from the game: coral, a butter blob, and Grandma
+    return (
+      <View style={[styles.sceneArt, { backgroundColor: '#FF9B85' }]}>
+        <View style={{ position: 'absolute', width: 300 * k, height: 270 * k, borderRadius: 140 * k, backgroundColor: '#FFD86B', left: -110 * k, top: -120 * k }} />
+        <Text style={{ position: 'absolute', top: 26 * k, right: 30 * k, fontSize: 64 * k }}>📞</Text>
+        <Image source={GRANDMA_ART} style={{ position: 'absolute', width: 400 * k, height: 400 * k, bottom: -36 * k, alignSelf: 'center' }} resizeMode="contain" />
+      </View>
+    );
+  }
   if (kind === 'talk') {
     return (
       <ImageBackground source={roomBackgroundPickers.talkPlay(box, box)} style={styles.sceneArt} imageStyle={styles.sceneArtImageCover}>

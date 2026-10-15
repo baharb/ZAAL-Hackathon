@@ -13,8 +13,10 @@ import { BOX_CHARACTER_HEIGHT, BOX_CHARACTER_WIDTH } from '../../theme/character
 import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAssets';
 import { SOLAR_SYSTEM_BACKGROUND, SOLAR_SYSTEM_PLANETS } from '../../assets/solarSystemPuzzle';
 
-type GameId = 'ConversationGame' | 'DailyRoutine' | 'FeedAnimals' | 'BuildScene' | 'DressUp' | 'Cooking' | 'ToothBrush' | 'SolarPuzzle';
-type Kind = 'talk' | 'routine' | 'feed' | 'home' | 'dress' | 'cook' | 'tooth' | 'solar';
+type GameId = 'ConversationGame' | 'GrandmaCall' | 'DailyRoutine' | 'FeedAnimals' | 'BuildScene' | 'DressUp' | 'Cooking' | 'ToothBrush' | 'SolarPuzzle';
+type Kind = 'talk' | 'grandma' | 'routine' | 'feed' | 'home' | 'dress' | 'cook' | 'tooth' | 'solar';
+
+const GRANDMA_ART = require('../../../assets/neli-world/characters/Grandma/grandma_standing.webp');
 
 const solarPlanetSource = (id: string) => SOLAR_SYSTEM_PLANETS.find(planet => planet.id === id)?.source ?? SOLAR_SYSTEM_PLANETS[0].source;
 
@@ -28,6 +30,7 @@ const GAMES: {
   color: string;
   soft: string;
 }[] = [
+  { id: 'GrandmaCall', kind: 'grandma', en: "Grandma's Call", fa: 'زنگ مامان‌بزرگ', desc: 'Grandma calls: answer her in Farsi.', descFa: 'مامان‌بزرگ زنگ زده! به فارسی جوابش رو بده.', color: '#FF7A5C', soft: '#FFE7DF' },
   { id: 'ConversationGame', kind: 'talk', en: 'Talk & Play', fa: 'گفت‌وگو و بازی', desc: 'Listen to a short sentence and answer by touch.', descFa: 'یک جمله کوتاه بشنو و جواب را لمس کن.', color: '#6C4EFF', soft: '#EEE9FF' },
   { id: 'DailyRoutine', kind: 'routine', en: 'Daily Routine', fa: 'روتین روزانه', desc: 'Practice brushing, washing, dressing, and sleep.', descFa: 'مسواک، شستن، لباس پوشیدن و خواب را تمرین کن.', color: '#38BDF8', soft: '#E7F7FF' },
   { id: 'FeedAnimals', kind: 'feed', en: 'Feed Animals', fa: 'غذا بده', desc: 'Drag the right food to each animal.', descFa: 'غذای درست را به حیوان بده.', color: '#22C55E', soft: '#EAFBEF' },
@@ -39,6 +42,15 @@ const GAMES: {
 ];
 
 function GameIllustration({ kind, color, artW, artH }: { kind: Kind; color: string; artW: number; artH: number }) {
+  if (kind === 'grandma') {
+    return (
+      <View style={[styles.sceneArt, { backgroundColor: '#FF9B85' }]}>
+        <View style={{ position: 'absolute', width: artW * 0.7, height: artW * 0.62, borderRadius: artW * 0.33, backgroundColor: '#FFD86B', left: -artW * 0.25, top: -artW * 0.28 }} />
+        <Text style={{ position: 'absolute', top: artH * 0.07, right: artW * 0.08, fontSize: artH * 0.16 }}>📞</Text>
+        <Image source={GRANDMA_ART} style={{ position: 'absolute', width: artH * 1.05, height: artH * 1.05, bottom: -artH * 0.1, alignSelf: 'center' }} resizeMode="contain" />
+      </View>
+    );
+  }
   if (kind === 'talk') {
     return (
       <ImageBackground source={roomBackgroundPickers.talkPlay(artW, artH)} style={styles.sceneArt} imageStyle={styles.sceneArtImage}>

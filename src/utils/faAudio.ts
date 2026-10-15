@@ -523,6 +523,16 @@ export function getIngredientAudioKey(ingredientId: string): FaTestAudioKey | nu
   return key in FA_TEST_AUDIO ? key : null;
 }
 
+/**
+ * Maps a feedback clip name (e.g. 'afarin', 'wrong' = «اشتباهه», 'correct' =
+ * «درسته») to its audio key. Returns null if no recording exists yet, so a
+ * caller can ship before the clip does and simply skip it.
+ */
+export function getFeedbackAudioKey(name: string): FaTestAudioKey | null {
+  const key = `feedback/${name}` as FaTestAudioKey;
+  return key in FA_TEST_AUDIO ? key : null;
+}
+
 /** Maps a counting number (1-10) to its audio key. Returns null if no audio exists. */
 export function getCountingNumberAudioKey(n: number): FaTestAudioKey | null {
   const key = `counting/number/${n}` as FaTestAudioKey;
