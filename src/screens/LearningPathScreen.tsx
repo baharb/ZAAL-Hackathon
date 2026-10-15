@@ -14,7 +14,9 @@ type PathStep = {
   id: string;
   label: string;
   labelFa: string;
-  type: 'section' | 'game' | 'tracing' | 'coloring' | 'video' | 'sel' | 'physical';
+  type: 'section' | 'game' | 'tracing' | 'coloring' | 'video' | 'sel' | 'physical' | 'solarPuzzle';
+  /** GameScreen's id for a 'game' step, when it differs from the step's own id. */
+  gameId?: string;
   stars: number;
   color: string;
   soft: string;
@@ -28,10 +30,10 @@ const PATH: PathStep[] = [
   { id: 'quiz', label: 'Word Quiz', labelFa: 'مسابقه کلمه', type: 'game', stars: 20, color: '#0EA5E9', soft: '#E0F2FE', art: 'quiz' },
   { id: 'counting', label: 'Counting', labelFa: 'شمارش', type: 'game', stars: 20, color: '#F59E0B', soft: '#FEF3C7', art: 'counting' },
   { id: 'memory', label: 'Memory Match', labelFa: 'بازی حافظه', type: 'game', stars: 20, color: '#7C3AED', soft: '#F1E8FF', art: 'memory' },
-  { id: 'colors', label: 'Color Play', labelFa: 'بازی رنگ', type: 'game', stars: 15, color: '#EC4899', soft: '#FCE7F3', art: 'colors' },
+  { id: 'colors', label: 'Color Play', labelFa: 'بازی رنگ', type: 'game', gameId: 'colormatch', stars: 15, color: '#EC4899', soft: '#FCE7F3', art: 'colors' },
   { id: 'animals', label: 'Animals', labelFa: 'حیوانات', type: 'section', stars: 10, color: '#22C55E', soft: '#DCFCE7', art: 'animal' },
   { id: 'food', label: 'Food', labelFa: 'غذا', type: 'section', stars: 10, color: '#F97316', soft: '#FFEDD5', art: 'food' },
-  { id: 'solarPuzzle', label: 'Solar System', labelFa: 'منظومه خورشیدی', type: 'game', stars: 20, color: '#2563EB', soft: '#EAF2FF', art: 'solarPuzzle' },
+  { id: 'solarPuzzle', label: 'Solar System', labelFa: 'منظومه خورشیدی', type: 'solarPuzzle', stars: 20, color: '#2563EB', soft: '#EAF2FF', art: 'solarPuzzle' },
   { id: 'coloring', label: 'Painting', labelFa: 'نقاشی', type: 'coloring', stars: 15, color: '#A855F7', soft: '#F3E8FF', art: 'paint' },
   { id: 'sel', label: 'Feelings', labelFa: 'احساسات', type: 'sel', stars: 15, color: '#FF5FA2', soft: '#FFE4EF', art: 'heart' },
   { id: 'nowruz', label: 'Nowruz', labelFa: 'نوروز', type: 'section', stars: 15, color: '#14B8A6', soft: '#CCFBF1', art: 'culture' },
@@ -148,7 +150,8 @@ export default function LearningPathScreen() {
 
     switch (step.type) {
       case 'section': navigate({ name: 'Section', id: step.id }); break;
-      case 'game': navigate({ name: 'Game', gameId: step.id }); break;
+      case 'game': navigate({ name: 'Game', gameId: step.gameId ?? step.id }); break;
+      case 'solarPuzzle': navigate({ name: 'SolarPuzzle' }); break;
       case 'tracing': navigate({ name: 'InteractiveFarsiTrace' }); break;
       case 'coloring': navigate({ name: 'Coloring' }); break;
       case 'video': navigate({ name: 'VideoShows' }); break;

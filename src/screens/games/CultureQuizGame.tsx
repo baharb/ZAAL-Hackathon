@@ -1,6 +1,9 @@
 import React, { useContext, useState } from 'react';
 import { Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import type { ImageStyle, StyleProp, ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useWindowDimensions } from '../../layout/PortraitFallback';
 import { AppContext } from '../../store/AppContext';
 import { ff, dir } from '../../theme/fonts';
 import { C } from '../../theme/colors';
@@ -81,6 +84,23 @@ const CULTURE_POOL: CultureItem[] = [
   },
 ];
 
+// Below this height (landscape phones) the question card and the answers sit
+// side by side; stacked, the answers started below the bottom of the screen.
+const COMPACT_MAX_HEIGHT = 600;
+// The art is drawn for a stage this tall (its fixed height on tablets).
+const ART_REFERENCE_HEIGHT = 218;
+const SCALED_KEYS = ['width', 'height', 'top', 'bottom', 'left', 'right', 'borderRadius', 'borderWidth'] as const;
+
+/** Multiplies every size and offset in `style` by k. */
+function scaled<T extends ViewStyle | ImageStyle>(style: StyleProp<T>, k: number): T {
+  const flat = { ...StyleSheet.flatten(style) } as Record<string, unknown>;
+  if (k === 1) return flat as T;
+  for (const key of SCALED_KEYS) {
+    if (typeof flat[key] === 'number') flat[key] = (flat[key] as number) * k;
+  }
+  return flat as T;
+}
+
 function shuffle<T>(arr: T[]) {
   return [...arr].sort(() => Math.random() - 0.5);
 }
@@ -91,64 +111,69 @@ function makeQuestion() {
   return { correct, options };
 }
 
-function CultureArt({ item }: { item: CultureItem }) {
+function CultureArt({ item, compact }: { item: CultureItem; compact: boolean }) {
+  const [stageHeight, setStageHeight] = useState(0);
+  const k = stageHeight > 0 ? Math.min(1, stageHeight / ART_REFERENCE_HEIGHT) : 1;
+  const stage = [styles.artStage, compact && styles.artStageCompact];
+  const onLayout = (e: { nativeEvent: { layout: { height: number } } }) => setStageHeight(e.nativeEvent.layout.height);
+
   if (item.kind === 'food') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.kitchenWide} style={styles.artStage} imageStyle={styles.artScene}>
-        <Image source={neliWorldAssets.persianFoods.sabziPolo} style={styles.cultureImage} resizeMode="contain" />
+      <ImageBackground source={neliWorldAssets.rooms.kitchenWide} style={stage} onLayout={onLayout} imageStyle={styles.artScene}>
+        <Image source={neliWorldAssets.persianFoods.sabziPolo} style={scaled(styles.cultureImage, k)} resizeMode="contain" />
       </ImageBackground>
     );
   }
   if (item.kind === 'nowruz') {
     return (
-      <ImageBackground source={neliWorldAssets.rooms.gardenWide} style={styles.artStage} imageStyle={styles.artScene}>
-        <Image source={neliWorldAssets.persianFoods.sabziPolo} style={[styles.cultureImage, { width: 160 }]} resizeMode="contain" />
-        <Image source={neliWorldAssets.foods.apple} style={styles.cultureSmallA} resizeMode="contain" />
-        <Image source={neliWorldAssets.ui.star} style={styles.cultureSmallB} resizeMode="contain" />
+      <ImageBackground source={neliWorldAssets.rooms.gardenWide} style={stage} onLayout={onLayout} imageStyle={styles.artScene}>
+        <Image source={neliWorldAssets.persianFoods.sabziPolo} style={scaled([styles.cultureImage, { width: 160 }], k)} resizeMode="contain" />
+        <Image source={neliWorldAssets.foods.apple} style={scaled(styles.cultureSmallA, k)} resizeMode="contain" />
+        <Image source={neliWorldAssets.ui.star} style={scaled(styles.cultureSmallB, k)} resizeMode="contain" />
       </ImageBackground>
     );
   }
   if (item.kind === 'poet') {
     return (
-      <View style={[styles.artStage, { backgroundColor: '#EADFFF' }]}>
-        <Image source={neliWorldAssets.ui.book} style={styles.cultureImage} resizeMode="contain" />
-        <Image source={neliWorldAssets.ui.paintbrush} style={styles.cultureSmallB} resizeMode="contain" />
+      <View style={[stage, { backgroundColor: '#EADFFF' }]} onLayout={onLayout}>
+        <Image source={neliWorldAssets.ui.book} style={scaled(styles.cultureImage, k)} resizeMode="contain" />
+        <Image source={neliWorldAssets.ui.paintbrush} style={scaled(styles.cultureSmallB, k)} resizeMode="contain" />
       </View>
     );
   }
   if (item.kind === 'music') {
     return (
-      <View style={[styles.artStage, { backgroundColor: '#FFE7B8' }]}>
-        <Image source={neliWorldAssets.ui.voice} style={styles.cultureImage} resizeMode="contain" />
+      <View style={[stage, { backgroundColor: '#FFE7B8' }]} onLayout={onLayout}>
+        <Image source={neliWorldAssets.ui.voice} style={scaled(styles.cultureImage, k)} resizeMode="contain" />
       </View>
     );
   }
   if (item.kind === 'persepolis') {
     return (
-      <View style={styles.artStage}>
-        <View style={[styles.column, { backgroundColor: item.color, left: 78 }]} />
-        <View style={[styles.column, { backgroundColor: item.color, right: 78 }]} />
-        <View style={[styles.roof, { backgroundColor: item.accent }]} />
-        <View style={[styles.steps, { backgroundColor: '#7C2D12' }]} />
+      <View style={stage} onLayout={onLayout}>
+        <View style={scaled([styles.column, { backgroundColor: item.color, left: 78 }], k)} />
+        <View style={scaled([styles.column, { backgroundColor: item.color, right: 78 }], k)} />
+        <View style={scaled([styles.roof, { backgroundColor: item.accent }], k)} />
+        <View style={scaled([styles.steps, { backgroundColor: '#7C2D12' }], k)} />
       </View>
     );
   }
   if (item.kind === 'carpet') {
     return (
-      <View style={styles.artStage}>
-        <View style={[styles.carpet, { backgroundColor: item.color }]}>
-          <View style={[styles.carpetCenter, { borderColor: item.accent }]} />
-          <View style={[styles.carpetLine, { backgroundColor: item.accent, top: 24 }]} />
-          <View style={[styles.carpetLine, { backgroundColor: item.accent, bottom: 24 }]} />
+      <View style={stage} onLayout={onLayout}>
+        <View style={scaled([styles.carpet, { backgroundColor: item.color }], k)}>
+          <View style={scaled([styles.carpetCenter, { borderColor: item.accent }], k)} />
+          <View style={scaled([styles.carpetLine, { backgroundColor: item.accent, top: 24 }], k)} />
+          <View style={scaled([styles.carpetLine, { backgroundColor: item.accent, bottom: 24 }], k)} />
         </View>
       </View>
     );
   }
   return (
-    <View style={styles.artStage}>
-      <View style={[styles.instrumentBody, { backgroundColor: item.color }]} />
-      <View style={[styles.instrumentNeck, { backgroundColor: item.accent }]} />
-      <View style={styles.instrumentString} />
+    <View style={stage} onLayout={onLayout}>
+      <View style={scaled([styles.instrumentBody, { backgroundColor: item.color }], k)} />
+      <View style={scaled([styles.instrumentNeck, { backgroundColor: item.accent }], k)} />
+      <View style={scaled(styles.instrumentString, k)} />
     </View>
   );
 }
@@ -159,6 +184,10 @@ export default function CultureQuizGame() {
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [total, setTotal] = useState(0);
+  const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const compact = height < COMPACT_MAX_HEIGHT;
+  const sidePad = Math.max(16, insets.left, insets.right);
 
   const handleAnswer = (id: string) => {
     if (selected) return;
@@ -189,25 +218,25 @@ export default function CultureQuizGame() {
         rightContent={<Text style={styles.score}>{score}/{total}</Text>}
       />
 
-      <View style={styles.content}>
-        <View style={styles.questionCard}>
+      <View style={[styles.content, compact && [styles.contentCompact, { paddingHorizontal: sidePad, paddingBottom: Math.max(16, insets.bottom) }]]}>
+        <View style={[styles.questionCard, compact && styles.questionCardCompact]}>
           <Text style={[styles.kicker, { fontFamily: ff(lang, 'bold') }, dir(lang)]}>
             {lang === 'fa' ? q.correct.hintFa : q.correct.hintEn}
           </Text>
-          <CultureArt item={q.correct} />
+          <CultureArt item={q.correct} compact={compact} />
           <Text style={[styles.question, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
             {lang === 'fa' ? 'این کدام است؟' : 'Which one is this?'}
           </Text>
         </View>
 
-        <View style={styles.options}>
+        <View style={[styles.options, compact && styles.optionsCompact]}>
           {q.options.map(opt => {
             const correct = !!selected && opt.id === q.correct.id;
             const wrong = selected === opt.id && opt.id !== q.correct.id;
             return (
               <TouchableOpacity
                 key={opt.id}
-                style={[styles.option, correct && styles.optionCorrect, wrong && styles.optionWrong]}
+                style={[styles.option, compact && styles.optionCompact, correct && styles.optionCorrect, wrong && styles.optionWrong]}
                 onPress={() => handleAnswer(opt.id)}
                 activeOpacity={0.86}
               >
@@ -237,6 +266,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   content: { flex: 1, padding: 16, paddingTop: 8 },
+  contentCompact: { flexDirection: 'row', gap: 12 },
   questionCard: {
     minHeight: 338,
     borderRadius: 32,
@@ -249,6 +279,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 9 },
     elevation: 4,
   },
+  questionCardCompact: { flex: 1, minHeight: 0, padding: 14 },
   kicker: { color: C.purple, fontSize: 15, marginBottom: 10, textAlign: 'center' },
   question: { color: C.textDark, fontSize: 26, marginTop: 12, textAlign: 'center' },
   artStage: {
@@ -260,11 +291,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
+  artStageCompact: { flex: 1, height: undefined, maxHeight: ART_REFERENCE_HEIGHT },
   artScene: { width: '100%', height: '100%' },
   cultureImage: { width: 138, height: 138 },
   cultureSmallA: { position: 'absolute', left: 54, bottom: 40, width: 58, height: 58 },
   cultureSmallB: { position: 'absolute', right: 52, top: 34, width: 62, height: 62 },
   options: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingTop: 16 },
+  optionsCompact: { flex: 1, paddingTop: 0, alignContent: 'center' },
   option: {
     width: '48%',
     minHeight: 86,
@@ -280,6 +313,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
+  optionCompact: { flexGrow: 1, flexBasis: '45%', minHeight: 110 },
   optionCorrect: { borderColor: '#22C55E', backgroundColor: '#F0FFF4' },
   optionWrong: { borderColor: '#FF6B6B', backgroundColor: '#FFF1F2' },
   optFa: { color: C.textDark, fontSize: 18, textAlign: 'center' },
