@@ -524,8 +524,8 @@ export function getIngredientAudioKey(ingredientId: string): FaTestAudioKey | nu
 }
 
 /**
- * Maps a feedback clip name (e.g. 'afarin', 'wrong' = «اشتباهه», 'correct' =
- * «درسته») to its audio key. Returns null if no recording exists yet, so a
+ * Maps a feedback clip name (e.g. 'afarin', 'wrong' = «اشتباهه», 'right-answer' =
+ * «جواب درست») to its audio key. Returns null if no recording exists yet, so a
  * caller can ship before the clip does and simply skip it.
  */
 export function getFeedbackAudioKey(name: string): FaTestAudioKey | null {
