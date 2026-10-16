@@ -2,7 +2,7 @@
   "expo": {
     "name": "ZAAL",
     "slug": "zaal",
-    "version": "1.4.1",
+    "version": "1.4.2",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -29,7 +29,7 @@
         "backgroundColor": "#6B21A8"
       },
       "package": "com.zaal.app",
-      "versionCode": 24
+      "versionCode": 25
     },
     "plugins": [
       "./plugins/withRemoveForegroundServiceMediaPlayback.js",

@@ -123,13 +123,13 @@ export default function CountingGame() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
 
-    // Right: \u00ab\u0622\u0641\u0631\u06cc\u0646\u00bb + number. Wrong: \u00ab\u0627\u0634\u062a\u0628\u0627\u0647\u0647\u00bb + right number + \u00ab\u062f\u0631\u0633\u062a\u0647\u00bb.
+    // Right: \u00ab\u0622\u0641\u0631\u06cc\u0646\u00bb + number. Wrong: \u00ab\u0627\u0634\u062a\u0628\u0627\u0647\u0647\u00bb + \u00ab\u062c\u0648\u0627\u0628 \u062f\u0631\u0633\u062a\u00bb + right number.
     // A clip with no recording is skipped rather than spoken by TTS (iOS has
     // no Persian voice).
     const numberKey = getCountingNumberAudioKey(round.count);
     const keys = correct
       ? [getFeedbackAudioKey('afarin'), numberKey]
-      : [getFeedbackAudioKey('wrong'), numberKey, getFeedbackAudioKey('correct')];
+      : [getFeedbackAudioKey('wrong'), getFeedbackAudioKey('right-answer'), numberKey];
     const startedAt = Date.now();
     if (numberKey) {
       await playFaAudioSequence(keys.filter((k): k is NonNullable<typeof k> => k !== null), 120);
@@ -231,7 +231,7 @@ export default function CountingGame() {
             <Text style={[styles.feedbackText, { fontFamily: ff(isFa ? 'fa' : lang, 'black') }]}>
               {feedback
                 ? (isFa ? `\u0622\u0641\u0631\u06cc\u0646! ${toFaDigits(round.count)}` : `Well done! ${round.count}`)
-                : (isFa ? `\u0627\u0634\u062a\u0628\u0627\u0647\u0647! ${toFaDigits(round.count)} \u062f\u0631\u0633\u062a\u0647` : `Oops! ${round.count} is right`)}
+                : (isFa ? `\u0627\u0634\u062a\u0628\u0627\u0647\u0647! \u062c\u0648\u0627\u0628 \u062f\u0631\u0633\u062a: ${toFaDigits(round.count)}` : `Oops! The right answer is ${round.count}`)}
             </Text>
           </View>
         ) : null}
