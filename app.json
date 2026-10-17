@@ -2,7 +2,7 @@
   "expo": {
     "name": "ZAAL",
     "slug": "zaal",
-    "version": "1.4.2",
+    "version": "1.4.3",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -21,7 +21,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "26"
+      "buildNumber": "27"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +29,7 @@
         "backgroundColor": "#6B21A8"
       },
       "package": "com.zaal.app",
-      "versionCode": 26
+      "versionCode": 27
     },
     "plugins": [
       "./plugins/withRemoveForegroundServiceMediaPlayback.js",
