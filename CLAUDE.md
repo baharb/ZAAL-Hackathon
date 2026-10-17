@@ -109,7 +109,15 @@ React Native applies to every `<Text>`. So: `PortraitFallback` now serves
 the root view's **measured** size in landscape too (it ignores height shrinks
 at the same width — that's the keyboard under `adjustResize`), and
 `MainApplication.kt`/`MainActivity.kt` pin `fontScale` to 1 via
-`withFixedFontScale()`. iOS Dynamic Type is **not** pinned. `TopBar` now
+`withFixedFontScale()`. iOS Dynamic Type is **not** pinned. That override
+must contain **only** `fontScale` (a fresh `Configuration()`): copying the
+whole current config also froze orientation/size at launch, and once R8 made
+startup fast enough to beat the rotation, a tablet with a non-1 font scale
+got portrait metrics forever and drew in the portrait fallback box.
+
+**Release builds run R8** (`android.enableMinifyInReleaseBuilds=true` in
+`android/gradle.properties`) — Play flags apps under 25% obfuscation.
+Resource shrinking stays off: React Native looks up bundled images by name. `TopBar` now
 renders at exactly `topBarHeight()` (its title stack used to measure taller).
 
 **No system keyboard on kid-reachable or landscape-phone gates.** Android's
