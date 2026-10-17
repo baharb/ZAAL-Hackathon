@@ -23,12 +23,19 @@ import expo.modules.ReactNativeHostWrapper
  * by default, and React Native scales every <Text> by it — prompts wrapped to
  * extra lines and pushed cards off-screen, a word on the letter page overran
  * its box by a full line. Pin fontScale to 1 for this app only.
+ *
+ * The override must set fontScale *only*. Copying the whole current
+ * configuration also pins orientation and screen size to whatever they were
+ * at launch: a tablet that started the process in portrait (R8 builds start
+ * fast enough to beat the rotation to landscape) then fed React Native
+ * portrait window metrics forever, and the app drew in the portrait fallback
+ * box on a landscape screen.
  */
 fun Context.withFixedFontScale(): Context {
-  val config = Configuration(resources.configuration)
-  if (config.fontScale == 1f) return this
-  config.fontScale = 1f
-  return createConfigurationContext(config)
+  if (resources.configuration.fontScale == 1f) return this
+  // A fresh Configuration() leaves every field undefined except fontScale,
+  // so it only overrides fontScale; the rest keeps tracking the device.
+  return createConfigurationContext(Configuration().apply { fontScale = 1f })
 }
 
 class MainApplication : Application(), ReactApplication {
