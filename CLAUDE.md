@@ -188,7 +188,14 @@ the audio session if no player is playing at that instant — a clip still
 loading is not "playing", so it plays silent. `playFaAudio()` on iOS waits
 `IOS_SESSION_SETTLE_MS` after the last finish/pause (`noteAudioPlayerReleased()`
 — call it when pausing any *other* player too, as the Train's whistle does)
-so that check has already run. **Do not use `keepAudioSessionActive: true`
+so that check has already run. A one-shot sound-effect player of your own
+must call `noteAudioPlayerReleased()` when it *finishes*, too, and anything
+spoken right after it should wait for that finish — GrandmaCallGame's answer
+tap (35ms, its own player) used to finish just as Grandma's first line was
+loading, which on iPhone made that line silent most of the time.
+Since a cut-off clip never sends its finish event, `awaitFinish` caps the wait
+at the clip's duration + 1.5s once the duration is known (12s before that).
+**Do not use `keepAudioSessionActive: true`
 instead** — build 22 did, and on iPhone it made the Train and Tracing far
 more often silent and stalled, not less (cause not understood).
 (2) Android: every status update while the player is ended says
