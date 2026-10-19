@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { ActivityIndicator, Image, Keyboard, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import * as Haptics from 'expo-haptics';
 import { createAudioPlayer, AudioPlayer } from 'expo-audio';
@@ -573,7 +573,8 @@ export default function AccountSetupScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    // No KeyboardAvoidingView: PortraitFallback lifts the app clear of the keyboard for every screen.
+    <View style={styles.root}>
       {/* A sibling backdrop behind everything else, not a wrapper around it —
           wrapping the whole screen in a Touchable put every nested
           TouchableOpacity/Modal trigger inside its responder subtree, and
@@ -788,7 +789,7 @@ export default function AccountSetupScreen() {
           <Text style={[styles.note, { fontFamily: ff(lang, 'regular') }]}>{t(lang, 'note')}</Text>
         </ScrollView>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

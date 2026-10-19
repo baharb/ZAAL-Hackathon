@@ -8,6 +8,7 @@ import {
   Platform,
   StyleSheet,
   Text,
+  TextInput,
   View,
   useWindowDimensions as useRealWindowDimensions,
 } from 'react-native';
@@ -43,6 +44,8 @@ export function useWindowDimensions() {
 const ZERO_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const BAND_COLOR = '#2D1B69';
 const KEYBOARD_GAP = 12;
+// Landscape: how much of what sits under the focused field (its submit button) to keep in view too.
+const KEYBOARD_ROOM_BELOW = 76;
 
 export default function PortraitFallback({ children }: { children: React.ReactNode }) {
   const { width, height } = useRealWindowDimensions();
@@ -91,12 +94,55 @@ export default function PortraitFallback({ children }: { children: React.ReactNo
     ? Math.min(boxTop, Math.max(0, boxTop + boxH + KEYBOARD_GAP - keyboardTop))
     : 0;
 
+  // Landscape: nothing moves the app for the keyboard by itself. Android draws edge-to-edge
+  // (edgeToEdgeEnabled), where adjustResize does nothing, and a phone's landscape keyboard covers
+  // two thirds of the screen, so it sat right over the field being typed in (AccountSetup's code
+  // on a Galaxy S25 Ultra). Shift the whole app up just far enough to show the focused field and
+  // the button under it. Re-checked while the keyboard is up, so moving to another field follows.
+  const [inputLift, setInputLift] = useState(0);
+  const inputLiftRef = useRef(0);
+  useEffect(() => {
+    if (portrait) return;
+    let kbTop: number | null = null;
+    let poll: ReturnType<typeof setInterval> | null = null;
+    const apply = (next: number) => {
+      const v = Math.round(next);
+      if (v === inputLiftRef.current) return;
+      inputLiftRef.current = v;
+      setInputLift(v);
+    };
+    const update = () => {
+      const input = TextInput.State.currentlyFocusedInput();
+      if (kbTop == null || !input) { apply(0); return; }
+      input.measureInWindow((_x, y, _w, h) => {
+        if (kbTop == null || !(h > 0)) return;
+        const top = y + inputLiftRef.current; // where the field sits with no lift
+        const wanted = top + h + KEYBOARD_ROOM_BELOW - kbTop;
+        apply(Math.max(0, Math.min(wanted, top - KEYBOARD_GAP)));
+      });
+    };
+    const show = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hide = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const a = Keyboard.addListener(show, (e: KeyboardEvent) => {
+      kbTop = e.endCoordinates.screenY;
+      update();
+      if (!poll) poll = setInterval(update, 300);
+    });
+    const b = Keyboard.addListener(hide, () => {
+      kbTop = null;
+      if (poll) clearInterval(poll);
+      poll = null;
+      apply(0);
+    });
+    return () => { a.remove(); b.remove(); if (poll) clearInterval(poll); apply(0); };
+  }, [portrait]);
+
   return (
     <View style={[styles.fill, portrait && styles.band]} onLayout={onRootLayout}>
       <View
         style={portrait
           ? { position: 'absolute', left: 0, top: boxTop - lift, width: boxW, height: boxH, overflow: 'hidden' }
-          : styles.fill}
+          : [styles.fill, inputLift > 0 && { top: -inputLift }]}
       >
         <ViewportContext.Provider value={portrait ? { width: boxW, height: boxH } : landscapeSize}>
           {/* The box sits in the middle of the screen, clear of the status

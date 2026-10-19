@@ -9,7 +9,10 @@ top-level `"orientation": "landscape"` sets it natively for both platforms:
 Expo prebuild writes it into iOS's `Info.plist` (no `ios/` directory is
 committed, so this is the only iOS orientation config there is), and
 `android/app/src/main/AndroidManifest.xml` sets
-`android:screenOrientation="landscape"` on `MainActivity` directly (bare
+`android:screenOrientation="sensorLandscape"` on `MainActivity` directly
+(both landscape directions, following the sensor even when the phone's
+auto-rotate is off; plain `landscape` was stuck on one side — reported on a
+Galaxy S25 Ultra) (bare
 workflow — app.json's `orientation` is ignored there once a native `android/`
 dir exists, the same way `android.package` is).
 **Android 16 ignores that attribute on large screens** (sw >= 600dp) at
@@ -119,6 +122,13 @@ got portrait metrics forever and drew in the portrait fallback box.
 `android/gradle.properties`) — Play flags apps under 25% obfuscation.
 Resource shrinking stays off: React Native looks up bundled images by name. `TopBar` now
 renders at exactly `topBarHeight()` (its title stack used to measure taller).
+
+**The keyboard never resizes the app.** Android is edge-to-edge
+(`edgeToEdgeEnabled=true`), where `adjustResize` does nothing, and a landscape
+phone keyboard covers ~2/3 of the screen. `PortraitFallback` handles it for
+every screen: in landscape it shifts the whole app up just enough to show the
+focused `TextInput` plus ~76pt under it (its button); in portrait it lifts the
+box. Don't add `KeyboardAvoidingView`s — they'd fight it.
 
 **No system keyboard on kid-reachable or landscape-phone gates.** Android's
 full-screen text-entry mode takes over a landscape phone when a `TextInput`
