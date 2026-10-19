@@ -38,21 +38,32 @@ type Speaker = 'grandma' | 'neli' | 'you' | null;
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const shuffle = <T,>(items: T[]) => [...items].sort(() => Math.random() - 0.5);
 
-function playEffect(source: any, volume: number, loop = false): AudioPlayer | null {
+// `done` resolves when a one-shot effect finishes (or after a short cap). Its finish is reported to
+// faAudio (noteAudioPlayerReleased): on iOS a finished player switches the audio session off 100ms
+// later unless something is playing, and a clip still loading then plays silent.
+function playEffect(source: any, volume: number, loop = false): { player: AudioPlayer | null; done: Promise<void> } {
   try {
     const player = createAudioPlayer(source);
     player.volume = volume;
     player.loop = loop;
     player.play();
-    if (!loop) {
+    if (loop) return { player, done: Promise.resolve() };
+    const done = new Promise<void>(resolve => {
+      const cap = setTimeout(resolve, 1500);
       const sub = player.addListener('playbackStatusUpdate', s => {
-        if (s.isLoaded && s.didJustFinish) { sub.remove(); try { player.remove(); } catch {} }
+        if (s.isLoaded && s.didJustFinish) {
+          sub.remove();
+          noteAudioPlayerReleased();
+          clearTimeout(cap);
+          resolve();
+          try { player.remove(); } catch {}
+        }
       });
-      setTimeout(() => { try { player.remove(); } catch {} }, 6000);
-    }
-    return player;
+    });
+    setTimeout(() => { try { player.remove(); } catch {} }, 6000);
+    return { player, done };
   } catch {
-    return null; // sound effects are a nice-to-have
+    return { player: null, done: Promise.resolve() }; // sound effects are a nice-to-have
   }
 }
 
@@ -133,6 +144,7 @@ export default function GrandmaCallGame() {
   const step: CallStep | undefined = call.steps[stepIdx];
   const runId = useRef(0);
   const ringPlayer = useRef<AudioPlayer | null>(null);
+  const tapDone = useRef<Promise<void>>(Promise.resolve()); // the answer tap; Grandma waits for it (see playEffect)
   const firstQuizDone = useRef(false);
   // quiz reminder: Grandma repeats the question after a quiet while. It must never start while
   // someone is talking or once the child has answered, or the repeat cuts off Neli's answer.
@@ -157,7 +169,7 @@ export default function GrandmaCallGame() {
     if (stepIdx !== -1) return;
     const loop = Animated.loop(Animated.timing(ringPulse, { toValue: 1, duration: 1100, easing: Easing.out(Easing.quad), useNativeDriver: true }));
     loop.start();
-    ringPlayer.current = playEffect(RING_SOUND, 0.35, true);
+    ringPlayer.current = playEffect(RING_SOUND, 0.35, true).player;
     const t = setTimeout(() => { void playFaAudio('grandma-call/neli/ring' as FaTestAudioKey); }, 900);
     // like a real phone: three rings, then quiet (the call screen keeps pulsing until answered)
     const quiet = setTimeout(stopRing, RING_SECONDS * 3 * 1000);
@@ -210,7 +222,7 @@ export default function GrandmaCallGame() {
     }
 
     (async () => {
-      await wait(350);
+      await Promise.all([wait(350), tapDone.current]);
       if (!alive()) return;
       if (step.kind === 'grandma' || step.kind === 'neli') {
         await say(step.kind, step.clip, step, run);
@@ -268,7 +280,7 @@ export default function GrandmaCallGame() {
     stopRing();
     void stopFaAudio();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    playEffect(TAP_SOUND, 0.6);
+    tapDone.current = playEffect(TAP_SOUND, 0.6).done;
     setStepIdx(0);
   };
 

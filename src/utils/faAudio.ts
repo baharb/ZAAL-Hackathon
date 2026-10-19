@@ -60,6 +60,9 @@ const IOS_SESSION_SETTLE_MS = 250;
 // Keep this above that if longer clips are ever added — and check new clips
 // for long silent tails (several shipped with 20-135s of silence/noise).
 const AWAIT_FINISH_MAX_MS = 12000;
+// Once a clip's duration is known, awaitFinish gives up this long after the clip should have
+// ended. Generous enough for slow loading/buffering; a real finish event always lands first.
+const DURATION_CAP_MARGIN_MS = 1500;
 
 /** Call after pausing/stopping any other expo-audio player (see IOS_SESSION_SETTLE_MS). */
 export function noteAudioPlayerReleased() {
@@ -209,10 +212,28 @@ export async function playFaAudio(key: FaTestAudioKey, options?: PlayFaAudioOpti
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        clearInterval(durationPoll);
         if (onSharedPlayerFinish === finish) onSharedPlayerFinish = null;
         resolve(true);
       };
-      const timer = setTimeout(finish, AWAIT_FINISH_MAX_MS);
+      let timer = setTimeout(finish, AWAIT_FINISH_MAX_MS);
+      // Once the clip's length is known, tighten the cap to it. A clip the iOS session cut off
+      // never sends its finish event, and the caller would otherwise sit out the full 12s
+      // (Grandma's Call: a silent first line, then a long pause before Neli spoke).
+      const startedAt = Date.now();
+      const rate = options.playbackRate ?? 1;
+      const durationPoll = setInterval(() => {
+        if (settled || token !== loadingToken) { clearInterval(durationPoll); return; }
+        let duration = 0;
+        try { duration = player.duration; } catch {}
+        if (!(duration > 0)) return;
+        clearInterval(durationPoll);
+        const remaining = (duration * 1000) / rate + DURATION_CAP_MARGIN_MS - (Date.now() - startedAt);
+        if (remaining < AWAIT_FINISH_MAX_MS - (Date.now() - startedAt)) {
+          clearTimeout(timer);
+          timer = setTimeout(finish, Math.max(remaining, 0));
+        }
+      }, 300);
       onSharedPlayerFinish = finish;
     });
   }
