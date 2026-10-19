@@ -4,7 +4,8 @@
 <script>
 // "3 simple ways to keep Farsi alive at home": useful, made to be saved.
 window.REEL = {
-  palette: { bg: '#7fdcd6', shape: '#ff8fb8', onshape: '#fff', ink: '#0d4d49', ink2: '#14635e' },   // aqua + pink
+  palette: { bg: '#4fd8cc', deep: '#ff5fa2', shape: '#ff5fa2', onshape: '#fff', ink: '#06403b', ink2: '#0b5a53' },   // bolder aqua (blue) + pink: pink shapes on the blue background
+  shapes: 'flower',   // big tone-on-tone flower + white daisy, like the green post
   hook: { fa: '۳ کار ساده تا بچه‌ت | فارسی رو فراموش نکنه 💜', en: '3 simple ways to keep<br>Farsi alive at home', pill: 'Save this for later 📌', size: 98, art: 'Neli/06_reading_book_base.webp', artW: 470, artX: 180 },
   items: [
     { fa: 'توی خونه | فارسی حرف بزنید', en: 'Make home a Farsi-speaking place', note: 'Kids learn the language they need', art: 'Neli/01_base_standing.webp' },
@@ -12,7 +13,7 @@ window.REEL = {
     { fa: 'روزی ۱۰ دقیقه | با بازی یاد بگیرن', en: '10 minutes a day of Farsi play', note: 'Games make kids WANT to speak', art: 'Neli/04_dancing_base.webp' },
   ],
   end: { fa: 'زال این کارو | آسون می‌کنه 💜', en: 'ZAAL makes Farsi play easy', pill: 'Save 📌 & share with a Persian parent' },
-  speech: null,
+  speech: [['0-hook',0.34,4.60],['1',0.32,3.34],['2',0.46,3.04],['3',0.32,3.82],['4-end',0.96,3.94]],   // [clip, speech start, speech end] per page (Zephyr, young-mother voice)
 };
 </script>
 <script src="../tools/listreel.js"></script>
