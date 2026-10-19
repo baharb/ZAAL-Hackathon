@@ -117,6 +117,12 @@ must contain **only** `fontScale` (a fresh `Configuration()`): copying the
 whole current config also froze orientation/size at launch, and once R8 made
 startup fast enough to beat the rotation, a tablet with a non-1 font scale
 got portrait metrics forever and drew in the portrait fallback box.
+It still isn't fully fixed natively: `MainApplication`'s override is an
+application-level config context, and on a Galaxy S25 Ultra launched while
+held upright it kept reporting a portrait window (411x891) while drawing
+landscape; opening the keyboard re-read it and dropped the app into the
+portrait box. So `PortraitFallback` now decides portrait/landscape from the
+root view's **measured** size, never from the window metrics alone.
 
 **Release builds run R8** (`android.enableMinifyInReleaseBuilds=true` in
 `android/gradle.properties`) — Play flags apps under 25% obfuscation.
