@@ -9,7 +9,7 @@
 
   document.head.insertAdjacentHTML('beforeend', `<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Nunito:wght@700;800;900&display=block" rel="stylesheet">
 <style>
-:root{--bg:${P.bg};--shape:${P.shape};--onshape:${P.onshape};--ink:${P.ink};--ink2:${P.ink2};--card:#fff}
+:root{--bg:${P.bg};--shape:${P.shape};--deep:${P.deep || P.shape};--onshape:${P.onshape};--ink:${P.ink};--ink2:${P.ink2};--card:#fff}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:1080px;height:1920px;overflow:hidden}
 body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--ink);position:relative}
@@ -42,9 +42,16 @@ body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--ink);posit
 
   // --- pages ---
   const H = R.hook, N = R.items.length;
-  let html = `
+  const petals = (fill, rx, ry) => [0, 45, 90, 135, 180, 225, 270, 315].map(a =>
+    `<ellipse cx="50" cy="${50 - ry}" rx="${rx}" ry="${ry}" fill="${fill}" transform="rotate(${a} 50 50)"/>`).join('');
+  const FLOWER = R.shapes === 'flower';
+  let html = FLOWER ? `
+<svg class="a" id="b1" viewBox="0 0 100 100" style="width:560px;left:-150px;top:150px">${petals('var(--deep)', 13, 25)}<circle cx="50" cy="50" r="16" fill="var(--deep)"/></svg>
+<svg class="a" id="f1" viewBox="0 0 100 100" style="width:170px;left:205px;top:95px">${petals('#fff', 10, 22)}<circle cx="50" cy="50" r="12" fill="#fff"/></svg>
+<svg class="a" id="b2" viewBox="0 0 200 200" style="width:600px;right:-170px;top:1130px"><path fill="var(--deep)" d="M62 28C96 4 132 22 150 40 170 60 196 58 192 92 188 120 168 124 176 150 186 182 150 200 118 188 92 178 82 198 50 186 18 174 28 144 16 120 2 92 12 70 30 56 42 46 46 40 62 28Z"/></svg>` : `
 <svg class="a" id="b1" viewBox="0 0 200 200" style="width:560px;left:-230px;top:110px"><path fill="var(--shape)" d="M100 12C122 10 128 40 146 44 168 48 190 40 192 66 194 90 166 96 170 116 174 138 196 156 180 176 164 194 140 176 120 184 100 192 86 200 68 186 50 172 62 150 46 138 28 124 4 128 6 104 8 80 34 84 38 64 42 44 22 26 42 16 62 6 80 14 100 12Z"/></svg>
-<svg class="a" id="b2" viewBox="0 0 200 200" style="width:520px;right:-110px;top:1090px"><path fill="var(--shape)" d="M62 28C96 4 132 22 150 40 170 60 196 58 192 92 188 120 168 124 176 150 186 182 150 200 118 188 92 178 82 198 50 186 18 174 28 144 16 120 2 92 12 70 30 56 42 46 46 40 62 28Z"/></svg>
+<svg class="a" id="b2" viewBox="0 0 200 200" style="width:520px;right:-110px;top:1090px"><path fill="var(--shape)" d="M62 28C96 4 132 22 150 40 170 60 196 58 192 92 188 120 168 124 176 150 186 182 150 200 118 188 92 178 82 198 50 186 18 174 28 144 16 120 2 92 12 70 30 56 42 46 46 40 62 28Z"/></svg>`;
+  html += `
 <div class="scene" data-i="0">
   <div class="stack" style="top:${H.top || 300}px">
     <div class="fa" style="font-size:${H.size || 116}px;line-height:1.2">${words(H.fa, 0.2, 0.22)}</div>
@@ -129,6 +136,7 @@ body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--ink);posit
     document.getElementById('wm').style.opacity = t >= segs[pages - 1].start ? 0 : 1;
     document.getElementById('b1').style.transform = `rotate(${t * 6}deg)`;
     document.getElementById('b2').style.transform = `rotate(${-t * 5}deg)`;
+    const f1 = document.getElementById('f1'); if (f1) f1.style.transform = `rotate(${t * 14}deg)`;
   };
   document.fonts.ready.then(() => seek(0));
 })();
