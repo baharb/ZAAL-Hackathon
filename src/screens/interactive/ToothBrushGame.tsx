@@ -12,7 +12,7 @@ import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAs
 import { FA_AUDIO_KEYS, playFaAudioSequence, stopFaAudio } from '../../utils/faAudio';
 import GameEndOverlay from '../../components/GameEndOverlay';
 
-const NUM = 10;
+const NUM = 5; // brushing strokes to finish
 
 const FOAM_POINTS = [
   { left: 0.16, top: 0.02, size: 15 },
@@ -51,18 +51,19 @@ const BRUSH_RENDER_HEIGHT = Math.round(BRUSH_RENDER_WIDTH * (889 / 512));
 const BRUSH_START_RENDER_WIDTH = 112;
 const BRUSH_START_RENDER_HEIGHT = Math.round(BRUSH_START_RENDER_WIDTH * (889 / 512));
 const BRUSH_START_Y_SHIFT = 0;
+// Foam appears in this order, one per cleaned spot: the first NUM are spread across the whole mouth.
 const BUBBLE_LAYOUTS = [
   { left: 0.24, top: 0.30, size: 50 },
-  { left: 0.40, top: 0.20, size: 56 },
   { left: 0.54, top: 0.18, size: 58 },
-  { left: 0.66, top: 0.28, size: 52 },
+  { left: 0.72, top: 0.44, size: 40 },
   { left: 0.34, top: 0.54, size: 44 },
+  { left: 0.60, top: 0.68, size: 38 },
+  { left: 0.40, top: 0.20, size: 56 },
+  { left: 0.66, top: 0.28, size: 52 },
   { left: 0.56, top: 0.50, size: 46 },
   { left: 0.18, top: 0.46, size: 42 },
-  { left: 0.72, top: 0.44, size: 40 },
   { left: 0.28, top: 0.72, size: 36 },
   { left: 0.44, top: 0.70, size: 40 },
-  { left: 0.60, top: 0.68, size: 38 },
   { left: 0.74, top: 0.66, size: 34 },
 ] as const;
 const FOOD_BITS = [
