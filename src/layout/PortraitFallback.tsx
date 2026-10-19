@@ -48,9 +48,8 @@ const KEYBOARD_GAP = 12;
 const KEYBOARD_ROOM_BELOW = 76;
 
 export default function PortraitFallback({ children }: { children: React.ReactNode }) {
-  const { width, height } = useRealWindowDimensions();
+  const windowSize = useRealWindowDimensions();
   const realInsets = useContext(SafeAreaInsetsContext);
-  const portrait = height > width;
 
   // In landscape, report the root view's measured size rather than the
   // window metrics. Some Android phones (seen on a Xiaomi) report a window
@@ -72,7 +71,15 @@ export default function PortraitFallback({ children }: { children: React.ReactNo
       return next.height > prev.height ? next : prev;
     });
   };
-  const landscapeSize = measured && measured.width > measured.height ? measured : null;
+
+  // Portrait or landscape is decided from that measured view too, never from the window metrics
+  // alone. On Android with a non-default system font size, MainApplication's fontScale override
+  // freezes the metrics at whatever orientation the app launched in: a Galaxy S25 Ultra started
+  // while held upright reported a portrait window (411x891) while drawing landscape, so the first
+  // re-measure (opening the keyboard) dropped the whole app into the portrait box in a corner.
+  const { width, height } = measured ?? windowSize;
+  const portrait = height > width;
+  const landscapeSize = portrait ? null : measured;
 
   const boxW = width;
   const boxH = Math.round((width * width) / height);
