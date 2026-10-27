@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import * as Speech from 'expo-speech';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../assets/faTestAudio.generated';
+import { noteWordSeen } from '../store/wordLog';
 
 // A fresh native AudioPlayer used to be created (and the old one torn down)
 // on every single call — see git history. On a real device that meant a kid
@@ -195,6 +196,10 @@ export async function playFaAudio(key: FaTestAudioKey, options?: PlayFaAudioOpti
     // Promise.resolve() is a no-op on a real void return and safely swallows
     // that rejection on web when it isn't.
     sharedPlayStartedAt = Date.now();
+    // Daily Quest word log: sync memory update only, never awaited, so the
+    // audio path keeps its exact timing. Non-vocabulary keys are ignored
+    // inside noteWordSeen().
+    noteWordSeen(key);
     Promise.resolve(player.play() as unknown).catch(() => {});
   } catch {
     return false;
