@@ -16,10 +16,11 @@ type BigCard = {
   en: string;
   fa: string;
   route: any;
-  art: 'gamesHub' | 'alphabetHub' | 'paint' | 'cook';
+  art: 'gamesHub' | 'alphabetHub' | 'paint' | 'cook' | 'quest';
 };
 
 const BIG_CARDS: BigCard[] = [
+  { en: 'My Daily Quest', fa: 'بازی امروز من', route: { name: 'DailyQuest' }, art: 'quest' },
   { en: 'Games', fa: 'بازی ها', route: { name: 'Main', tab: 'Games' }, art: 'gamesHub' },
   { en: 'Cooking', fa: 'آشپزی', route: { name: 'Cooking' }, art: 'cook' },
   { en: 'Painting', fa: 'نقاشی', route: { name: 'Coloring' }, art: 'paint' },
@@ -224,6 +225,24 @@ function BigCardArt({ art, size }: { art: BigCard['art']; size: number }) {
       </View>
     );
   }
+  if (art === 'quest') {
+    // My Daily Quest: a sunny garden with a gift and Neli, all scaled by k.
+    return (
+      <View style={[styles.sceneFill, styles.questScene]}>
+        <View style={[styles.questSun, { width: 64 * k, height: 64 * k, borderRadius: 32 * k, top: 10 * k, right: 14 * k }]} />
+        <View style={[styles.questHill, { width: 320 * k, height: 120 * k, borderRadius: 60 * k, bottom: -40 * k, left: -40 * k }]} />
+        <Text style={{ fontSize: 76 * k }}>🎁</Text>
+        <Image
+          source={characterAssets.neli.poses.base}
+          style={{ position: 'absolute', width: 120 * k, height: 150 * k, bottom: 44 * k, right: 8 * k }}
+          resizeMode="contain"
+        />
+        <View style={[styles.questNew, { borderRadius: 20 * k, paddingHorizontal: 10 * k, paddingVertical: 3 * k, top: 8 * k, left: 8 * k }]}>
+          <Text style={[styles.questNewText, { fontSize: 15 * k }]}>✨</Text>
+        </View>
+      </View>
+    );
+  }
   if (art === 'paint') {
     return (
       <View style={[styles.sceneFill, styles.paintCardScene]}>
@@ -320,7 +339,7 @@ export default function HomeScreen() {
   const bigGap = Math.max(18, Math.round(22 * ui));
   const cardGap = Math.round(bigGap * 0.8 * 0.6);
   const bigCardRadius = Math.max(22, Math.round(26 * ui));
-  const bigCardWRaw = (responsive.contentWidth - bigGap * 2 - cardGap * 3) / 4;
+  const bigCardWRaw = (responsive.contentWidth - bigGap * 2 - cardGap * 4) / 5;
   // The page must never scroll, so the cards are also capped by the height
   // left under the TopBar. Sizing by width alone overflowed wide-but-short
   // screens (1400x620 by 65pt): the cards grew with the width and pushed the
@@ -448,6 +467,11 @@ const styles = StyleSheet.create({
   paintCardScene: { backgroundColor: '#18C977', alignItems: 'center', justifyContent: 'center' },
   paintCardImage: { width: '100%', height: '100%' },
   cookScene: { backgroundColor: '#F7D046', alignItems: 'center', justifyContent: 'center' },
+  questScene: { backgroundColor: '#7ED6F2', alignItems: 'center', justifyContent: 'center' },
+  questSun: { position: 'absolute', backgroundColor: '#FFE45E' },
+  questHill: { position: 'absolute', backgroundColor: '#8FD694' },
+  questNew: { position: 'absolute', backgroundColor: '#FF5C8A' },
+  questNewText: { color: '#FFFFFF' },
   cookNeli: { width: 190, height: 248 },
   cookIngredient: { position: 'absolute', width: 46, height: 46 },
   cookIngredientOne: { left: 16, top: 8, transform: [{ rotate: '-16deg' }] },

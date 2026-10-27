@@ -34,6 +34,7 @@ export type Screen =
   | { name: 'ToothBrush' }
   | { name: 'ConversationGame' }
   | { name: 'GrandmaCall' }
+  | { name: 'DailyQuest' }
   | { name: 'SolarPuzzle' }
   | { name: 'TimeUp' };
 
