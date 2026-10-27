@@ -37,7 +37,16 @@ Start simple, using words that **already exist in the app** (art + recording):
    most today?" The child taps 2–4 of them (the number depends on the level,
    see section 4). **Every tap plays the word's recording** and the picture
    bounces.
-3. Optionally mix in 1–2 words the child met earlier today or that need
+3. **Say it to pack it** (this is the only speaking moment in the quest).
+   Each picked item grows big in the middle with a large 🎤 button. The word
+   plays once, then the child **holds the 🎤 and says the word**. On release,
+   the voice plays back with a fun echo and the item flies into the 🎒
+   backpack. Only a volume check (did the child make a sound?) — no speech
+   recognition. If the child doesn't speak, a small "next" arrow appears after
+   ~5 seconds so a shy child is never stuck; the item still goes in the
+   backpack. The recording is saved **on the device only** for the parent
+   (section 6) and never uploaded.
+4. Optionally mix in 1–2 words the child met earlier today or that need
    practice (from `wordLog.ts`) — the AI decides, within the level rules.
 
 Build a word catalog `src/data/questWords.ts` from existing data: id, category,
@@ -52,7 +61,7 @@ and the list of available step types below. **No name or personal data.**
 
 Muse Spark returns **JSON only**: a short quest with a theme that fits the words
 (e.g. "Help Neli collect food for Grandma's picnic", "Get dressed for the snow
-trip"), and **5–7 connected steps**. Steps must build on each other: items found
+trip"), and **3–6 connected stops** (by level, section 4). Steps must build on each other: items found
 in one step are used in a later step, and the last step completes the theme
 (the picnic is ready, Neli is dressed, the rocket launches).
 
@@ -61,13 +70,9 @@ in one step are used in a later step, and the last step completes the theme
   "theme_id": "picnic_for_grandma",
   "theme_title_fa": "پیک‌نیک با مادربزرگ",
   "steps": [
-    { "type": "find_it",     "target": "ingredients/apple", "distractors": ["clothes/hat", "ingredients/egg"] },
-    { "type": "say_it",      "target": "ingredients/apple" },
-    { "type": "memory_pairs","words": ["ingredients/apple", "ingredients/egg", "ingredients/bread"] },
-    { "type": "count_it",    "target": "ingredients/egg", "count": 3 },
-    { "type": "odd_one_out", "words": ["ingredients/apple", "ingredients/bread", "clothes/hat"], "answer": "clothes/hat" },
-    { "type": "say_it",      "target": "ingredients/bread" },
-    { "type": "finale",      "words": ["ingredients/apple", "ingredients/egg", "ingredients/bread"] }
+    { "type": "find_it",  "surprise": "gift_box",      "target": "ingredients/apple", "distractors": ["clothes/hat", "ingredients/egg"] },
+    { "type": "count_it", "surprise": "shake_tree",    "target": "ingredients/egg", "count": 3 },
+    { "type": "finale",   "surprise": "open_basket",   "words": ["ingredients/apple", "ingredients/egg", "ingredients/bread"] }
   ]
 }
 ```
@@ -77,7 +82,6 @@ in one step are used in a later step, and the last step completes the theme
 | type | What the child does | From level |
 |---|---|---|
 | `find_it` | Hears the word (existing recording), taps the right picture. | 1 |
-| `say_it` | Sees the picture, hears the word, presses a big 🎤 and says it. Played back with a fun echo, saved **on the device only** for the parent (section 6). Always succeeds once the child makes a sound (volume check only — no speech recognition). | 1 |
 | `memory_pairs` | Flip cards to match pairs of the chosen words. | 2 |
 | `count_it` | "How many?" — taps the right number (uses counting recordings). | 2 |
 | `first_letter` | Sees the picture (e.g. cat 🐱), hears the word, then taps its first letter (گ) among 2–4 letters; the letter name plays. | 3 |
@@ -85,6 +89,23 @@ in one step are used in a later step, and the last step completes the theme
 | `odd_one_out` | Taps the picture that doesn't belong (different category). | 3 |
 | `color_it` | Taps the right color of an object (uses painting/color recordings). | 3 |
 | `finale` | Celebration that completes the theme with all chosen items; awards stars/sticker. | 1 |
+
+### Every stop on the map: Discover → Play → Collect (about 1 minute)
+
+1. **Discover:** one tap opens a surprise at the stop — `gift_box` (unwraps),
+   `shake_tree` (something falls), `lift_mushroom`, `open_door` (windmill),
+   `pop_bubble` (over the pond), `open_basket` (goal). The word's picture
+   appears and **the app says the word out loud** (existing recording).
+2. **Play:** exactly **one** small game from the table above with that word.
+3. **Collect:** the item flies into the 🎒 backpack, **the app says the word
+   again**, the stop becomes ⭐, and the buddy walks to the next landmark.
+
+No speaking on the map — the child already said the words when packing them
+(section 2). At the goal, all collected items appear together (e.g. on the
+picnic blanket) and the app says each word once more.
+
+Muse Spark picks the `surprise` for each stop to match that stop's landmark
+(e.g. `shake_tree` at the apple tree, `lift_mushroom` at the mushroom pond).
 
 Instructions to the child are **icons, animation and the word's own recording**
 — no new narration recordings and no TTS. Theme titles are shown as text for
@@ -103,7 +124,7 @@ saved locally and is the hero of every quest. Tapping a buddy plays a short
 happy bounce; no extra recordings needed.
 
 ### The quest map
-Each quest is one screen: a **soft path across a themed world** with 5–7 round
+Each quest is one screen: a **soft path across a themed world** with 3–6 round
 stops (one per step) and a goal at the end.
 
 - **Layers, like a real 2D side-scroller** (all flat 2D, no 3D):
@@ -171,22 +192,25 @@ Difficulty is **not fixed by age**. Age only picks the starting level
 (age 3–4 → level 1, 5–6 → level 2, 7+ → level 3). After that the child moves
 by how they play. Store the level locally per child.
 
-| Level | Words picked | Steps | Choices per question | Step types allowed |
-|---|---|---|---|---|
-| 1 | 2 | 4 | 2 | find_it, say_it, finale |
-| 2 | 3 | 5 | 2–3 | + memory_pairs (2 pairs), count_it (1–3) |
-| 3 | 3 | 6 | 3 | + first_letter, trace_letter, odd_one_out, color_it |
-| 4 | 4 | 7 | 3–4 | all; memory 3 pairs, count 1–5 |
-| 5 | 4 | 7 | 4 | all; first_letter with similar-looking letters (ب پ ت ث) |
+| Level | Words picked | Stops on the map | About | Choices per question | Play types allowed |
+|---|---|---|---|---|---|
+| 1 | 2 | 3 (incl. goal) | 3–4 min | 2 | find_it, finale |
+| 2 | 3 | 4 | 4–5 min | 2–3 | + memory_pairs (2 pairs), count_it (1–3) |
+| 3 | 3 | 5 | 5–6 min | 3 | + first_letter, trace_letter, odd_one_out, color_it |
+| 4 | 4 | 6 | 6–8 min | 3–4 | all; memory 3 pairs, count 1–5 |
+| 5 | 4 | 6 | 6–8 min | 4 | all; first_letter with similar-looking letters (ب پ ت ث) |
+
+Short on purpose: small children focus for about 5 minutes. End while it is
+still fun ("See you tomorrow! 🌙").
 
 **Moving between levels:**
 
 - **Level up:** two quests in a row with ≥ 80% of answers right on the first
-  try (say_it doesn't count). Celebrate it ("Level 3! 🌟").
+  try. Celebrate it ("Level 3! 🌟").
 - **Stay:** anything in between — the next quest stays at this level, and the
   AI repeats the words and step types the child got wrong.
 - **Stuck:** two quests in a row under 50% first-try → the next quest is an
-  easier version of the **same level** (fewer choices, more find_it/say_it).
+  easier version of the **same level** (fewer choices, more find_it).
   Never show a "level down" to the child.
 
 The level rules are sent to Muse Spark with every request, and the validator
@@ -197,12 +221,12 @@ rejects any quest that breaks them.
 Because the AI only **chooses word ids and step types**, the output can be fully
 checked in code:
 
-1. Strict instructions in every request: ages 3–7, 5–7 steps, at least 2
-   `say_it` steps, only the provided word ids and step types, themes must be
+1. Strict instructions in every request: ages 3–7, the stop count from the level table, only the provided
+   word ids, step types and surprise types, themes must be
    happy and everyday (food, family, play, nature, home, trips, space) — never
    fear, danger, violence, sadness.
 2. Code validator `src/services/questValidator.ts`:
-   - valid JSON in the shape above; 5–7 steps; last step is `finale`;
+   - valid JSON in the shape above; stop count matches the level; last step is `finale`;
    - every word id exists in `FA_TEST_AUDIO` and has art;
    - every step type is known and has its required fields; `answer` is among
      its `words`; `count` is 1–5; distractors differ from the target;
@@ -221,7 +245,7 @@ checked in code:
 
 ## 6. Parent check (inside the existing parent area, behind the PIN gate)
 
-- **"Today's words"** screen: for each `say_it` word, the picture, the correct
+- **"Today's words"** screen: for each word the child packed (section 2), the picture, the correct
   recording, and the child's recording. Parent taps ✅ "said it well" or
   🔁 "practice again".
 - 🔁 words are sent as "needs practice" in tomorrow's quest request; ✅ words
@@ -239,7 +263,8 @@ checked in code:
    store with the level-up rules.
 2. Buddy picker, quest map (path, stops, backpack bar, buddy walking), category
    picker and favourites picker, then step components: `find_it`,
-   `say_it` (local echo + save), `finale` — enough for level 1 end to end.
+   the "say it to pack it" step (hold-to-talk, local echo + save), the stop
+   flow (surprise → play → collect) and `finale` — enough for level 1 end to end.
    Then `memory_pairs`, `count_it`, `first_letter`, `trace_letter`,
    `odd_one_out`, `color_it`.
 3. Quest generation (with the level rules): prompt, `askMeta()` call, validator, retry, built-in
