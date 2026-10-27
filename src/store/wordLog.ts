@@ -35,7 +35,9 @@ export type WordLogState = {
   stats: Record<string, WordStat>;
 };
 
-const EMPTY: WordLogState = { version: 1, stats: {} };
+function freshState(): WordLogState {
+  return { version: 1, stats: {} };
+}
 
 // Vocabulary groups from the quest spec. Clips outside these groups
 // (cheers, music, feedback, intros, conversation helpers) are never logged.
@@ -79,6 +81,11 @@ function blankStat(day: string): WordStat {
 // --- In-memory cache + batched saves ---
 
 let cache: WordLogState | null = null;
+let loadPromise: Promise<WordLogState> | null = null;
+// Changes that arrive before the saved log has loaded. They are applied on
+// top of the loaded log, so a sound played right after launch can never
+// overwrite (and erase) the saved history with an empty log.
+const pendingChanges: ((state: WordLogState) => void)[] = [];
 let dirty = false;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let appStateInstalled = false;
@@ -129,39 +136,64 @@ function ensureAppStateFlush() {
   }
 }
 
-/** Load the log into memory. Call once at startup (safe to call again). */
-export async function loadWordLog(): Promise<WordLogState> {
-  if (cache) return cache;
+/** Load the log into memory. Called automatically on first use (safe to call again). */
+export function loadWordLog(): Promise<WordLogState> {
+  if (cache) return Promise.resolve(cache);
+  if (loadPromise) return loadPromise;
   ensureAppStateFlush();
-  try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as WordLogState;
-      if (parsed && parsed.stats && typeof parsed.stats === 'object') {
-        // Normalize: old or corrupt entries get defaults, never crash.
-        const num = (v: unknown) => (typeof v === 'number' && v >= 0 ? v : 0);
-        const stats: Record<string, WordStat> = {};
-        for (const [id, s] of Object.entries(parsed.stats)) {
-          const w = s as Partial<WordStat>;
-          if (!w || typeof w !== 'object') continue;
-          stats[id] = {
-            seen: num(w.seen),
-            correct: num(w.correct),
-            wrong: num(w.wrong),
-            verdict: w.verdict === 'ok' || w.verdict === 'practice' ? w.verdict : null,
-            lastSeenDay: typeof w.lastSeenDay === 'string' ? w.lastSeenDay : '',
-            days: w.days && typeof w.days === 'object' ? (w.days as Record<string, number>) : {},
-          };
+  loadPromise = (async () => {
+    let loaded = freshState();
+    try {
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as WordLogState;
+        if (parsed && parsed.stats && typeof parsed.stats === 'object') {
+          // Normalize: old or corrupt entries get defaults, never crash.
+          const num = (v: unknown) => (typeof v === 'number' && v >= 0 ? v : 0);
+          const stats: Record<string, WordStat> = {};
+          for (const [id, s] of Object.entries(parsed.stats)) {
+            const w = s as Partial<WordStat>;
+            if (!w || typeof w !== 'object') continue;
+            stats[id] = {
+              seen: num(w.seen),
+              correct: num(w.correct),
+              wrong: num(w.wrong),
+              verdict: w.verdict === 'ok' || w.verdict === 'practice' ? w.verdict : null,
+              lastSeenDay: typeof w.lastSeenDay === 'string' ? w.lastSeenDay : '',
+              days: w.days && typeof w.days === 'object' ? (w.days as Record<string, number>) : {},
+            };
+          }
+          loaded = { version: 1, stats };
         }
-        cache = { version: 1, stats };
-        return cache;
       }
+    } catch {
+      // Corrupt or missing storage starts fresh.
     }
+    cache = loaded;
+    if (pendingChanges.length > 0) {
+      for (const change of pendingChanges.splice(0)) {
+        try { change(loaded); } catch { /* never break the app */ }
+      }
+      scheduleSave();
+    }
+    return loaded;
+  })();
+  return loadPromise;
+}
+
+/** Apply a change now if the log is loaded, otherwise right after it loads. */
+function mutate(change: (state: WordLogState) => void): void {
+  try {
+    if (cache) {
+      change(cache);
+      scheduleSave();
+      return;
+    }
+    pendingChanges.push(change);
+    void loadWordLog();
   } catch {
-    // Corrupt or missing storage starts fresh below.
+    // Logging must never break the app (this runs inside the audio path).
   }
-  cache = EMPTY;
-  return cache;
 }
 
 /**
@@ -171,39 +203,39 @@ export async function loadWordLog(): Promise<WordLogState> {
  */
 export function noteWordSeen(key: string, day = todayKey()): void {
   if (!isQuestVocabularyKey(key)) return;
-  ensureAppStateFlush();
-  if (!cache) cache = EMPTY;
-  const stat = cache.stats[key] ?? blankStat(day);
-  stat.seen += 1;
-  stat.lastSeenDay = day;
-  stat.days[day] = (stat.days[day] ?? 0) + 1;
-  cache.stats[key] = stat;
-  scheduleSave();
+  mutate(state => {
+    const stat = state.stats[key] ?? blankStat(day);
+    stat.seen += 1;
+    stat.lastSeenDay = day;
+    stat.days[day] = (stat.days[day] ?? 0) + 1;
+    state.stats[key] = stat;
+  });
 }
 
 /** Count one graded quest answer (say_it answers are not graded). */
 export function recordQuestAnswer(key: string, firstTryRight: boolean, day = todayKey()): void {
   if (!isQuestVocabularyKey(key)) return;
-  if (!cache) cache = EMPTY;
-  const stat = cache.stats[key] ?? blankStat(day);
-  if (firstTryRight) stat.correct += 1;
-  else stat.wrong += 1;
-  stat.lastSeenDay = day;
-  cache.stats[key] = stat;
-  scheduleSave();
+  mutate(state => {
+    const stat = state.stats[key] ?? blankStat(day);
+    if (firstTryRight) stat.correct += 1;
+    else stat.wrong += 1;
+    stat.lastSeenDay = day;
+    state.stats[key] = stat;
+  });
 }
 
 /** Parent's verdict from the "Today's words" screen (step 5). */
 export function setParentVerdict(key: string, verdict: ParentVerdict | null): void {
-  if (!cache) cache = EMPTY;
-  const stat = cache.stats[key] ?? blankStat(todayKey());
-  stat.verdict = verdict;
-  cache.stats[key] = stat;
-  scheduleSave();
+  mutate(state => {
+    const stat = state.stats[key] ?? blankStat(todayKey());
+    stat.verdict = verdict;
+    state.stats[key] = stat;
+  });
 }
 
 /** Write any pending changes now. Called on backgrounding and in tests. */
 export async function flushWordLog(): Promise<void> {
+  if (loadPromise) await loadPromise;
   await persist();
 }
 
