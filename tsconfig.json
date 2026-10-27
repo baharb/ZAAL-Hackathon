@@ -6,5 +6,5 @@
       "@/*": ["./*"]
     }
   },
-  "exclude": ["app", "checkpoint-A"]
+  "exclude": ["app", "checkpoint-A", "supabase/functions"]
 }

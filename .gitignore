@@ -22,3 +22,9 @@ ios/build/
 # Supabase (send-code feature) secrets
 .env
 .env.local
+
+# Secrets: never commit API keys (Meta Model API key lives only in Supabase secrets)
+.env.*
+!.env.example
+supabase/.env
+supabase/.temp/
