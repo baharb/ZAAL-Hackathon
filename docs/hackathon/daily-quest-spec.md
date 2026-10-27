@@ -92,6 +92,61 @@ the parent. Keep a single function `speakLine(text)` in
 `src/services/storyVoice.ts` that is silent for now, so an AI voice can be
 added later.
 
+## 3b. Look and feel: a calm quest map (like Lingokids, never busy)
+
+### Pick a buddy
+Before the first quest (and any time from a small button), the child picks a
+buddy from ZAAL's existing characters: Neli, Aidin 🦉, Mila, Lila, Dara 🦒,
+Robo Boombo. Use their existing pose art in `src/assets/characterAssets.ts`
+(base, waving, walking, jumping, thinking, celebration). The chosen buddy is
+saved locally and is the hero of every quest. Tapping a buddy plays a short
+happy bounce; no extra recordings needed.
+
+### The quest map
+Each quest is one screen: a **soft path across a themed world** with 5–7 round
+stops (one per step) and a goal at the end.
+
+- The path runs **right → left** (Farsi reading direction), drawn gently over a
+  background. Use existing backgrounds in `assets/neli-world/backgrounds/`
+  through `pickRoomBackground()` (aspect-ratio aware, see CLAUDE.md); where a
+  theme has no background, use a simple soft gradient with a few large shapes.
+- The buddy stands on the current stop (base pose). Tapping the glowing stop
+  opens that step's mini-game as a large rounded card over the map.
+- After a step: the collected item (e.g. the apple picture) floats gently into
+  a **backpack bar** at the top; the stop turns into a ⭐; the buddy walks
+  (walking pose, ~1 s slide) to the next stop.
+- The goal at the end matches the theme (picnic blanket, wardrobe, rocket,
+  paint easel, letter castle). At the finale the buddy switches to the
+  celebration pose and all collected items appear together on the goal.
+- A quest takes about **5–8 minutes**. After the finale: "See you tomorrow! 🌙"
+  with a small preview of tomorrow's world. No endless next-next-next.
+
+### What changes every day (chosen by Muse Spark, within the level rules)
+- the **world/theme** (from the allowed list in `questThemes.ts`, each with a
+  background and goal art), the order and type of steps, which words go where,
+  the distractor pictures, and how the steps connect to the goal.
+- The **structure stays familiar** (same map, same buddy, same controls), so
+  the child always knows what to do. Only the content is new.
+
+### Calm, child-professional design rules (must follow)
+- **One thing moves at a time.** Gentle ease-in-out motion, 300–600 ms; no
+  shaking, flashing, fast spinning or confetti storms. Small celebrations
+  (sparkle on the item, buddy jump) — one big celebration only at the finale.
+- **Large touch targets** (scaled from a reference size, roughly ≥ 64 pt on a
+  phone), at least 16 pt between choices. Nothing important in the corners.
+- **Soft, limited palette** matching ZAAL's existing theme; high contrast for
+  Farsi text and pictures; Vazirmatn font.
+- **No timers, no lives, no "game over", no losing stars.** Wrong answer → the
+  wrong card gently fades, the buddy shows the thinking pose, the word plays
+  again; after 2 tries the right card softly glows.
+- **Sound:** gentle effects, never loud; respects the app's existing audio
+  rules (one output at a time, see CLAUDE.md). A mute button for parents.
+- **No ads, no purchases, no external links, no streak pressure** inside the
+  quest. Parent features stay behind the existing PIN gate.
+- Respect accessibility: every interactive element has an accessibility label;
+  colors are never the only cue (except in `color_it`, which also plays the
+  color word).
+
 ## 4. Levels: harder only when the child is ready
 
 Difficulty is **not fixed by age**. Age only picks the starting level
@@ -164,7 +219,8 @@ checked in code:
 1. Word catalog `questWords.ts` (only words with art + recording, with first
    letter), `wordLog.ts` tracking hooked into `playFaAudio()`, and the level
    store with the level-up rules.
-2. Category picker and favourites picker, then step components: `find_it`,
+2. Buddy picker, quest map (path, stops, backpack bar, buddy walking), category
+   picker and favourites picker, then step components: `find_it`,
    `say_it` (local echo + save), `finale` — enough for level 1 end to end.
    Then `memory_pairs`, `count_it`, `first_letter`, `trace_letter`,
    `odd_one_out`, `color_it`.
