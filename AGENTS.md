@@ -30,8 +30,11 @@ below.
   Supabase Edge Function `supabase/functions/meta-ai/index.ts`, which holds the
   key as the server secret `MODEL_API_KEY` and calls
   `https://api.meta.ai/v1/chat/completions`.
-- Model: `muse-spark-1.3` (standard). **Never use `muse-spark-1.3-contributor`**
-  — it lets Meta train on the data, and this is a children's app.
+- Model for the **app's own calls** (inside the Edge Function): `muse-spark-1.3`
+  (standard). Never use `muse-spark-1.3-contributor` there — the app sends
+  children's data, and the contributor tier lets Meta train on it.
+  (This rule is about the app's runtime calls only. Which model the developer
+  uses to run this coding session is her choice.)
 - Need a new kind of call (image generation, speech-to-text)? Add a new
   Edge Function next to `meta-ai` following the same pattern. Don't add API
   keys to the client.
