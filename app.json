@@ -19,7 +19,8 @@
       "requireFullScreen": true,
       "bundleIdentifier": "com.zaal.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "ZAAL lets your child say Farsi words out loud. Recordings stay on this device and are never uploaded."
       },
       "buildNumber": "31"
     },
