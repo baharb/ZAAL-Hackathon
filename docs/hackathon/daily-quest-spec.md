@@ -170,8 +170,15 @@ checked in code:
    `odd_one_out`, `color_it`.
 3. Quest generation (with the level rules): prompt, `askMeta()` call, validator, retry, built-in
    generator fallback. Works offline and when Supabase is not configured.
-4. Quest flow: category → favourites → steps → finale → level-up celebration. Add a "My Daily Quest" button to
-   the Games screen. Landscape only, every `<Modal>` with
+4. Quest flow: category → favourites → steps → finale → level-up celebration.
+   **Where it starts:** add «بازی امروز من» / "My Daily Quest" as the **first
+   big card on the Home screen** (`BIG_CARDS` in `src/screens/HomeScreen.tsx`,
+   before Games, Cooking, Painting, Alphabet), with a gentle "new today ✨"
+   badge until today's quest is played. Make sure the five big cards still fit
+   on a landscape phone (the card size is computed from the available width and
+   height — keep that working, don't hard-code sizes). Also add it as a card on
+   the Games screen. Add a new route name `DailyQuest` in the app's navigator
+   (`App.tsx` / `NavContext`), following how existing games are registered. Landscape only, every `<Modal>` with
    `supportedOrientations={['landscape']}`, all sizes scaled from a reference.
 5. Parent "Today's words" check screen and the daily note.
 6. (Later) Muse Image theme art / reward stickers; AI voice in `storyVoice.ts`.
