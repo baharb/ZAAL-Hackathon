@@ -24,12 +24,25 @@ tomorrow's game.
 - If the child met fewer than 4 words today, top up with words from earlier
   days that need practice, then with easy starter words.
 
-## 2. The child picks today's words
+## 2. The child picks what to play with today
 
-Start screen of the quest: show up to 8 picture cards of today's words. The
-child taps to choose 4–6 of them ("which ones do you want to play with?").
-Each tap plays the word's existing recording. Use the word's existing art; if a
-word has no art, don't offer it.
+Start simple, using words that **already exist in the app** (art + recording):
+
+1. **Pick a category.** Big picture buttons: Animals, Fruits, Vegetables,
+   Food & ingredients, Clothes, Colors, Numbers, Letters. Only show a category
+   if it has at least 4 words with both art (`assets/neli-world/...`) and a
+   recording (`FA_TEST_AUDIO`). Zaal asks (icon + animation): "What do you want
+   to play with today?"
+2. **Pick favourites.** Show 6–8 items of that category: "Which ones do you like
+   most today?" The child taps 2–4 of them (the number depends on the level,
+   see section 4). **Every tap plays the word's recording** and the picture
+   bounces.
+3. Optionally mix in 1–2 words the child met earlier today or that need
+   practice (from `wordLog.ts`) — the AI decides, within the level rules.
+
+Build a word catalog `src/data/questWords.ts` from existing data: id, category,
+Farsi text, art, recording key, and the **first letter id** (matching the
+alphabet ids used by the tracing screens, e.g. گربه → `gaf`).
 
 ## 3. The AI designs the game (Muse Spark)
 
@@ -61,15 +74,17 @@ in one step are used in a later step, and the last step completes the theme
 
 ### Step types (the app implements these; the AI only chooses and orders them)
 
-| type | What the child does |
-|---|---|
-| `find_it` | Hears the word (existing recording), taps the right picture among 2–3. |
-| `say_it` | Sees the picture, hears the word, presses a big 🎤 and says it. Recording is played back with a fun echo, then saved **on the device only** for the parent (section 5). The step always succeeds once the child makes a sound (volume check only — no speech recognition). |
-| `memory_pairs` | Flip cards to match 2–3 pairs of today's words. |
-| `count_it` | "How many?" — taps the right number (uses counting recordings). |
-| `odd_one_out` | Taps the picture that doesn't belong (different category). |
-| `color_it` | Taps the right color of an object (uses painting/color recordings). Only when the AI includes a color word. |
-| `finale` | Short celebration that completes the theme with all collected items; awards stars/sticker. |
+| type | What the child does | From level |
+|---|---|---|
+| `find_it` | Hears the word (existing recording), taps the right picture. | 1 |
+| `say_it` | Sees the picture, hears the word, presses a big 🎤 and says it. Played back with a fun echo, saved **on the device only** for the parent (section 6). Always succeeds once the child makes a sound (volume check only — no speech recognition). | 1 |
+| `memory_pairs` | Flip cards to match pairs of the chosen words. | 2 |
+| `count_it` | "How many?" — taps the right number (uses counting recordings). | 2 |
+| `first_letter` | Sees the picture (e.g. cat 🐱), hears the word, then taps its first letter (گ) among 2–4 letters; the letter name plays. | 3 |
+| `trace_letter` | Traces the first letter of the word, reusing the existing tracing component (`src/components/farsi/FarsiLetterTracer.tsx`). | 3 |
+| `odd_one_out` | Taps the picture that doesn't belong (different category). | 3 |
+| `color_it` | Taps the right color of an object (uses painting/color recordings). | 3 |
+| `finale` | Celebration that completes the theme with all chosen items; awards stars/sticker. | 1 |
 
 Instructions to the child are **icons, animation and the word's own recording**
 — no new narration recordings and no TTS. Theme titles are shown as text for
@@ -77,7 +92,34 @@ the parent. Keep a single function `speakLine(text)` in
 `src/services/storyVoice.ts` that is silent for now, so an AI voice can be
 added later.
 
-## 4. Safety and quality (required)
+## 4. Levels: harder only when the child is ready
+
+Difficulty is **not fixed by age**. Age only picks the starting level
+(age 3–4 → level 1, 5–6 → level 2, 7+ → level 3). After that the child moves
+by how they play. Store the level locally per child.
+
+| Level | Words picked | Steps | Choices per question | Step types allowed |
+|---|---|---|---|---|
+| 1 | 2 | 4 | 2 | find_it, say_it, finale |
+| 2 | 3 | 5 | 2–3 | + memory_pairs (2 pairs), count_it (1–3) |
+| 3 | 3 | 6 | 3 | + first_letter, trace_letter, odd_one_out, color_it |
+| 4 | 4 | 7 | 3–4 | all; memory 3 pairs, count 1–5 |
+| 5 | 4 | 7 | 4 | all; first_letter with similar-looking letters (ب پ ت ث) |
+
+**Moving between levels:**
+
+- **Level up:** two quests in a row with ≥ 80% of answers right on the first
+  try (say_it doesn't count). Celebrate it ("Level 3! 🌟").
+- **Stay:** anything in between — the next quest stays at this level, and the
+  AI repeats the words and step types the child got wrong.
+- **Stuck:** two quests in a row under 50% first-try → the next quest is an
+  easier version of the **same level** (fewer choices, more find_it/say_it).
+  Never show a "level down" to the child.
+
+The level rules are sent to Muse Spark with every request, and the validator
+rejects any quest that breaks them.
+
+## 5. Safety and quality (required)
 
 Because the AI only **chooses word ids and step types**, the output can be fully
 checked in code:
@@ -92,6 +134,9 @@ checked in code:
    - every step type is known and has its required fields; `answer` is among
      its `words`; `count` is 1–5; distractors differ from the target;
    - every chosen word appears at least once;
+   - step count, choices and step types match the child's level (section 4);
+   - `first_letter`/`trace_letter` use the word's real first letter from the
+     catalog;
    - `theme_id` is in an allowed list `src/data/questThemes.ts` (each with a
      title in Farsi checked by the developer and a background art key).
 3. If invalid: ask once more; if still invalid, build a quest with a simple
@@ -101,7 +146,7 @@ checked in code:
 5. Privacy: no child data on any server, no name sent to the AI, microphone
    audio never uploaded.
 
-## 5. Parent check (inside the existing parent area, behind the PIN gate)
+## 6. Parent check (inside the existing parent area, behind the PIN gate)
 
 - **"Today's words"** screen: for each `say_it` word, the picture, the correct
   recording, and the child's recording. Parent taps ✅ "said it well" or
@@ -116,13 +161,16 @@ checked in code:
 
 ## Build steps
 
-1. `wordLog.ts` tracking hooked into `playFaAudio()`, plus the word catalog
-   (id → category, art, recording) for vocabulary words that have art.
-2. Step-type components: `find_it`, `say_it` (with local echo + save), then
-   `memory_pairs`, `count_it`, `odd_one_out`, `color_it`, `finale`.
-3. Quest generation: prompt, `askMeta()` call, validator, retry, built-in
+1. Word catalog `questWords.ts` (only words with art + recording, with first
+   letter), `wordLog.ts` tracking hooked into `playFaAudio()`, and the level
+   store with the level-up rules.
+2. Category picker and favourites picker, then step components: `find_it`,
+   `say_it` (local echo + save), `finale` — enough for level 1 end to end.
+   Then `memory_pairs`, `count_it`, `first_letter`, `trace_letter`,
+   `odd_one_out`, `color_it`.
+3. Quest generation (with the level rules): prompt, `askMeta()` call, validator, retry, built-in
    generator fallback. Works offline and when Supabase is not configured.
-4. Quest screens: word picker → steps → finale. Add a "My Daily Quest" button to
+4. Quest flow: category → favourites → steps → finale → level-up celebration. Add a "My Daily Quest" button to
    the Games screen. Landscape only, every `<Modal>` with
    `supportedOrientations={['landscape']}`, all sizes scaled from a reference.
 5. Parent "Today's words" check screen and the daily note.
