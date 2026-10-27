@@ -106,10 +106,28 @@ happy bounce; no extra recordings needed.
 Each quest is one screen: a **soft path across a themed world** with 5–7 round
 stops (one per step) and a goal at the end.
 
-- The path runs **right → left** (Farsi reading direction), drawn gently over a
-  background. Use existing backgrounds in `assets/neli-world/backgrounds/`
-  through `pickRoomBackground()` (aspect-ratio aware, see CLAUDE.md); where a
-  theme has no background, use a simple soft gradient with a few large shapes.
+- **Layers, like a real 2D side-scroller** (all flat 2D, no 3D):
+  1. **Background layer:** one wide sky-and-hills picture per world (e.g.
+     `assets/neli-world/quest/garden-background.png`, made with Meta's Muse
+     Image). Repeat it horizontally, **mirroring every other copy** so the
+     joins are seamless, for as long as the path needs.
+  2. **Path layer, drawn in code** (react-native-svg): a flat, soft sandy path
+     running **right → left** (Farsi reading direction) across the lower part
+     of the screen, with gentle rounded ends. Stops are flat circles on the
+     path, spaced about one screen-width apart so there is room between them.
+  3. **Landmark layer:** separate cut-out pictures with transparent background
+     (apple tree, wooden bridge, sunflowers, windmill, mushroom pond, picnic
+     goal — files in `assets/neli-world/quest/landmarks/`). One landmark sits
+     between each pair of stops, standing on the grass behind the path, so
+     every part of the journey shows something new. The finale goal landmark
+     sits at the left end. Muse Spark chooses which landmarks appear and in
+     which order (from the list available for that world).
+- **The map scrolls horizontally.** The screen shows the current stop and a bit
+  of the next one. After a step, the camera slides gently (~1 s) to follow the
+  buddy to the next stop. The child can also drag to look back at done stops,
+  but cannot skip ahead.
+- If a world's background or landmarks are missing, fall back to a soft flat
+  gradient sky with simple flat hills drawn in code, so the game always works.
 - The buddy stands on the current stop (base pose). Tapping the glowing stop
   opens that step's mini-game as a large rounded card over the map.
 - After a step: the collected item (e.g. the apple picture) floats gently into
