@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "ZAAL",
+    "name": "ZAAL Quest",
     "slug": "zaal",
-    "version": "1.4.5",
+    "version": "0.1.0",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -17,20 +17,20 @@
     "ios": {
       "supportsTablet": true,
       "requireFullScreen": true,
-      "bundleIdentifier": "com.zaal.app",
+      "bundleIdentifier": "com.zaal.app.quest",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSMicrophoneUsageDescription": "ZAAL lets your child say Farsi words out loud. Recordings stay on this device and are never uploaded."
       },
-      "buildNumber": "31"
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#6B21A8"
       },
-      "package": "com.zaal.app",
-      "versionCode": 31
+      "package": "com.zaal.app.quest",
+      "versionCode": 1
     },
     "plugins": [
       "./plugins/withRemoveForegroundServiceMediaPlayback.js",
