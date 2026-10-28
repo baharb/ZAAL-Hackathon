@@ -87,8 +87,8 @@ later without changing the game code.
 - Along the street there are **5 mystery boxes with a «؟» on them** — one per
   pick (fruit, ingredient, color, ingredient, food). The car drives to the next
   box and stops.
-- **The child taps the box** → it **wiggles and bursts into sparkles** (gentle
-  "pop" sound) → a question appears: **"Which one is «سیب»?"** with
+- **The child taps the box** → it **wiggles and pops open** (lid up, sparkles,
+  gentle "pop" sound) → a question appears: **"Which one is «سیب»?"** with
   **3 options**: the child's own pick for that box plus 2 others from the same
   list. There is no recording of the question itself, so play only the word
   (e.g. «سیب») and show a friendly pointing-hand / "?" icon.
@@ -109,12 +109,13 @@ later without changing the game code.
 
 - `car-<buddyId>.png` — the buddy sitting in the red car, side view, facing
   left (`car-neli.png` exists; others are added one by one).
-- `box-closed.png` — purple gift box with a yellow bow (no symbol on it). The
-  app draws a big **«؟»** in a soft white circle badge on the front of the box,
-  so the symbol is always crisp. There is no open-box picture: when tapped, the
-  box **wiggles, then bursts into sparkles and disappears** (scale up a little,
-  fade out, 8–12 small star/sparkle shapes flying outward, ~0.6 s), and the
-  question appears in its place.
+- `box-closed.png` and `box-open.png` — purple gift box with a yellow bow,
+  closed, and open (lid tilted up, empty inside). Neither has a symbol: the app
+  draws a big **«؟»** in a soft white circle badge on the front of the closed
+  box, so it is always crisp. When tapped: the closed box wiggles, swaps to
+  `box-open.png` with a small "pop" and 8–12 sparkles/stars flying up out of it
+  (~0.6 s); then the question and its 3 options rise out of the open box, and
+  the box fades away.
 - Background: the existing `garden-background.png` for now (more later).
 - Destination: `landmarks/picnic.png`.
 - If a picture is missing, draw a simple placeholder in code so the game still
