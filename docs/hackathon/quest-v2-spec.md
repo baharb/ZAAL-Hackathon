@@ -120,3 +120,53 @@ Design `DailyQuestScreen` so Part 2 can be **one of several games** that all use
 the five picks (e.g. a cooking game, a dress-up trip, a memory game). Game 1 is
 Neli's Drive; others will be added later. Later, Muse Spark will choose the
 story and game each day (see `daily-quest-spec.md` for the AI and safety rules).
+
+## 5. Meta AI inside the game (build after Neli's Drive works end to end)
+
+The child's game stays exactly as above. These additions put Meta's models
+inside the experience without making it harder for the child.
+
+### 5a. ✨ "Today's picnic" picture — Muse Image (build first)
+
+- As soon as the child finishes the five picks, start creating a **new
+  illustration of this child's picnic** in the background while they drive:
+  Neli (or the chosen buddy) and Grandma on a blue checkered picnic blanket in
+  a soft garden, with exactly the five picked things (e.g. an apple, an egg,
+  something red, cheese, a bowl of آش رشته) on the blanket. Soft pastel flat
+  2D children's-book style matching ZAAL. No text in the picture.
+- The prompt is **built only from the English names of the picked word ids**
+  (from the app's own catalog) and a fixed style template — never free text
+  from the child, no names, no personal data.
+- New Supabase Edge Function `meta-image` (same pattern as `meta-ai`: key in
+  the `MODEL_API_KEY` secret, never in the app). Model `muse-image-1.0`
+  (standard tier). Check the exact endpoint and request fields in Meta's docs
+  or the **Get code** button on the dev.meta.ai Image page.
+- At the finale, after the items appear on the blanket, show the new picture
+  with a gentle reveal ("Your picnic! ✨"). Save it **on the device only** in a
+  small "My picnics" album the child can reopen (newest first, keep the last
+  30).
+- **If the picture isn't ready or fails** (offline, slow, error), the finale
+  works exactly as before without it — never make the child wait more than a
+  couple of seconds.
+
+### 5b. 🧠 Muse Spark as the trip director (hidden from the child)
+
+- Before the drive, send Muse Spark (via `askMeta()`) the five picked word ids,
+  the allowed word lists, the child's level, and up to 5 words the child got
+  wrong before (from `wordLog.ts`). Ask for **JSON only**: the order of the five
+  boxes and, for each box, the 2 wrong options.
+- **Validate in code:** every id exists in the catalog and in the right list
+  (fruit wrong options are fruits, etc.), wrong options differ from the answer
+  and from each other, all five picks appear once. If anything is wrong, ask
+  once more, then fall back to the built-in random choice. The child never
+  waits more than ~3 seconds (show the car "getting ready").
+- Prefer wrong options that the child has confused before, so practice targets
+  real mistakes.
+
+### 5c. 📝 Note for parents — Muse Spark
+
+- In the parent area (behind the existing PIN gate), show a short daily note
+  written by Muse Spark from **local stats only** (words picked, first-try
+  right/wrong, words confused): 2–3 warm sentences in English and Farsi plus one
+  idea to practice at home (e.g. "At dinner, ask her the color of the cheese").
+- No names, recordings or pictures are sent — only word ids and counts.
