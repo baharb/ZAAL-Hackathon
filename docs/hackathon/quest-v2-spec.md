@@ -52,17 +52,20 @@ For each pick screen:
 
 A short driving adventure built from the five picks.
 
-### Story (chosen at random each quest — the child does not choose)
+### Story
 
-Each story has its own background and destination. Start with:
+**For now there is only one story: `picnic_grandma`** — "Neli is going to a
+picnic with Grandma". Use the existing garden background
+(`assets/neli-world/quest/garden-background.png`, repeated and mirrored like
+before) and draw the road in code as a soft flat path along the bottom of the
+screen. The destination is `landmarks/picnic.png` (add a Grandma picture next to
+it if the app already has one). The other landmarks in `quest/landmarks/`
+(apple tree, bridge, sunflowers, windmill, mushroom pond) can stand along the
+road as scenery between the boxes.
 
-| Story id | Story (shown/narrated simply) | Destination at the end |
-|---|---|---|
-| `picnic_grandma` | Neli is going to a picnic with Grandma | picnic blanket with Grandma |
-| `shopping_home` | Neli goes shopping and drives home | home |
-| `park_friends` | Neli drives to the park to play | playground |
-
-Keep stories in a small list (`src/quest/stories.ts`) so more can be added.
+Still keep stories in a small list (`src/quest/stories.ts`) with one entry, so
+more stories and backgrounds (shopping then home, the park, …) can be added
+later without changing the game code.
 
 ### How it plays
 
@@ -97,11 +100,8 @@ Keep stories in a small list (`src/quest/stories.ts`) so more can be added.
   window where the buddy's existing base-pose picture is placed (so any buddy
   can ride).
 - `box-closed.png`, `box-open.png` — mystery box with «؟», closed and open.
-- Backgrounds per story, e.g. `street-picnic.png`, `street-town.png`,
-  `street-park.png` — wide, flat 2D, with a road along the bottom; repeat
-  horizontally (mirror every other copy) like the garden background.
-- Destinations: reuse `landmarks/picnic.png`; add `destination-home.png`,
-  `destination-park.png`, and a `grandma` picture if one exists in the app.
+- Background: the existing `garden-background.png` for now (more later).
+- Destination: `landmarks/picnic.png`.
 - If a picture is missing, draw a simple placeholder in code so the game still
   runs.
 
