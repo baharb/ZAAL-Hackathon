@@ -20,8 +20,14 @@ buddy store, sounds); remove what this version no longer uses.
 
 ## 2. Part 1 — "Which one do you like?" (the child's picks)
 
-Remove the category screen ("What do you want to play with today?"). Instead
-the child answers **five quick picks, one screen each**:
+**Step 0 — pick your buddy.** The quest starts with the existing buddy picker
+(Neli, Aidin, Mila, Lila, Dara, Robo Boombo): big pictures, tap one, it
+bounces and the quest goes straight on (no "next" button), same layout rules
+as above. Remember the choice for next time, with a small "change buddy"
+button on later visits.
+
+Remove the category screen ("What do you want to play with today?"). After the
+buddy, the child answers **five quick picks, one screen each**:
 
 1. **Fruit** 🍎
 2. **Ingredient** 🥚
@@ -69,8 +75,11 @@ later without changing the game code.
 
 ### How it plays
 
-- The buddy (default Neli; other buddies from the existing buddy store are
-  allowed later) sits **in a small car**. The car drives **right → left**
+- The chosen buddy drives **a small car**: use `assets/neli-world/quest/car-<buddyId>.png`
+  (e.g. `car-neli.png` — the character is already drawn inside, transparent
+  background, facing left). If a buddy has no car picture yet, use
+  `car-neli.png`'s car with the buddy's existing base-pose picture placed in the
+  window, or fall back to `car-neli.png`. The car drives **right → left**
   (Farsi direction) along a street across the full-screen background, which
   scrolls gently as the car moves.
 - Along the street there are **5 mystery boxes with a «؟» on them** — one per
@@ -96,9 +105,8 @@ later without changing the game code.
 
 ### Art (files in `assets/neli-world/quest/`, transparent PNGs)
 
-- `car.png` — small friendly car, side view, facing left, with an open top or a
-  window where the buddy's existing base-pose picture is placed (so any buddy
-  can ride).
+- `car-<buddyId>.png` — the buddy sitting in the red car, side view, facing
+  left (`car-neli.png` exists; others are added one by one).
 - `box-closed.png`, `box-open.png` — mystery box with «؟», closed and open.
 - Background: the existing `garden-background.png` for now (more later).
 - Destination: `landmarks/picnic.png`.
