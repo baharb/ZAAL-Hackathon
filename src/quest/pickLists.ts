@@ -8,6 +8,16 @@ import { DisplayWord, displayWordById } from './questGroups';
 
 export type PickKind = 'fruit' | 'ingredient' | 'color' | 'dish';
 
+// Words small kids would not meet as simple everyday foods: raw cuts, ground
+// meat and dried herbs. (The info-cook instruction clip has no catalog art,
+// so it can never appear in a pool in the first place.)
+const INGREDIENT_EXCLUDE = new Set([
+  'ingredients/filletChickenRaw',
+  'ingredients/groundBeefRaw',
+  'ingredients/cutRawBeefForStew',
+  'ingredients/driedMint',
+]);
+
 const FRUIT_IDS = new Set([
   'ingredients/apple',
   'ingredients/orange',
@@ -44,7 +54,7 @@ export function pickPool(kind: PickKind): DisplayWord[] {
       .filter((w): w is DisplayWord => w !== null);
   }
   if (kind === 'ingredient') {
-    return QUEST_WORDS.filter(w => w.category === 'ingredients' && !FRUIT_IDS.has(w.id))
+    return QUEST_WORDS.filter(w => w.category === 'ingredients' && !FRUIT_IDS.has(w.id) && !INGREDIENT_EXCLUDE.has(w.id))
       .map(w => displayWordById(w.id))
       .filter((w): w is DisplayWord => w !== null);
   }
