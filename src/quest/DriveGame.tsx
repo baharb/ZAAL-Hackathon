@@ -5,7 +5,7 @@
 // after 2 wrong tries. No losing, no going back. Ends at the picnic.
 
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Easing, Image, ImageSourcePropType, LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Line, Rect } from 'react-native-svg';
 import { createAudioPlayer } from 'expo-audio';
 import { useWindowDimensions } from '../layout/PortraitFallback';
@@ -34,20 +34,26 @@ const CARS: Record<BuddyId, ImageSourcePropType> = {
   roboBoombo: require('../../assets/neli-world/quest/car-roboBoombo.png'),
 };
 
-// Roadside scenery standing between the boxes (fractions of screen width).
-const SCENERY: { src: ImageSourcePropType; frac: number }[] = [
-  { src: require('../../assets/neli-world/quest/landmarks/apple-tree.png'), frac: 0.75 },
-  { src: require('../../assets/neli-world/quest/landmarks/bridge.png'), frac: 0.61 },
-  { src: require('../../assets/neli-world/quest/landmarks/sunflowers.png'), frac: 0.47 },
-  { src: require('../../assets/neli-world/quest/landmarks/windmill.png'), frac: 0.33 },
-  { src: require('../../assets/neli-world/quest/landmarks/mushroom-pond.png'), frac: 0.2 },
-];
-
-// Box centers as fractions of width, right → left. The car stops at the
-// picnic (grandma's side) after the last box.
-const BOX_FRAC = [0.82, 0.68, 0.54, 0.4, 0.28];
-const DEST_FRAC = 0.22;
+// Long horizontal world: about 7 screen widths. All drive positions are
+// world X coordinates (right → left). The camera follows the car, so only
+// the part around the car is ever visible.
+const WORLD_SCREENS = 7;
 const DRIVE_MS = 1500;
+
+// Background copies overlap by this much so no hairline shows where two
+// copies meet; each copy is drawn slightly oversized inside a clipped tile
+// so the join never lands on the image's own edge pixels.
+const BG_OVERLAP = 2;
+const BG_EDGE_CROP = 8;
+
+// Landmark art, one per gap between stops (right → left).
+const SCENERY_SRC: ImageSourcePropType[] = [
+  require('../../assets/neli-world/quest/landmarks/apple-tree.png'),
+  require('../../assets/neli-world/quest/landmarks/bridge.png'),
+  require('../../assets/neli-world/quest/landmarks/sunflowers.png'),
+  require('../../assets/neli-world/quest/landmarks/windmill.png'),
+  require('../../assets/neli-world/quest/landmarks/mushroom-pond.png'),
+];
 
 export type DriveRound = { kind: PickKind; answer: DisplayWord };
 
@@ -129,13 +135,11 @@ function QuestionView({
   round,
   choices,
   optSize,
-  promptTop,
   onCorrect,
 }: {
   round: DriveRound;
   choices: DisplayWord[];
   optSize: number;
-  promptTop: number;
   onCorrect: (firstTry: boolean) => void;
 }) {
   const { lang } = useContext(AppContext);
@@ -167,7 +171,7 @@ function QuestionView({
   const shakeX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-8, 8] });
 
   return (
-    <View style={[styles.question, { top: promptTop }]} pointerEvents="box-none">
+    <View style={styles.question} pointerEvents="box-none">
       <View style={styles.promptRow}>
         <Text style={{ fontSize: optSize * 0.32 }}>👉</Text>
         <Text
@@ -235,41 +239,84 @@ export default function DriveGame({
   const { width: W, height: H } = useWindowDimensions();
   const isFa = lang === 'fa' || lang === 'ar';
 
-  const roadH = H * 0.3;
-  const roadTop = H - roadH;
-  const boxSize = Math.max(64, Math.min(W * 0.1, H * 0.26));
-  const carW = Math.min(W * 0.2, H * 0.38);
-  const carH = carW * 0.52;
-  const carTop = H - roadH * 0.18 - carH;
-  const optSize = Math.max(64, Math.min(W * 0.14, H * 0.26));
-  const landmarkH = Math.min(W * 0.085, H * 0.24);
-  const destSize = Math.min(W * 0.16, H * 0.36);
+  // The real game area: this view sits below the title bar, so measure it
+  // and size/position everything from the measurement. The layout re-flows
+  // whenever the size changes, and nothing is pushed below the screen.
+  // Until the first measurement, fall back to the window size.
+  const [gameSize, setGameSize] = useState<{ w: number; h: number } | null>(null);
+  const onGameLayout = (e: LayoutChangeEvent) => {
+    const { width: w, height: h } = e.nativeEvent.layout;
+    if (w <= 0 || h <= 0) return;
+    const next = { w: Math.round(w), h: Math.round(h) };
+    setGameSize(prev => (prev && prev.w === next.w && prev.h === next.h ? prev : next));
+  };
+  const gw = gameSize?.w ?? W;
+  const gh = gameSize?.h ?? H;
 
-  const boxX = (i: number) => BOX_FRAC[i]! * W;
-  const boxY = H - roadH * 0.55;
+  // Every size derives from the game-area height, so the car, box, road
+  // and landmarks keep the same proportions on every device: the car is
+  // 30% of the game height, the box 55% of the car.
+  const carH = gh * 0.3;
+  const carW = carH / 0.52;
+  const boxH = carH * 0.55;
+  const boxW = boxH;
+  const roadH = gh * 0.32;
+  const roadTop = gh - roadH;
+  const boxY = roadTop + roadH * 0.45;
+  const miniSize = Math.max(24, carH * 0.3);
+  const carTop = roadTop + roadH - carH - miniSize - roadH * 0.08;
+  const optSize = Math.max(48, Math.min(gw * 0.13, gh * 0.26));
+  // Landmarks stand on the grass behind the road, never taller than the car.
+  const landmarkH = carH * 0.95;
+  const landmarkW = landmarkH * 1.3;
+  const destSize = gh * 0.34;
+
+  // World geometry (right → left): the car enters from the right, meets
+  // one box per screen, and ends at the picnic at the far LEFT end.
+  const worldW = WORLD_SCREENS * gw;
+  const boxWorldX = (i: number) => worldW - (1.5 + i) * gw;
+  const destWorldX = 0.55 * gw;
+  // The car stops BEFORE the box: the box stays ahead-left of the car
+  // with a clear gap, so tapping the box never hits the car.
+  const STOP_GAP = boxW * 0.35;
+  const stopWorldX = (i: number) => boxWorldX(i) + carW / 2 + boxW / 2 + STOP_GAP;
+  const destStopX = destWorldX + carW / 2 + destSize * 0.15;
+  const landmarkWorldX = (i: number) => {
+    const right = i === 0 ? worldW - 0.5 * gw : boxWorldX(i - 1);
+    const left = i < rounds.length ? boxWorldX(i) : destWorldX;
+    return (right + left) / 2;
+  };
+  const clampCam = (worldX: number) => Math.min(Math.max(worldX - gw * 0.62, 0), Math.max(worldW - gw, 0));
 
   const [phase, setPhase] = useState<DrivePhase>('driving');
   const [legIndex, setLegIndex] = useState(0);
-  const [boxOpen, setBoxOpen] = useState(false);
   const [boxGone, setBoxGone] = useState(false);
   const [spark, setSpark] = useState(false);
   const [choices, setChoices] = useState<DisplayWord[]>([]);
   const [collected, setCollected] = useState<DisplayWord[]>([]);
   const [flying, setFlying] = useState<DisplayWord | null>(null);
 
-  const carX = useRef(new Animated.Value(W * 1.05)).current;
+  const carX = useRef(new Animated.Value(WORLD_SCREENS * W + 80)).current;
+  const cameraX = useRef(new Animated.Value(Math.max(WORLD_SCREENS * W - W, 0))).current;
   const carBounce = useRef(new Animated.Value(0)).current;
   const bounceLoop = useRef<Animated.CompositeAnimation | null>(null);
+  const driveAnim = useRef<Animated.CompositeAnimation | null>(null);
   const wiggle = useRef(new Animated.Value(0)).current;
-  const boxFade = useRef(new Animated.Value(1)).current;
+  const zoomAnim = useRef(new Animated.Value(0)).current;
+  const dimAnim = useRef(new Animated.Value(0)).current;
+  const qAnim = useRef(new Animated.Value(0)).current;
   const flyAnim = useRef(new Animated.Value(0)).current;
   const grandmaBounce = useRef(new Animated.Value(1)).current;
-  const bgShift = useRef(new Animated.Value(0)).current;
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const collectedRef = useRef<DisplayWord[]>([]);
   const firstTriesRef = useRef<boolean[]>([]);
   const phaseRef = useRef<DrivePhase>('driving');
   phaseRef.current = phase;
+  const legIndexRef = useRef(0);
+  legIndexRef.current = legIndex;
+  const startedRef = useRef(false);
+  const headingRef = useRef<'box' | 'dest'>('box');
+  const prevSizeRef = useRef<{ w: number; h: number } | null>(null);
 
   const later = (ms: number, fn: () => void) => {
     timers.current.push(setTimeout(fn, ms));
@@ -279,6 +326,7 @@ export default function DriveGame({
     () => () => {
       timers.current.forEach(clearTimeout);
       bounceLoop.current?.stop();
+      driveAnim.current?.stop();
       void stopFaAudio();
     },
     [],
@@ -301,58 +349,115 @@ export default function DriveGame({
     carBounce.setValue(0);
   };
 
-  const driveTo = (frac: number, then?: () => void) => {
+  const driveTo = (worldX: number, then?: () => void) => {
     setPhase('driving');
     startBounce();
-    Animated.parallel([
+    driveAnim.current?.stop();
+    const anim = Animated.parallel([
       Animated.timing(carX, {
-        toValue: frac * W,
+        toValue: worldX,
         duration: DRIVE_MS,
         easing: Easing.inOut(Easing.ease),
         useNativeDriver: true,
       }),
-      Animated.timing(bgShift, {
-        toValue: 1 - frac,
+      Animated.timing(cameraX, {
+        toValue: clampCam(worldX),
         duration: DRIVE_MS,
         easing: Easing.inOut(Easing.ease),
         useNativeDriver: true,
       }),
-    ]).start(() => {
+    ]);
+    driveAnim.current = anim;
+    anim.start(() => {
       stopBounce();
       then?.();
     });
   };
 
-  // The quest starts with the drive to the first box.
-  useEffect(() => {
-    driveTo(BOX_FRAC[0]!, () => {
-      if (phaseRef.current === 'driving') setPhase('atBox');
+  const arriveAtBox = () => {
+    if (phaseRef.current === 'driving') setPhase('atBox');
+  };
+
+  const driveToBox = (i: number) => {
+    headingRef.current = 'box';
+    driveTo(stopWorldX(i), arriveAtBox);
+  };
+
+  const driveToDest = () => {
+    headingRef.current = 'dest';
+    driveTo(destStopX, () => {
+      setPhase('arrived');
+      Animated.sequence([
+        Animated.timing(grandmaBounce, { toValue: 1.12, duration: 220, useNativeDriver: true }),
+        Animated.timing(grandmaBounce, { toValue: 1, duration: 260, useNativeDriver: true }),
+      ]).start();
+      void questPlay(story.arrivalAudio);
+      later(2800, () => {
+        const tries = firstTriesRef.current;
+        const accuracy = tries.length === 0 ? 1 : tries.filter(Boolean).length / tries.length;
+        onDone(collectedRef.current, accuracy);
+      });
     });
+  };
+
+  // The drive starts by itself after the picks, once the game area is
+  // measured: the car enters from the right and drives left to the first
+  // box, stopping before it.
+  useEffect(() => {
+    if (!gameSize || startedRef.current) return;
+    startedRef.current = true;
+    carX.setValue(worldW + 80);
+    cameraX.setValue(Math.max(worldW - gw, 0));
+    driveToBox(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [gameSize]);
+
+  // If the game area is resized mid-game, re-seat the car/camera on the
+  // current target: restart the drive when en route, snap when parked.
+  useEffect(() => {
+    if (!gameSize) return;
+    const prev = prevSizeRef.current;
+    prevSizeRef.current = { w: gw, h: gh };
+    if (!startedRef.current) return;
+    if (prev && prev.w === gw && prev.h === gh) return;
+    driveAnim.current?.stop();
+    if (phaseRef.current === 'driving') {
+      if (headingRef.current === 'dest') driveToDest();
+      else driveToBox(Math.min(legIndexRef.current, rounds.length - 1));
+    } else {
+      const t = legIndexRef.current >= rounds.length ? destStopX : stopWorldX(legIndexRef.current);
+      carX.setValue(t);
+      cameraX.setValue(clampCam(t));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gw, gh]);
 
   const openBox = () => {
     if (phase !== 'atBox') return;
     setPhase('opening');
+    // Calm beat 1: the box wiggles.
     Animated.sequence([
-      Animated.timing(wiggle, { toValue: 1, duration: 180, useNativeDriver: true }),
-      Animated.timing(wiggle, { toValue: -1, duration: 180, useNativeDriver: true }),
-      Animated.timing(wiggle, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(wiggle, { toValue: 1, duration: 100, useNativeDriver: true }),
+      Animated.timing(wiggle, { toValue: -1, duration: 100, useNativeDriver: true }),
+      Animated.timing(wiggle, { toValue: 0, duration: 100, useNativeDriver: true }),
     ]).start(() => {
-      setBoxOpen(true);
-      playPop();
+      // Calm beat 2: the box zooms toward the screen center while it opens
+      // (crossfade to the open art with sparkles) as the scene gently dims.
       setSpark(true);
-      later(650, () => {
-        setSpark(false);
+      playPop();
+      later(800, () => setSpark(false));
+      Animated.parallel([
+        Animated.timing(zoomAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
+        Animated.timing(dimAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
+      ]).start(() => {
         const round = rounds[legIndex]!;
         const distract = sampleOptions(pickPool(round.kind), 2, new Set([round.answer.id]));
         setChoices(shuffle([round.answer, ...distract]));
-        // The question rises out of the open box; the box fades away.
-        Animated.timing(boxFade, { toValue: 0, duration: 400, useNativeDriver: true }).start(() =>
-          setBoxGone(true),
-        );
         setPhase('question');
         void questPlay(round.answer.audioKey);
+        // Calm beat 3: the question grows out of the open box into the
+        // center while the opened box fades away behind it.
+        Animated.timing(qAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
       });
     });
   };
@@ -362,250 +467,337 @@ export default function DriveGame({
     firstTriesRef.current.push(firstTry);
     setPhase('flying');
     void questPlay(round.answer.audioKey);
+    // The open box is already faded (the question covers it); remove it so
+    // the reverse never flashes it back.
+    setBoxGone(true);
+    setSpark(false);
     setFlying(round.answer);
     flyAnim.setValue(0);
-    Animated.timing(flyAnim, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.ease), useNativeDriver: true }).start(
-      () => {
-        setFlying(null);
-        const next = [...collectedRef.current, round.answer];
-        collectedRef.current = next;
-        setCollected(next);
-        setBoxOpen(false);
-        setBoxGone(false);
-        boxFade.setValue(1);
-        if (legIndex >= rounds.length - 1) {
-          const dest = DEST_FRAC;
-          setLegIndex(legIndex + 1);
-          driveTo(dest, () => {
-            setPhase('arrived');
-            Animated.sequence([
-              Animated.timing(grandmaBounce, { toValue: 1.12, duration: 220, useNativeDriver: true }),
-              Animated.timing(grandmaBounce, { toValue: 1, duration: 260, useNativeDriver: true }),
-            ]).start();
-            void questPlay(story.arrivalAudio);
-            later(2800, () => {
-              const tries = firstTriesRef.current;
-              const accuracy = tries.length === 0 ? 1 : tries.filter(Boolean).length / tries.length;
-              onDone(collectedRef.current, accuracy);
-            });
-          });
-        } else {
-          const nextLeg = legIndex + 1;
-          setLegIndex(nextLeg);
-          driveTo(BOX_FRAC[nextLeg]!, () => {
-            if (phaseRef.current === 'driving') setPhase('atBox');
-          });
-        }
-      },
-    );
+    Animated.sequence([
+      // The options shrink away.
+      Animated.timing(qAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      // The right item flies from the center into the car.
+      Animated.timing(flyAnim, { toValue: 1, duration: 400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      // The scene brightens again.
+      Animated.timing(dimAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => {
+      setFlying(null);
+      const next = [...collectedRef.current, round.answer];
+      collectedRef.current = next;
+      setCollected(next);
+      setBoxGone(false);
+      zoomAnim.setValue(0);
+      wiggle.setValue(0);
+      if (legIndex >= rounds.length - 1) {
+        setLegIndex(legIndex + 1);
+        driveToDest();
+      } else {
+        const nextLeg = legIndex + 1;
+        setLegIndex(nextLeg);
+        driveToBox(nextLeg);
+      }
+    });
   };
 
   const wiggleDeg = wiggle.interpolate({ inputRange: [-1, 1], outputRange: ['-10deg', '10deg'] });
-  const bgX = bgShift.interpolate({ inputRange: [0, 1], outputRange: [0, -W * 0.3] });
-  const miniSize = Math.max(28, Math.min(carW * 0.22, H * 0.09));
 
-  const flyX = flyAnim.interpolate({ inputRange: [0, 1], outputRange: [boxX(legIndex), DEST_FRAC * W] });
-  const flyY = flyAnim.interpolate({ inputRange: [0, 1], outputRange: [boxY, carTop] });
+  // Screen-space geometry for the current leg: the camera has settled, so
+  // the box-to-center and center-to-car hops are plain static numbers.
+  const leg = Math.min(legIndex, rounds.length - 1);
+  const legStopX = stopWorldX(leg);
+  const legCam = clampCam(legStopX);
+  // How far the active box must travel to reach the screen center.
+  const boxDX = gw / 2 - (boxWorldX(leg) - legCam);
+  const boxDY = gh / 2 - boxY;
+  // The answered item flies from the screen center into the car roof.
+  const flyStartY = gh * 0.48;
+  const flyDX = legStopX - legCam - gw / 2;
+  const flyDY = carTop + miniSize * 0.4 - flyStartY;
 
   return (
-    <View style={styles.root}>
-      {/* Garden background, mirrored copies; shifts gently as the car moves. */}
-      <Animated.View style={[styles.bgRow, { width: W * 2.3, height: H, transform: [{ translateX: bgX }] }]}>
-        <Image source={GARDEN_BG} style={{ width: W * 1.15, height: H }} resizeMode="cover" />
-        <Image
-          source={GARDEN_BG}
-          style={{ width: W * 1.15, height: H, transform: [{ scaleX: -1 }] }}
-          resizeMode="cover"
-        />
-      </Animated.View>
-
-      {/* Cream road drawn in code along the bottom. */}
-      <Svg width={W} height={roadH} style={{ position: 'absolute', left: 0, top: roadTop }}>
-        <Rect x={0} y={0} width={W} height={roadH} fill="#F6E7C8" />
-        <Rect x={0} y={0} width={W} height={Math.max(4, roadH * 0.06)} fill="#EAD3A8" />
-        <Line
-          x1={0}
-          y1={roadH * 0.55}
-          x2={W}
-          y2={roadH * 0.55}
-          stroke="#FFFFFF"
-          strokeWidth={Math.max(3, roadH * 0.035)}
-          strokeDasharray="16,20"
-          strokeLinecap="round"
-          opacity={0.8}
-        />
-      </Svg>
-
-      {/* Destination: picnic blanket + Grandma. */}
-      <Image
-        source={story.destination}
-        style={{
-          position: 'absolute',
-          left: 0.015 * W,
-          top: roadTop - destSize * 0.72,
-          width: destSize,
-          height: destSize * 0.72,
-        }}
-        resizeMode="contain"
-        accessibilityLabel={isFa ? 'پیک‌نیک' : 'Picnic'}
-      />
-      <Animated.View
-        style={{
-          position: 'absolute',
-          left: 0.1 * W,
-          top: roadTop - destSize * 0.95,
-          transform: [{ scale: grandmaBounce }],
-        }}
-      >
-        <Image
-          source={story.grandma}
-          style={{ width: destSize * 0.55, height: destSize * 0.95 }}
-          resizeMode="contain"
-          accessibilityLabel={isFa ? 'مادربزرگ' : 'Grandma'}
-        />
-      </Animated.View>
-
-      {/* Roadside scenery between the boxes. */}
-      {SCENERY.map((s, i) => (
-        <Image
-          key={i}
-          source={s.src}
-          style={{
-            position: 'absolute',
-            left: s.frac * W - landmarkH / 2,
-            top: roadTop - landmarkH * 1.05,
-            width: landmarkH,
-            height: landmarkH * 1.05,
-          }}
-          resizeMode="contain"
-        />
-      ))}
-
-      {/* The five mystery boxes. */}
-      {BOX_FRAC.map((frac, i) => {
-        if (i < legIndex) return null;
-        const active = i === legIndex;
-        if (!active) {
-          return (
-            <View key={i} style={{ position: 'absolute', left: frac * W - boxSize / 2, top: boxY - boxSize / 2 }}>
-              <Image source={BOX_CLOSED} style={{ width: boxSize, height: boxSize }} resizeMode="contain" />
-              <View
-                style={[
-                  styles.qBadge,
-                  {
-                    width: boxSize * 0.42,
-                    height: boxSize * 0.42,
-                    borderRadius: boxSize * 0.21,
-                  },
-                ]}
-              >
-                <Text style={{ fontSize: boxSize * 0.26, color: '#6C4EFF', fontWeight: 'bold' }}>؟</Text>
-              </View>
-            </View>
-          );
-        }
-        if (boxGone) return null;
-        return (
-          <TouchableOpacity
-            key={i}
-            onPress={openBox}
-            disabled={phase !== 'atBox'}
-            activeOpacity={0.85}
-            accessibilityLabel={isFa ? `جعبه ${i + 1}` : `Box ${i + 1}`}
-            accessibilityRole="button"
-            style={{ position: 'absolute', left: frac * W - boxSize / 2, top: boxY - boxSize / 2 }}
-          >
-            <Animated.View style={{ opacity: boxFade, transform: [{ rotate: wiggleDeg }] }}>
-              <Image
-                source={boxOpen ? BOX_OPEN : BOX_CLOSED}
-                style={{ width: boxSize, height: boxSize }}
-                resizeMode="contain"
-              />
-              {!boxOpen && (
-                <View
-                  style={[
-                    styles.qBadge,
-                    {
-                      width: boxSize * 0.42,
-                      height: boxSize * 0.42,
-                      borderRadius: boxSize * 0.21,
-                    },
-                  ]}
-                >
-                  <Text style={{ fontSize: boxSize * 0.26, color: '#6C4EFF', fontWeight: 'bold' }}>؟</Text>
-                </View>
-              )}
-            </Animated.View>
-          </TouchableOpacity>
-        );
-      })}
-      {spark && <SparkBurst x={boxX(legIndex)} y={boxY - boxSize * 0.7} size={boxSize} />}
-
-      {/* The question rises out of the open box. */}
-      {phase === 'question' && choices.length === 3 && (
-        <QuestionView
-          key={legIndex}
-          round={rounds[legIndex]!}
-          choices={choices}
-          optSize={optSize}
-          promptTop={Math.max(4, H * 0.06)}
-          onCorrect={answerCorrect}
-        />
-      )}
-
-      {/* The car with the collected items on its roof. */}
+    <View style={styles.root} onLayout={onGameLayout}>
+      {/* Camera: the long world slides past; only the part around the car shows. */}
       <Animated.View
         style={{
           position: 'absolute',
           left: 0,
-          top: carTop,
-          width: carW,
-          height: carH + miniSize,
-          transform: [{ translateX: Animated.subtract(carX, carW / 2) }],
+          top: 0,
+          width: worldW,
+          height: gh,
+          transform: [{ translateX: Animated.multiply(cameraX, -1) }],
         }}
       >
-        <View style={[styles.roof, { minHeight: miniSize }]}>
-          {collected.map(w =>
-            w.id.startsWith('painting/color/') ? (
+        {/* Garden background tiled across the whole world. Copies overlap
+            by 2px (each later copy covers the seam) and each copy is drawn
+            oversized inside a clipped tile so the join never sits on the
+            image's edge pixels. */}
+        <View style={[styles.bgRow, { width: worldW, height: gh, backgroundColor: '#CDEBF7' }]}>
+          {Array.from({ length: WORLD_SCREENS }).map((_, i) => {
+            const tileW = i === 0 ? gw : gw + BG_OVERLAP;
+            return (
               <View
-                key={w.id}
+                key={i}
                 style={{
-                  width: miniSize * 0.8,
-                  height: miniSize * 0.8,
-                  borderRadius: miniSize * 0.4,
-                  backgroundColor: COLOR_HEX[w.id] ?? '#CCCCCC',
+                  position: 'absolute',
+                  left: i === 0 ? 0 : i * gw - BG_OVERLAP,
+                  top: 0,
+                  width: tileW,
+                  height: gh,
+                  overflow: 'hidden',
                 }}
-                accessibilityLabel={w.fa}
-              />
-            ) : (
-              <WordArt key={w.id} word={w} size={miniSize * 0.9} />
-            ),
-          )}
+              >
+                <Image
+                  source={story.background ?? GARDEN_BG}
+                  style={{ position: 'absolute', left: -BG_EDGE_CROP, top: 0, width: tileW + BG_EDGE_CROP * 2, height: gh }}
+                  resizeMode="cover"
+                />
+              </View>
+            );
+          })}
         </View>
-        <Animated.View style={{ transform: [{ translateY: carBounce }] }}>
-          <Image
-            source={CARS[buddy] ?? CARS.neli}
-            style={{ width: carW, height: carH }}
-            resizeMode="contain"
-            accessibilityLabel={buddy}
+
+        {/* Cream road drawn in code along the bottom, full world length. */}
+        <Svg width={worldW} height={roadH} style={{ position: 'absolute', left: 0, top: roadTop }}>
+          <Rect x={0} y={0} width={worldW} height={roadH} fill="#F6E7C8" />
+          <Rect x={0} y={0} width={worldW} height={Math.max(4, roadH * 0.06)} fill="#EAD3A8" />
+          <Line
+            x1={0}
+            y1={roadH * 0.55}
+            x2={worldW}
+            y2={roadH * 0.55}
+            stroke="#FFFFFF"
+            strokeWidth={Math.max(3, roadH * 0.035)}
+            strokeDasharray="16,20"
+            strokeLinecap="round"
+            opacity={0.8}
           />
+        </Svg>
+
+        {/* Destination: picnic blanket + Grandma at the far LEFT end. */}
+        <Image
+          source={story.destination}
+          style={{
+            position: 'absolute',
+            left: destWorldX - destSize / 2,
+            top: roadTop - destSize * 0.72,
+            width: destSize,
+            height: destSize * 0.72,
+          }}
+          resizeMode="contain"
+          accessibilityLabel={isFa ? 'پیک‌نیک' : 'Picnic'}
+        />
+        <Animated.View
+          style={{
+            position: 'absolute',
+            left: destWorldX + destSize * 0.1,
+            top: roadTop - destSize * 0.95,
+            transform: [{ scale: grandmaBounce }],
+          }}
+        >
+          <Image
+            source={story.grandma}
+            style={{ width: destSize * 0.55, height: destSize * 0.95 }}
+            resizeMode="contain"
+            accessibilityLabel={isFa ? 'مادربزرگ' : 'Grandma'}
+          />
+        </Animated.View>
+
+        {/* One landmark in each gap between stops, feet on the grass behind the road. */}
+        {SCENERY_SRC.map((src, i) => (
+          <Image
+            key={i}
+            source={src}
+            style={{
+              position: 'absolute',
+              left: landmarkWorldX(i) - landmarkW / 2,
+              top: roadTop + 6 - landmarkH,
+              width: landmarkW,
+              height: landmarkH,
+            }}
+            resizeMode="contain"
+          />
+        ))}
+
+        {/* The five mystery boxes, one screen apart along the road. */}
+        {rounds.map((_, i) => {
+          const worldX = boxWorldX(i);
+          if (i < legIndex) return null;
+          const active = i === legIndex;
+          if (!active) {
+            return (
+              <View key={i} style={{ position: 'absolute', left: worldX - boxW / 2, top: boxY - boxH / 2, zIndex: 2 }}>
+                <Image source={BOX_CLOSED} style={{ width: boxW, height: boxH }} resizeMode="contain" />
+                <View
+                  style={[
+                    styles.qBadge,
+                    {
+                      width: boxW * 0.42,
+                      height: boxW * 0.42,
+                      borderRadius: boxW * 0.21,
+                    },
+                  ]}
+                >
+                  <Text style={{ fontSize: boxW * 0.26, color: '#6C4EFF', fontWeight: 'bold' }}>؟</Text>
+                </View>
+              </View>
+            );
+          }
+          if (boxGone) return null;
+          return (
+            <TouchableOpacity
+              key={i}
+              onPress={openBox}
+              disabled={phase !== 'atBox'}
+              activeOpacity={0.85}
+              accessibilityLabel={isFa ? `جعبه ${i + 1}` : `Box ${i + 1}`}
+              accessibilityRole="button"
+              style={{ position: 'absolute', left: worldX - boxW / 2, top: boxY - boxH / 2, zIndex: 5 }}
+            >
+              <Animated.View
+                style={{
+                  width: boxW,
+                  height: boxH,
+                  opacity: Animated.subtract(1, qAnim),
+                  transform: [
+                    { translateX: Animated.multiply(zoomAnim, boxDX) },
+                    { translateY: Animated.multiply(zoomAnim, boxDY) },
+                    { scale: zoomAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.45] }) },
+                    { rotate: wiggleDeg },
+                  ],
+                }}
+              >
+                <Image
+                  source={BOX_CLOSED}
+                  style={{ position: 'absolute', left: 0, top: 0, width: boxW, height: boxH, opacity: Animated.subtract(1, zoomAnim) }}
+                  resizeMode="contain"
+                />
+                <Image
+                  source={BOX_OPEN}
+                  style={{ position: 'absolute', left: 0, top: 0, width: boxW, height: boxH, opacity: zoomAnim }}
+                  resizeMode="contain"
+                />
+                <Animated.View style={{ opacity: Animated.subtract(1, zoomAnim) }}>
+                  <View
+                    style={[
+                      styles.qBadge,
+                      {
+                        width: boxW * 0.42,
+                        height: boxW * 0.42,
+                        borderRadius: boxW * 0.21,
+                      },
+                    ]}
+                  >
+                    <Text style={{ fontSize: boxW * 0.26, color: '#6C4EFF', fontWeight: 'bold' }}>؟</Text>
+                  </View>
+                </Animated.View>
+                {spark && <SparkBurst x={boxW / 2} y={-boxH * 0.2} size={boxW} />}
+              </Animated.View>
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* The car with the collected items on its roof. It never takes
+            touches (pointerEvents none) and paints below the box, so the
+            stopped car can never cover or steal taps from the box. */}
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: carTop,
+            width: carW,
+            height: carH + miniSize,
+            zIndex: 1,
+            transform: [{ translateX: Animated.subtract(carX, carW / 2) }],
+          }}
+        >
+          <View style={[styles.roof, { minHeight: miniSize }]}>
+            {collected.map(w =>
+              w.id.startsWith('painting/color/') ? (
+                <View
+                  key={w.id}
+                  style={{
+                    width: miniSize * 0.8,
+                    height: miniSize * 0.8,
+                    borderRadius: miniSize * 0.4,
+                    backgroundColor: COLOR_HEX[w.id] ?? '#CCCCCC',
+                  }}
+                  accessibilityLabel={w.fa}
+                />
+              ) : (
+                <WordArt key={w.id} word={w} size={miniSize * 0.9} />
+              ),
+            )}
+          </View>
+          <Animated.View style={{ transform: [{ translateY: carBounce }] }}>
+            <Image
+              source={CARS[buddy] ?? CARS.neli}
+              style={{ width: carW, height: carH }}
+              resizeMode="contain"
+              accessibilityLabel={buddy}
+            />
+          </Animated.View>
         </Animated.View>
       </Animated.View>
 
-      {/* The right answer flies from the box into the car. */}
-      {flying && (
+      {/* Gentle dim over the scene while the box opens and asks. */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          zIndex: 20,
+          backgroundColor: '#000000',
+          opacity: dimAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.35] }),
+        }}
+      />
+
+      {/* The right answer flies from the screen center into the car. */}
+      {phase === 'flying' && flying && (
+        <Animated.View
+          style={{
+            position: 'absolute',
+            left: gw / 2 - optSize * 0.4,
+            top: flyStartY - optSize * 0.4,
+            zIndex: 30,
+            opacity: flyAnim.interpolate({ inputRange: [0.7, 1], outputRange: [1, 0.4] }),
+            transform: [
+              { translateX: flyAnim.interpolate({ inputRange: [0, 1], outputRange: [0, flyDX] }) },
+              { translateY: flyAnim.interpolate({ inputRange: [0, 1], outputRange: [0, flyDY] }) },
+            ],
+          }}
+          pointerEvents="none"
+        >
+          <OptionArt word={flying} kind={rounds[leg]!.kind} size={optSize * 0.8} />
+        </Animated.View>
+      )}
+
+      {/* The question grows out of the open box into the center, and
+          shrinks away again after the answer. */}
+      {(phase === 'question' || phase === 'flying') && choices.length === 3 && (
         <Animated.View
           style={{
             position: 'absolute',
             left: 0,
+            right: 0,
             top: 0,
-            zIndex: 20,
-            opacity: flyAnim.interpolate({ inputRange: [0.7, 1], outputRange: [1, 0.4] }),
-            transform: [{ translateX: flyX }, { translateY: flyY }],
+            bottom: 0,
+            zIndex: 40,
+            opacity: qAnim,
+            transform: [{ scale: qAnim.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }) }],
           }}
-          pointerEvents="none"
+          pointerEvents={phase === 'question' ? 'box-none' : 'none'}
         >
-          <OptionArt word={flying} kind={rounds[legIndex]!.kind} size={optSize * 0.8} />
+          <QuestionView
+            key={legIndex}
+            round={rounds[legIndex]!}
+            choices={choices}
+            optSize={optSize}
+            onCorrect={answerCorrect}
+          />
         </Animated.View>
       )}
     </View>
@@ -614,7 +806,7 @@ export default function DriveGame({
 
 const styles = StyleSheet.create({
   root: { flex: 1, overflow: 'hidden' },
-  bgRow: { position: 'absolute', left: 0, top: 0, flexDirection: 'row' },
+  bgRow: { position: 'absolute', left: 0, top: 0 },
   qBadge: {
     position: 'absolute',
     left: '29%',
@@ -623,7 +815,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  question: { position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 10 },
+  question: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
   promptRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   prompt: {
     color: '#FFFFFF',
