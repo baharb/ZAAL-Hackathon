@@ -63,8 +63,10 @@ A short driving adventure built from the five picks.
 **For now there is only one story: `picnic_grandma`** — "Neli is going to a
 picnic with Grandma". Use the existing garden background
 (`assets/neli-world/quest/garden-background.png`, repeated and mirrored like
-before) and draw the road in code as a soft flat path along the bottom of the
-screen. The destination is `landmarks/picnic.png` (add a Grandma picture next to
+before) and draw the road in code along the bottom of the screen: a **soft cream road**
+(around `#F6E7C8`, slightly darker cream edges around `#EAD3A8`, a few faint
+white dashes in the middle), flat 2D, no grey asphalt. Background pictures never
+contain a road themselves. The destination is `landmarks/picnic.png` (add a Grandma picture next to
 it if the app already has one). The other landmarks in `quest/landmarks/`
 (apple tree, bridge, sunflowers, windmill, mushroom pond) can stand along the
 road as scenery between the boxes.
