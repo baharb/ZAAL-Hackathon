@@ -122,24 +122,34 @@ function SparkBurst({ x, y, size }: { x: number; y: number; size: number }) {
 function OptionArt({ word, kind, size }: { word: DisplayWord; kind: PickKind; size: number }) {
   if (kind === 'color') {
     return (
-      <View
-        style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: COLOR_HEX[word.id] ?? '#CCCCCC' }}
-        accessibilityLabel={word.fa}
-      />
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <View
+          style={{ width: size * 0.92, height: size * 0.92, borderRadius: size * 0.46, backgroundColor: COLOR_HEX[word.id] ?? '#CCCCCC' }}
+          accessibilityLabel={word.fa}
+        />
+      </View>
     );
   }
-  return <WordArt word={word} size={size} />;
+  // Every picture gets the exact same square box (contain), so herbs and
+  // peppers render equally big regardless of their art's aspect ratio.
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <WordArt word={word} size={size * 0.92} />
+    </View>
+  );
 }
 
 function QuestionView({
   round,
   choices,
   optSize,
+  lift,
   onCorrect,
 }: {
   round: DriveRound;
   choices: DisplayWord[];
   optSize: number;
+  lift: number;
   onCorrect: (firstTry: boolean) => void;
 }) {
   const { lang } = useContext(AppContext);
@@ -171,7 +181,7 @@ function QuestionView({
   const shakeX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-8, 8] });
 
   return (
-    <View style={styles.question} pointerEvents="box-none">
+    <View style={[styles.question, { paddingBottom: lift }]} pointerEvents="box-none">
       <View style={styles.promptRow}>
         <Text style={{ fontSize: optSize * 0.32 }}>👉</Text>
         <Text
@@ -263,13 +273,27 @@ export default function DriveGame({
   const roadH = gh * 0.32;
   const roadTop = gh - roadH;
   const boxY = roadTop + roadH * 0.45;
-  const miniSize = Math.max(24, carH * 0.3);
+  // Collected items ride on the roof rack: each one is ~35% of the car height.
+  const miniSize = Math.max(24, carH * 0.35);
   const carTop = roadTop + roadH - carH - miniSize - roadH * 0.08;
+  // The question must sit fully above the car + roof rack, never over it.
+  const questionLift = Math.max(0, gh - carTop) + 8;
+  const rackBarH = Math.max(5, carH * 0.055);
+  const rackBarW = carW * 0.72;
   const optSize = Math.max(48, Math.min(gw * 0.13, gh * 0.26));
   // Landmarks stand on the grass behind the road, never taller than the car.
   const landmarkH = carH * 0.95;
   const landmarkW = landmarkH * 1.3;
-  const destSize = gh * 0.34;
+  // Picnic destination: a big blanket with Grandma beside it. Grandma
+  // stands about the car's height, feet on the road near the blanket.
+  const destSize = gh * 0.46;
+  const grandmaH = carH;
+  const grandmaW = carH * 0.58;
+  const blanketW = destSize;
+  const blanketH = destSize * 0.72;
+  // Feet rest slightly down onto the road so blanket + Grandma read as
+  // close to the road, not floating behind it.
+  const destFeetY = roadTop + roadH * 0.14;
 
   // World geometry (right → left): the car enters from the right, meets
   // one box per screen, and ends at the picnic at the far LEFT end.
@@ -280,7 +304,8 @@ export default function DriveGame({
   // with a clear gap, so tapping the box never hits the car.
   const STOP_GAP = boxW * 0.35;
   const stopWorldX = (i: number) => boxWorldX(i) + carW / 2 + boxW / 2 + STOP_GAP;
-  const destStopX = destWorldX + carW / 2 + destSize * 0.15;
+  // Park the car right beside the blanket: car nose just past its edge.
+  const destStopX = destWorldX + blanketW / 2 + carW / 2 + carW * 0.06;
   const landmarkWorldX = (i: number) => {
     const right = i === 0 ? worldW - 0.5 * gw : boxWorldX(i - 1);
     const left = i < rounds.length ? boxWorldX(i) : destWorldX;
@@ -307,6 +332,7 @@ export default function DriveGame({
   const qAnim = useRef(new Animated.Value(0)).current;
   const flyAnim = useRef(new Animated.Value(0)).current;
   const grandmaBounce = useRef(new Animated.Value(1)).current;
+  const grandmaWave = useRef(new Animated.Value(0)).current;
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const collectedRef = useRef<DisplayWord[]>([]);
   const firstTriesRef = useRef<boolean[]>([]);
@@ -390,6 +416,14 @@ export default function DriveGame({
       Animated.sequence([
         Animated.timing(grandmaBounce, { toValue: 1.12, duration: 220, useNativeDriver: true }),
         Animated.timing(grandmaBounce, { toValue: 1, duration: 260, useNativeDriver: true }),
+      ]).start();
+      // Grandma waves hello: rock side to side a few times.
+      grandmaWave.setValue(0);
+      Animated.sequence([
+        Animated.timing(grandmaWave, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.timing(grandmaWave, { toValue: -1, duration: 240, useNativeDriver: true }),
+        Animated.timing(grandmaWave, { toValue: 1, duration: 240, useNativeDriver: true }),
+        Animated.timing(grandmaWave, { toValue: 0, duration: 240, useNativeDriver: true }),
       ]).start();
       void questPlay(story.arrivalAudio);
       later(2800, () => {
@@ -500,6 +534,12 @@ export default function DriveGame({
   };
 
   const wiggleDeg = wiggle.interpolate({ inputRange: [-1, 1], outputRange: ['-10deg', '10deg'] });
+  // Clean crossfade: the closed box fades out across the first half of the
+  // zoom while the open box is still invisible, then the open box fades in
+  // across the second half. The two are never both visible at once.
+  const closedOpacity = zoomAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: 'clamp' });
+  const openOpacity = zoomAnim.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' });
+  const grandmaWaveDeg = grandmaWave.interpolate({ inputRange: [-1, 1], outputRange: ['-14deg', '14deg'] });
 
   // Screen-space geometry for the current leg: the camera has settled, so
   // the box-to-center and center-to-car hops are plain static numbers.
@@ -573,15 +613,16 @@ export default function DriveGame({
           />
         </Svg>
 
-        {/* Destination: picnic blanket + Grandma at the far LEFT end. */}
+        {/* Destination: big picnic blanket + car-height Grandma at the far
+            LEFT end, feet on the road. The car parks right beside it. */}
         <Image
           source={story.destination}
           style={{
             position: 'absolute',
-            left: destWorldX - destSize / 2,
-            top: roadTop - destSize * 0.72,
-            width: destSize,
-            height: destSize * 0.72,
+            left: destWorldX - blanketW / 2,
+            top: destFeetY - blanketH,
+            width: blanketW,
+            height: blanketH,
           }}
           resizeMode="contain"
           accessibilityLabel={isFa ? 'پیک‌نیک' : 'Picnic'}
@@ -589,14 +630,14 @@ export default function DriveGame({
         <Animated.View
           style={{
             position: 'absolute',
-            left: destWorldX + destSize * 0.1,
-            top: roadTop - destSize * 0.95,
-            transform: [{ scale: grandmaBounce }],
+            left: destWorldX + blanketW * 0.28,
+            top: destFeetY - grandmaH,
+            transform: [{ scale: grandmaBounce }, { rotate: grandmaWaveDeg }],
           }}
         >
           <Image
             source={story.grandma}
-            style={{ width: destSize * 0.55, height: destSize * 0.95 }}
+            style={{ width: grandmaW, height: grandmaH }}
             resizeMode="contain"
             accessibilityLabel={isFa ? 'مادربزرگ' : 'Grandma'}
           />
@@ -668,15 +709,15 @@ export default function DriveGame({
               >
                 <Image
                   source={BOX_CLOSED}
-                  style={{ position: 'absolute', left: 0, top: 0, width: boxW, height: boxH, opacity: Animated.subtract(1, zoomAnim) }}
+                  style={{ position: 'absolute', left: 0, top: 0, width: boxW, height: boxH, opacity: closedOpacity }}
                   resizeMode="contain"
                 />
                 <Image
                   source={BOX_OPEN}
-                  style={{ position: 'absolute', left: 0, top: 0, width: boxW, height: boxH, opacity: zoomAnim }}
+                  style={{ position: 'absolute', left: 0, top: 0, width: boxW, height: boxH, opacity: openOpacity }}
                   resizeMode="contain"
                 />
-                <Animated.View style={{ opacity: Animated.subtract(1, zoomAnim) }}>
+                <Animated.View style={{ opacity: closedOpacity }}>
                   <View
                     style={[
                       styles.qBadge,
@@ -711,23 +752,39 @@ export default function DriveGame({
             transform: [{ translateX: Animated.subtract(carX, carW / 2) }],
           }}
         >
-          <View style={[styles.roof, { minHeight: miniSize }]}>
-            {collected.map(w =>
-              w.id.startsWith('painting/color/') ? (
-                <View
-                  key={w.id}
-                  style={{
-                    width: miniSize * 0.8,
-                    height: miniSize * 0.8,
-                    borderRadius: miniSize * 0.4,
-                    backgroundColor: COLOR_HEX[w.id] ?? '#CCCCCC',
-                  }}
-                  accessibilityLabel={w.fa}
-                />
-              ) : (
-                <WordArt key={w.id} word={w} size={miniSize * 0.9} />
-              ),
-            )}
+          <View style={[styles.roof, { minHeight: miniSize + rackBarH }]}>
+            <View style={styles.roofItems}>
+              {collected.map(w =>
+                w.id.startsWith('painting/color/') ? (
+                  <View
+                    key={w.id}
+                    style={{ width: miniSize, height: miniSize, alignItems: 'center', justifyContent: 'flex-end' }}
+                    accessibilityLabel={w.fa}
+                  >
+                    <View
+                      style={{
+                        width: miniSize * 0.85,
+                        height: miniSize * 0.85,
+                        borderRadius: miniSize * 0.425,
+                        backgroundColor: COLOR_HEX[w.id] ?? '#CCCCCC',
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <View key={w.id} style={{ width: miniSize, height: miniSize, alignItems: 'center', justifyContent: 'flex-end' }}>
+                    <WordArt word={w} size={miniSize * 0.9} />
+                  </View>
+                ),
+              )}
+            </View>
+            <View
+              style={{
+                width: rackBarW,
+                height: rackBarH,
+                borderRadius: rackBarH / 2,
+                backgroundColor: '#7C4A21',
+              }}
+            />
           </View>
           <Animated.View style={{ transform: [{ translateY: carBounce }] }}>
             <Image
@@ -796,6 +853,7 @@ export default function DriveGame({
             round={rounds[legIndex]!}
             choices={choices}
             optSize={optSize}
+            lift={questionLift}
             onCorrect={answerCorrect}
           />
         </Animated.View>
@@ -832,5 +890,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  roof: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 4, marginBottom: 2 },
+  roof: { flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 2 },
+  roofItems: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 4 },
 });
