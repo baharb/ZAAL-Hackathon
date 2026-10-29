@@ -87,7 +87,13 @@ export function shuffle<T>(items: T[]): T[] {
 // the answer's close list, so e.g. teal never appears with aqua (cyan) and
 // pink never appears with purple. Neutrals avoid each other too, so brown
 // never appears with gray or black.
+function colorsFarApart(a: string, b: string): boolean {
+  if (a === b) return false;
+  return !(COLOR_CLOSE[a] ?? []).includes(b) && !(COLOR_CLOSE[b] ?? []).includes(a);
+}
+
 const COLOR_CLOSE: Record<string, string[]> = {
+
   'painting/color/red': ['painting/color/orange', 'painting/color/rose', 'painting/color/pink'],
   'painting/color/orange': ['painting/color/red', 'painting/color/amber', 'painting/color/yellow'],
   'painting/color/amber': ['painting/color/orange', 'painting/color/yellow'],
@@ -113,15 +119,31 @@ export function sampleOptions(
   excludeIds: Set<string>,
 ): DisplayWord[] {
   const isColorPool = pool.length > 0 && pool.every(w => w.id.startsWith('painting/color/'));
-  if (isColorPool && excludeIds.size === 1) {
-    // A distractor pick: the one excluded id is the answer.
-    const answerId = [...excludeIds][0]!;
-    const banned = new Set([answerId, ...(COLOR_CLOSE[answerId] ?? [])]);
-    const avail = pool.filter(w => !banned.has(w.id));
-    if (avail.length >= count) return shuffle(avail).slice(0, count);
-    // Fall back to anything but the answer if the pool ever shrinks.
-    return shuffle(pool.filter(w => w.id !== answerId)).slice(0, count);
+  if (isColorPool) {
+    if (excludeIds.size === 1) {
+      // A distractor pick: the one excluded id is the answer.
+      const answerId = [...excludeIds][0]!;
+      const banned = new Set([answerId, ...(COLOR_CLOSE[answerId] ?? [])]);
+      const avail = pool.filter(w => !banned.has(w.id));
+      if (avail.length >= count) return shuffle(avail).slice(0, count);
+      // Fall back to anything but the answer if the pool ever shrinks.
+      return shuffle(pool.filter(w => w.id !== answerId)).slice(0, count);
+    }
+    // A free pick (no single right answer): the shown colors must still be
+    // far apart from each other, so e.g. red never sits next to pink.
+    const availFree = shuffle(pool.filter(w => !excludeIds.has(w.id)));
+    const pickedFree: DisplayWord[] = [];
+    for (const w of availFree) {
+      if (pickedFree.length >= count) break;
+      if (pickedFree.every(p => colorsFarApart(p.id, w.id))) pickedFree.push(w);
+    }
+    for (const w of availFree) {
+      if (pickedFree.length >= count) break;
+      if (!pickedFree.some(p => p.id === w.id)) pickedFree.push(w);
+    }
+    return pickedFree.slice(0, count);
   }
+
   const avail = pool.filter(w => !excludeIds.has(w.id));
   return shuffle(avail).slice(0, count);
 }

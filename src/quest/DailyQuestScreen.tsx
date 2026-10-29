@@ -21,12 +21,13 @@ import BuddyPicker from './BuddyPicker';
 import PicksScreen from './PicksScreen';
 import DriveGame, { DriveRound } from './DriveGame';
 import Finale from './Finale';
+import MyDaysScreen from './MyDaysScreen';
 
 // The five picks, in order: fruit, ingredient, color, ingredient (new ones),
 // food. None of the options shown earlier may appear again in the same quest.
 const PICK_STEPS: PickKind[] = ['fruit', 'ingredient', 'color', 'ingredient', 'dish'];
 
-type Phase = 'loading' | 'buddy' | 'picks' | 'drive' | 'arrived';
+type Phase = 'loading' | 'buddy' | 'picks' | 'drive' | 'arrived' | 'album';
 
 export default function DailyQuestScreen() {
   const { lang } = useContext(AppContext);
@@ -43,6 +44,7 @@ export default function DailyQuestScreen() {
   const [rounds, setRounds] = useState<DriveRound[]>([]);
   const [collected, setCollected] = useState<DisplayWord[]>([]);
   const [finalLevel, setFinalLevel] = useState(1);
+  const [albumReturn, setAlbumReturn] = useState<'buddy' | 'arrived'>('buddy');
   const [leveledUp, setLeveledUp] = useState(false);
   const picksRef = useRef<DisplayWord[]>([]);
   const usedRef = useRef<Set<string>>(new Set());
@@ -128,7 +130,29 @@ export default function DailyQuestScreen() {
         {phase === 'loading' && (
           <Text style={[styles.loading, { fontFamily: ff(lang, 'black') }, dir(lang)]}>✨</Text>
         )}
-        {phase === 'buddy' && <BuddyPicker initial={buddy} onPick={chooseBuddy} />}
+        {phase === 'buddy' && (
+          <View style={styles.startWrap}>
+            <TouchableOpacity
+              onPress={() => { setAlbumReturn('buddy'); setPhase('album'); }}
+              activeOpacity={0.8}
+              accessibilityLabel={isFa ? 'روزهای من' : 'My Days'}
+              accessibilityRole="button"
+              style={styles.albumButton}
+            >
+              <Text style={[styles.albumButtonText, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
+                {isFa ? 'روزهای من 📸' : 'My Days 📸'}
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.startBody}>
+              <BuddyPicker initial={buddy} onPick={chooseBuddy} />
+            </View>
+          </View>
+        )}
+        {phase === 'album' && (
+          <View style={styles.albumOverlay}>
+            <MyDaysScreen onBack={() => setPhase(albumReturn)} />
+          </View>
+        )}
         {phase === 'picks' && options.length === 3 && (
           <PicksScreen
             key={stepIndex}
@@ -157,7 +181,7 @@ export default function DailyQuestScreen() {
             }}
           />
         )}
-        {phase === 'arrived' && (
+        {(phase === 'arrived' || (phase === 'album' && albumReturn === 'arrived')) && (
           <Finale
             words={collected.length > 0 ? collected : picks}
             buddy={buddy}
@@ -165,6 +189,7 @@ export default function DailyQuestScreen() {
             leveledUp={leveledUp}
             level={finalLevel}
             onDone={goBack}
+            onOpenAlbum={() => { setAlbumReturn('arrived'); setPhase('album'); }}
           />
         )}
       </View>
@@ -176,6 +201,21 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#2D1B69' },
   body: { flex: 1, paddingHorizontal: 12, paddingBottom: 12 },
   loading: { color: '#FFFFFF', fontSize: 44, textAlign: 'center', marginTop: 60 },
+  startWrap: { flex: 1 },
+  startBody: { flex: 1 },
+  albumButton: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255,253,245,0.92)',
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    marginTop: 2,
+  },
+  albumButtonText: { color: '#3A2A6B', fontSize: 15 },
+  albumOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#2D1B69',
+  },
   buddyChip: {
     position: 'absolute',
     right: 14,
