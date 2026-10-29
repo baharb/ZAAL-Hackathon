@@ -186,3 +186,61 @@ inside the experience without making it harder for the child.
   right/wrong, words confused): 2–3 warm sentences in English and Farsi plus one
   idea to practice at home (e.g. "At dinner, ask her the color of the cheese").
 - No names, recordings or pictures are sent — only word ids and counts.
+
+## 6. My Family + Yalda Night (next feature, after the finale polish)
+
+Goal: connect the game to family and culture — the Persian family words diaspora
+children lose (عمو / عمه / دایی / خاله have no English equivalents) and the
+first upcoming celebration, **شب یلدا** (Yalda Night, December 21).
+
+### 6a. The family cast (premade, shared by every child)
+
+- Six family members in the **same style as the existing Grandma**
+  (`assets/neli-world/characters/Grandma/grandma_standing.webp`):
+  مامان‌بزرگ (existing Grandma), بابابزرگ, عمو, عمه, دایی, خاله. Pictures go in
+  `assets/neli-world/characters/Family/<id>.png` with ids `mamanbozorg`,
+  `bababozorg`, `amoo`, `ammeh`, `daei`, `khaleh` (transparent background,
+  standing, facing the viewer, waving pose if possible). Until a picture exists,
+  show the Grandma picture with the role word underneath.
+- Voices: `assets/audio/fa-test/family/<id>.wav` (generated from
+  `scripts/family-yalda-voices.csv`).
+- **"My family" setup** (once, changeable later from a small button): the child
+  (or parent) taps which family members they have — big pictures, each tap
+  plays the word. Saved on the device only. No names, no photos of real people.
+- **Personal touch (Muse Image, optional, after 6a works):** the child picks a
+  favorite color for each family member; Muse Image recolors that member's
+  clothes (edit of the premade picture via the `meta-image` Edge Function),
+  saved on the device; fall back to the premade picture if offline or failed.
+
+### 6b. Who do we visit today?
+
+- New first question of the quest, before the five picks: «امروز بریم پیش کی؟»
+  (recorded: `family/who-visit`) with the child's family members as options
+  (each tap plays the role word). The chosen relative replaces Grandma as the
+  host at the destination and in the finale/photo.
+
+### 6c. Yalda Night story (`yalda_night`)
+
+- Add a second entry to `stories.ts`: **شب یلدا at the chosen relative's house**.
+  The drive happens at **evening/night** (darken and tint the garden background
+  toward dusk blue in code, a moon and a few stars), the destination is the
+  relative's house with a warm lit window.
+- Picks for Yalda: the fruit pick uses **Yalda fruits** (watermelon, pomegranate,
+  plus other fruits with art + voice); one ingredient pick becomes **nuts**
+  (walnut, almonds — `nuts/*`). Colors and dish stay.
+- Finale (Yalda): instead of a picnic blanket, a **sofreh** (cloth) in the
+  chosen color with a big **watermelon slice and pomegranate** always present,
+  the fruit bowl, the nuts (آجیل) and the dish; the relative says
+  «سلام عزیزم! خوش اومدی!» on arrival and «یلدات مبارک!» at the end
+  (recorded: `yalda/khosh-oomadi`, `yalda/mobarak`). Optional: a small Hafez
+  book on the sofreh with «بیا با هم فال حافظ بگیریم!».
+- From now until December 21, the quest picks the Yalda story by default;
+  otherwise it chooses at random between the picnic and Yalda.
+
+### 6d. New words
+
+Fruits with art but no voice before (watermelon, pomegranate, strawberry,
+cherries, grapes, pear, peach, apricot, kiwi, fig, plum, mango, pineapple) and
+nuts (walnut, almonds) get voices from `scripts/family-yalda-voices.csv`
+(folders `fruits/`, `nuts/`). Add them to the fruit/nut pick lists once the
+`.wav` files exist and `faTestAudio.generated.ts` is regenerated.
