@@ -195,6 +195,8 @@ first upcoming celebration, **شب یلدا** (Yalda Night, December 21).
 
 ### 6a. The family cast (premade, shared by every child)
 
+No character wears a headscarf or hijab — keep hair visible and outfits simple and modern.
+
 - Six family members in the **same style as the existing Grandma**
   (`assets/neli-world/characters/Grandma/grandma_standing.webp`):
   مامان‌بزرگ (existing Grandma), بابابزرگ, عمو, عمه, دایی, خاله. Pictures go in
