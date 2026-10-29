@@ -9,13 +9,17 @@ import { DisplayWord, displayWordById } from './questGroups';
 export type PickKind = 'fruit' | 'ingredient' | 'color' | 'dish';
 
 // Words small kids would not meet as simple everyday foods: raw cuts, ground
-// meat and dried herbs. (The info-cook instruction clip has no catalog art,
-// so it can never appear in a pool in the first place.)
+// meat and dried herbs, plus non-food items a child would never pick to eat
+// (water, cooking oil, salt). (The info-cook instruction clip has no catalog
+// art, so it can never appear in a pool in the first place.)
 const INGREDIENT_EXCLUDE = new Set([
   'ingredients/filletChickenRaw',
   'ingredients/groundBeefRaw',
   'ingredients/cutRawBeefForStew',
   'ingredients/driedMint',
+  'ingredients/water',
+  'ingredients/oil',
+  'ingredients/salt',
 ]);
 
 const FRUIT_IDS = new Set([
@@ -79,12 +83,45 @@ export function shuffle<T>(items: T[]): T[] {
   return arr;
 }
 
+// Colors that look close to each other: a wrong option must never come from
+// the answer's close list, so e.g. teal never appears with aqua (cyan) and
+// pink never appears with purple. Neutrals avoid each other too, so brown
+// never appears with gray or black.
+const COLOR_CLOSE: Record<string, string[]> = {
+  'painting/color/red': ['painting/color/orange', 'painting/color/rose', 'painting/color/pink'],
+  'painting/color/orange': ['painting/color/red', 'painting/color/amber', 'painting/color/yellow'],
+  'painting/color/amber': ['painting/color/orange', 'painting/color/yellow'],
+  'painting/color/yellow': ['painting/color/amber', 'painting/color/lime'],
+  'painting/color/lime': ['painting/color/yellow', 'painting/color/green'],
+  'painting/color/green': ['painting/color/lime', 'painting/color/teal'],
+  'painting/color/teal': ['painting/color/green', 'painting/color/aqua'],
+  'painting/color/aqua': ['painting/color/teal', 'painting/color/blue'],
+  'painting/color/blue': ['painting/color/aqua', 'painting/color/indigo'],
+  'painting/color/indigo': ['painting/color/blue', 'painting/color/purple'],
+  'painting/color/purple': ['painting/color/indigo', 'painting/color/rose', 'painting/color/pink'],
+  'painting/color/rose': ['painting/color/purple', 'painting/color/pink', 'painting/color/red'],
+  'painting/color/pink': ['painting/color/rose', 'painting/color/purple', 'painting/color/red'],
+  'painting/color/brown': ['painting/color/gray', 'painting/color/black', 'painting/color/orange'],
+  'painting/color/gray': ['painting/color/brown', 'painting/color/black'],
+  'painting/color/black': ['painting/color/brown', 'painting/color/gray'],
+};
+
 /** 3 random options from the whole pool, skipping ids already shown. */
 export function sampleOptions(
   pool: DisplayWord[],
   count: number,
   excludeIds: Set<string>,
 ): DisplayWord[] {
+  const isColorPool = pool.length > 0 && pool.every(w => w.id.startsWith('painting/color/'));
+  if (isColorPool && excludeIds.size === 1) {
+    // A distractor pick: the one excluded id is the answer.
+    const answerId = [...excludeIds][0]!;
+    const banned = new Set([answerId, ...(COLOR_CLOSE[answerId] ?? [])]);
+    const avail = pool.filter(w => !banned.has(w.id));
+    if (avail.length >= count) return shuffle(avail).slice(0, count);
+    // Fall back to anything but the answer if the pool ever shrinks.
+    return shuffle(pool.filter(w => w.id !== answerId)).slice(0, count);
+  }
   const avail = pool.filter(w => !excludeIds.has(w.id));
   return shuffle(avail).slice(0, count);
 }
