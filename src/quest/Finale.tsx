@@ -10,7 +10,7 @@ import { dir, ff } from '../theme/fonts';
 import { FaTestAudioKey } from '../assets/faTestAudio.generated';
 import { playFaAudioSequence } from '../utils/faAudio';
 import { isQuestMuted, questPlay } from './questSound';
-import { BuddyId } from './buddyStore';
+import { BUDDIES, BuddyId } from './buddyStore';
 import { DisplayWord } from './questGroups';
 import { COLOR_HEX } from './pickLists';
 import { Story } from './stories';
@@ -40,15 +40,20 @@ export default function Finale({
   const pops = useRef(words.map(() => new Animated.Value(0))).current;
   const buddyBounce = useRef(new Animated.Value(1)).current;
 
-  // Checkered picnic blanket: blue squares drawn in code.
-  const blanketW = Math.min(width * 0.72, 520);
+  // Title uses the chosen buddy's name, never a hard-coded one.
+  const buddyName = BUDDIES.find(b => b.id === buddy);
+  const titleFa = `سفر ${buddyName?.fa ?? 'نلی'}: پیک‌نیک با مادربزرگ`;
+  const titleEn = `${buddyName?.en ?? "Neli"}'s Drive: picnic with Grandma`;
+
+  // Big checkered picnic blanket on the grass: blue squares drawn in code.
+  const blanketW = Math.min(width * 0.82, 640);
   const cols = 10;
   const rows = 3;
   const cell = blanketW / cols;
   const blanketH = cell * rows;
-  const itemSize = cell * 1.15;
+  const itemSize = cell * 1.55;
 
-  const sideSize = Math.min(width * 0.16, height * 0.26);
+  const sideSize = Math.min(width * 0.2, height * 0.34);
 
   useEffect(() => {
     let alive = true;
@@ -89,10 +94,16 @@ export default function Finale({
 
   return (
     <View style={styles.root}>
+      <Image
+        source={story.background}
+        style={StyleSheet.absoluteFillObject}
+        resizeMode="cover"
+        accessibilityLabel={isFa ? 'باغ' : 'Garden'}
+      />
       <Text
         style={[styles.title, { fontFamily: ff(lang, 'black'), fontSize: Math.max(17, height * 0.06) }, dir(lang)]}
       >
-        {isFa ? story.titleFa : story.titleEn} 🎉
+        {isFa ? titleFa : titleEn} 🎉
       </Text>
       {leveledUp && (
         <Text
@@ -175,14 +186,27 @@ export default function Finale({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: { color: '#FFFFFF', textAlign: 'center', marginBottom: 4 },
+  root: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#8FD694' },
+  title: {
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 4,
+    textShadowColor: 'rgba(45,27,105,0.85)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+  },
   level: { color: '#FACC15', marginBottom: 4 },
   blanket: { overflow: 'hidden', marginVertical: 8, alignItems: 'center', justifyContent: 'center' },
   cells: { position: 'absolute', left: 0, top: 0, flexDirection: 'row', flexWrap: 'wrap' },
   items: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   cast: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 12, marginTop: 4 },
-  bye: { color: '#FFFFFF', marginTop: 4 },
+  bye: {
+    color: '#FFFFFF',
+    marginTop: 4,
+    textShadowColor: 'rgba(45,27,105,0.85)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+  },
   home: { backgroundColor: '#22C55E', justifyContent: 'center', marginTop: 8 },
   homeText: { color: '#FFFFFF' },
 });
