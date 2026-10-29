@@ -193,17 +193,22 @@ Goal: connect the game to family and culture — the Persian family words diaspo
 children lose (عمو / عمه / دایی / خاله have no English equivalents) and the
 first upcoming celebration, **شب یلدا** (Yalda Night, December 21).
 
-### 6a. The family cast (premade, shared by every child)
+### 6a. The family cast (premade, one family per buddy)
 
 No character wears a headscarf or hijab — keep hair visible and outfits simple and modern.
 
-- Six family members in the **same style as the existing Grandma**
-  (`assets/neli-world/characters/Grandma/grandma_standing.webp`):
-  مامان‌بزرگ (existing Grandma), بابابزرگ, عمو, عمه, دایی, خاله. Pictures go in
-  `assets/neli-world/characters/Family/<id>.png` with ids `mamanbozorg`,
-  `bababozorg`, `amoo`, `ammeh`, `daei`, `khaleh` (transparent background,
-  standing, facing the viewer, waving pose if possible). Until a picture exists,
-  show the Grandma picture with the role word underneath.
+- **Each buddy has its own family** in the buddy's species and style, made with
+  Muse Image by `scripts/generate_family_images.py` (the buddy's picture is the
+  style reference): Neli's family are cats (her مامان‌بزرگ is the existing
+  Grandma), Aidin's are owls, Mila's bunnies, Lila's lambs, Dara's giraffes,
+  Robo Boombo's robots.
+- Six relatives per buddy: مامان‌بزرگ, بابابزرگ, عمو, عمه, دایی, خاله, with ids
+  `mamanbozorg`, `bababozorg`, `amoo`, `ammeh`, `daei`, `khaleh`. Pictures:
+  `assets/neli-world/characters/Family/<buddyId>/<memberId>.png` (transparent
+  background); Neli's grandma is `characters/Grandma/grandma_standing.webp`.
+  The family shown always matches the chosen buddy. If a picture is missing,
+  fall back to Neli's family picture of the same member, then to the Grandma
+  picture with the role word underneath.
 - Voices: `assets/audio/fa-test/family/<id>.wav` (generated from
   `scripts/family-yalda-voices.csv`).
 - **"My family" setup** (once, changeable later from a small button): the child
