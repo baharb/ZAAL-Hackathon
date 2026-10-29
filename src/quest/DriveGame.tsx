@@ -271,7 +271,10 @@ export default function DriveGame({
   const boxH = carH * 0.55;
   const boxW = boxH;
   const roadH = gh * 0.32;
-  const roadTop = gh - roadH;
+  // A strip of grass stays under the road so the car never touches the
+  // screen bottom on short phones.
+  const roadPad = Math.max(4, gh * 0.02);
+  const roadTop = gh - roadH - roadPad;
   const boxY = roadTop + roadH * 0.45;
   // Collected items ride on the roof rack: each one is ~35% of the car height.
   const miniSize = Math.max(24, carH * 0.35);
@@ -284,11 +287,11 @@ export default function DriveGame({
   // Landmarks stand on the grass behind the road, never taller than the car.
   const landmarkH = carH * 0.95;
   const landmarkW = landmarkH * 1.3;
-  // Picnic destination: a big blanket with Grandma beside it. Grandma
-  // stands about the car's height, feet on the road near the blanket.
+  // Picnic destination: a big blanket with Grandma right at its edge,
+  // a head taller than the car, feet on the road near the blanket.
   const destSize = gh * 0.46;
-  const grandmaH = carH;
-  const grandmaW = carH * 0.58;
+  const grandmaH = carH * 1.2;
+  const grandmaW = grandmaH * 0.58;
   const blanketW = destSize;
   const blanketH = destSize * 0.72;
   // Feet rest slightly down onto the road so blanket + Grandma read as
@@ -316,6 +319,7 @@ export default function DriveGame({
   const [phase, setPhase] = useState<DrivePhase>('driving');
   const [legIndex, setLegIndex] = useState(0);
   const [boxGone, setBoxGone] = useState(false);
+  const [boxOpen, setBoxOpen] = useState(false);
   const [spark, setSpark] = useState(false);
   const [choices, setChoices] = useState<DisplayWord[]>([]);
   const [collected, setCollected] = useState<DisplayWord[]>([]);
@@ -475,9 +479,10 @@ export default function DriveGame({
       Animated.timing(wiggle, { toValue: -1, duration: 100, useNativeDriver: true }),
       Animated.timing(wiggle, { toValue: 0, duration: 100, useNativeDriver: true }),
     ]).start(() => {
-      // Calm beat 2: the box zooms toward the screen center while it opens
-      // (crossfade to the open art with sparkles) as the scene gently dims.
+      // Calm beat 2: the box zooms toward the screen center, swapping to
+      // the open art with sparkles, as the scene gently dims.
       setSpark(true);
+      setBoxOpen(true);
       playPop();
       later(800, () => setSpark(false));
       Animated.parallel([
@@ -520,6 +525,7 @@ export default function DriveGame({
       collectedRef.current = next;
       setCollected(next);
       setBoxGone(false);
+      setBoxOpen(false);
       zoomAnim.setValue(0);
       wiggle.setValue(0);
       if (legIndex >= rounds.length - 1) {
@@ -534,11 +540,8 @@ export default function DriveGame({
   };
 
   const wiggleDeg = wiggle.interpolate({ inputRange: [-1, 1], outputRange: ['-10deg', '10deg'] });
-  // Clean crossfade: the closed box fades out across the first half of the
-  // zoom while the open box is still invisible, then the open box fades in
-  // across the second half. The two are never both visible at once.
-  const closedOpacity = zoomAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: 'clamp' });
-  const openOpacity = zoomAnim.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' });
+  // Only one box art is ever mounted (see below): closed until the child
+  // taps, open afterwards, both in the exact same box.
   const grandmaWaveDeg = grandmaWave.interpolate({ inputRange: [-1, 1], outputRange: ['-14deg', '14deg'] });
 
   // Screen-space geometry for the current leg: the camera has settled, so
@@ -630,7 +633,7 @@ export default function DriveGame({
         <Animated.View
           style={{
             position: 'absolute',
-            left: destWorldX + blanketW * 0.28,
+            left: destWorldX + blanketW / 2 - grandmaW * 0.4,
             top: destFeetY - grandmaH,
             transform: [{ scale: grandmaBounce }, { rotate: grandmaWaveDeg }],
           }}
@@ -698,7 +701,7 @@ export default function DriveGame({
                 style={{
                   width: boxW,
                   height: boxH,
-                  opacity: Animated.subtract(1, qAnim),
+                  opacity: qAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
                   transform: [
                     { translateX: Animated.multiply(zoomAnim, boxDX) },
                     { translateY: Animated.multiply(zoomAnim, boxDY) },
@@ -707,17 +710,14 @@ export default function DriveGame({
                   ],
                 }}
               >
+                {/* One art at a time in the exact same box: closed until the
+                    tap, open afterwards — never stacked together. */}
                 <Image
-                  source={BOX_CLOSED}
-                  style={{ position: 'absolute', left: 0, top: 0, width: boxW, height: boxH, opacity: closedOpacity }}
+                  source={boxOpen ? BOX_OPEN : BOX_CLOSED}
+                  style={{ position: 'absolute', left: 0, top: 0, width: boxW, height: boxH }}
                   resizeMode="contain"
                 />
-                <Image
-                  source={BOX_OPEN}
-                  style={{ position: 'absolute', left: 0, top: 0, width: boxW, height: boxH, opacity: openOpacity }}
-                  resizeMode="contain"
-                />
-                <Animated.View style={{ opacity: closedOpacity }}>
+                {!boxOpen && (
                   <View
                     style={[
                       styles.qBadge,
@@ -730,7 +730,7 @@ export default function DriveGame({
                   >
                     <Text style={{ fontSize: boxW * 0.26, color: '#6C4EFF', fontWeight: 'bold' }}>؟</Text>
                   </View>
-                </Animated.View>
+                )}
                 {spark && <SparkBurst x={boxW / 2} y={-boxH * 0.2} size={boxW} />}
               </Animated.View>
             </TouchableOpacity>

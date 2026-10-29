@@ -11,6 +11,7 @@ import { AppContext } from '../store/AppContext';
 import { useNav } from '../store/NavContext';
 import { dir, ff } from '../theme/fonts';
 import { stopFaAudio } from '../utils/faAudio';
+import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { recordQuestResult } from '../store/questLevel';
 import { BuddyId, loadBuddy, saveBuddy } from './buddyStore';
 import { DisplayWord } from './questGroups';
@@ -106,22 +107,48 @@ export default function DailyQuestScreen() {
 
   const buddyFace = Math.max(40, height * 0.07);
 
+  // The drive and the picnic are full screen: no purple title bar, just a
+  // floating close button. The buddy picker and the picks keep the bar.
+  const fullScreen =
+    phase === 'drive' ||
+    phase === 'arrived' ||
+    (phase === 'album' && albumReturn === 'arrived');
+  const closeSize = Math.max(44, Math.min(height * 0.12, 64));
+
   return (
     <View style={styles.root}>
-      <TopBar
-        title="My Daily Quest"
-        titleFa="بازی امروز من"
-        dark
-        showClose
-        onBack={goBack}
-      />
+      {!fullScreen && (
+        <TopBar
+          title="My Daily Quest"
+          titleFa="بازی امروز من"
+          dark
+          showClose
+          onBack={goBack}
+        />
+      )}
+      {fullScreen && (
+        <TouchableOpacity
+          onPress={goBack}
+          activeOpacity={0.8}
+          accessibilityLabel={isFa ? 'بستن' : 'Close'}
+          accessibilityRole="button"
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={[styles.closeFloat, { top: insets.top + 8, width: closeSize, height: closeSize }]}
+        >
+          <Image
+            source={neliWorldAssets.ui.close}
+            style={{ width: closeSize * 0.62, height: closeSize * 0.62 }}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      )}
       {(phase === 'picks' || phase === 'drive' || phase === 'arrived') && (
         <TouchableOpacity
           onPress={() => setPhase('buddy')}
           activeOpacity={0.8}
           accessibilityLabel={isFa ? 'تغییر دوست' : 'Change buddy'}
           accessibilityRole="button"
-          style={[styles.buddyChip, { top: topBarHeight(height, insets.top, {}) + 4 }]}
+          style={[styles.buddyChip, { top: fullScreen ? insets.top + 8 : topBarHeight(height, insets.top, {}) + 4 }]}
         >
           <Image source={buddyPose(buddy, 'base')} style={{ width: buddyFace, height: buddyFace }} resizeMode="contain" />
         </TouchableOpacity>
@@ -146,11 +173,6 @@ export default function DailyQuestScreen() {
             <View style={styles.startBody}>
               <BuddyPicker initial={buddy} onPick={chooseBuddy} />
             </View>
-          </View>
-        )}
-        {phase === 'album' && (
-          <View style={styles.albumOverlay}>
-            <MyDaysScreen onBack={() => setPhase(albumReturn)} />
           </View>
         )}
         {phase === 'picks' && options.length === 3 && (
@@ -192,6 +214,12 @@ export default function DailyQuestScreen() {
             onOpenAlbum={() => { setAlbumReturn('arrived'); setPhase('album'); }}
           />
         )}
+        {/* Rendered last so it always sits on top of the finale. */}
+        {phase === 'album' && (
+          <View style={styles.albumOverlay}>
+            <MyDaysScreen onBack={() => setPhase(albumReturn)} />
+          </View>
+        )}
       </View>
     </View>
   );
@@ -215,6 +243,18 @@ const styles = StyleSheet.create({
   albumOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#2D1B69',
+    zIndex: 50,
+    elevation: 50,
+  },
+  closeFloat: {
+    position: 'absolute',
+    left: 12,
+    zIndex: 60,
+    elevation: 60,
+    backgroundColor: 'rgba(45,27,105,0.55)',
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buddyChip: {
     position: 'absolute',

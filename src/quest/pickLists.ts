@@ -112,6 +112,29 @@ const COLOR_CLOSE: Record<string, string[]> = {
   'painting/color/black': ['painting/color/brown', 'painting/color/gray'],
 };
 
+// Foods and dishes that look too much alike for a small child to tell
+// apart at a glance: citrus rounds, red rounds, beige legumes, rice dishes
+// and salads. A wrong option must never come from the answer's list, and a
+// free pick never shows two of them side by side - so lemon never sits next
+// to orange. (No tangerine or zucchini in the catalog, so no pairs for them.)
+const TOO_SIMILAR: Record<string, string[]> = {
+  'ingredients/lemon': ['ingredients/orange'],
+  'ingredients/orange': ['ingredients/lemon'],
+  'ingredients/apple': ['ingredients/tomato'],
+  'ingredients/tomato': ['ingredients/apple'],
+  'ingredients/chickpea': ['ingredients/lappeh'],
+  'ingredients/lappeh': ['ingredients/chickpea'],
+  'cooking/name/sabzi-polo': ['cooking/name/zereshk-polo'],
+  'cooking/name/zereshk-polo': ['cooking/name/sabzi-polo'],
+  'cooking/name/mast-khiar': ['cooking/name/shirazi-salad'],
+  'cooking/name/shirazi-salad': ['cooking/name/mast-khiar'],
+};
+
+function foodsFarApart(a: string, b: string): boolean {
+  if (a === b) return false;
+  return !(TOO_SIMILAR[a] ?? []).includes(b) && !(TOO_SIMILAR[b] ?? []).includes(a);
+}
+
 /** 3 random options from the whole pool, skipping ids already shown. */
 export function sampleOptions(
   pool: DisplayWord[],
@@ -144,6 +167,21 @@ export function sampleOptions(
     return pickedFree.slice(0, count);
   }
 
-  const avail = pool.filter(w => !excludeIds.has(w.id));
-  return shuffle(avail).slice(0, count);
+  // When a single id is excluded it is the answer (a drive question), so
+  // look-alikes of the answer are banned too. Otherwise this is a free
+  // pick and the shown options must be far apart from each other.
+  const answerId = excludeIds.size === 1 ? [...excludeIds][0]! : null;
+  const avail = shuffle(pool.filter(w => !excludeIds.has(w.id)));
+  const picked: DisplayWord[] = [];
+  for (const w of avail) {
+    if (picked.length >= count) break;
+    if (answerId && !foodsFarApart(answerId, w.id)) continue;
+    if (picked.every(p => foodsFarApart(p.id, w.id))) picked.push(w);
+  }
+  // Tiny pools fall back to anything but the answer, like the colors do.
+  for (const w of avail) {
+    if (picked.length >= count) break;
+    if (!picked.some(p => p.id === w.id)) picked.push(w);
+  }
+  return picked.slice(0, count);
 }
