@@ -11,6 +11,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Animated, Image, LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { createAudioPlayer } from 'expo-audio';
 import { useWindowDimensions } from '../layout/PortraitFallback';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppContext } from '../store/AppContext';
 import { dir, ff } from '../theme/fonts';
 import { FaTestAudioKey } from '../assets/faTestAudio.generated';
@@ -136,6 +137,7 @@ export default function Finale({
 }) {
   const { lang } = useContext(AppContext);
   const { width: W, height: H } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isFa = lang === 'fa' || lang === 'ar';
 
   const [celebrating, setCelebrating] = useState(false);
@@ -182,11 +184,9 @@ export default function Finale({
   const byeFont = Math.min(17, Math.max(12, 14 * k));
   const buttonH = Math.max(38, Math.min(54, gh * 0.13));
   const buttonFont = Math.max(13, buttonH * 0.34);
-
-  // The cast sits at the blanket's edges, feet on the grass.
-  const charH = gh * 0.32;
-  const buddyW = charH;
-  const grandmaW = charH * 0.58;
+  // Same size as the floating close button above this scene, so the album
+  // chip can sit just below it without overlapping.
+  const closeSize = Math.max(44, Math.min(gh * 0.12, 64));
 
   // Blanket on the grass at the bottom, in the child's chosen color.
   const blanketW = Math.min(gw * 0.46, gh * 1.12, 430);
@@ -197,10 +197,23 @@ export default function Finale({
   const blanketBottom = Math.max(2, 4 * k);
 
   // Dishes served on the blanket: big dish plate in the middle, fruit bowl
-  // and two small ingredient plates beside it.
-  const bigPlate = Math.min(blanketW * 0.3, blanketH * 0.78);
-  const smallPlate = Math.min(blanketW * 0.21, blanketH * 0.58);
+  // and two small ingredient plates beside it. The whole row (3 small + 1
+  // big + gaps) is shrunk to fit inside 90% of the blanket, so on wide
+  // tablets the side plates never hang off the blanket's edges.
+  const bigPlateRaw = Math.min(blanketW * 0.3, blanketH * 0.78);
+  const smallPlateRaw = Math.min(blanketW * 0.21, blanketH * 0.58);
   const foodGap = Math.max(3, 6 * k);
+  const fitScale = Math.min(1, (blanketW * 0.9) / (bigPlateRaw + smallPlateRaw * 3 + foodGap * 3));
+  const bigPlate = bigPlateRaw * fitScale;
+  const smallPlate = smallPlateRaw * fitScale;
+
+  // The cast stands right next to the blanket, both the same height, so
+  // Grandma reads as AT the picnic instead of tiny at the far edge.
+  const charH = gh * 0.32;
+  const charW = charH * 0.85;
+  // Distance of each figure from its screen edge: the blanket's edge minus
+  // a small overlap, so each figure tucks just against the blanket.
+  const castInset = Math.max(2, gw / 2 - blanketW / 2 - charW * 0.55);
 
   // Polaroid card size (also from k, so it fits small phones).
   const cardW = Math.min(gw * 0.44, gh * 0.92, 330);
@@ -273,8 +286,8 @@ export default function Finale({
     });
   };
 
-  // The polaroid flies from the center into the album chip (top corner).
-  const flyX = cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0, gw * 0.3] });
+  // The polaroid flies from the center into the album chip (top-left).
+  const flyX = cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -gw * 0.3] });
   const flyY = cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -gh * 0.32] });
   const flyScale = cardAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] });
   const flyOpacity = cardAnim.interpolate({ inputRange: [0.7, 1], outputRange: [1, 0.2] });
@@ -354,9 +367,11 @@ export default function Finale({
           </Text>
         </View>
       )}
-      {/* Album chip: the polaroid flies into it after the photo. */}
+      {/* Album chip, top-LEFT so the buddy avatar (top-right) never covers
+          it, and low enough to clear the floating close button. The
+          polaroid flies into it after the photo. */}
       {(photoPhase === 'flying' || photoPhase === 'saved') && (
-        <View style={[styles.albumChip, { top: Math.max(2, 4 * k), paddingHorizontal: Math.max(8, 12 * k) }]}>
+        <View style={[styles.albumChip, { top: insets.top + 8 + closeSize + 6, left: 8, paddingHorizontal: Math.max(8, 12 * k) }]}>
           <Text style={[styles.albumChipText, { fontFamily: ff(lang, 'black'), fontSize: levelFont }, dir(lang)]}>
             {isFa ? 'روزهای من 📸' : 'My Days 📸'}
           </Text>
@@ -399,7 +414,7 @@ export default function Finale({
         <View
           style={[
             styles.buddySide,
-            isFa ? { right: Math.max(2, 4 * k) } : { left: Math.max(2, 4 * k) },
+            isFa ? { right: castInset } : { left: castInset },
             { bottom: blanketBottom },
           ]}
           pointerEvents="none"
@@ -407,7 +422,7 @@ export default function Finale({
           <Animated.View style={{ transform: [{ scale: buddyBounce }] }}>
             <Image
               source={buddyPose(buddy, celebrating ? 'celebration' : 'base')}
-              style={{ width: buddyW, height: charH }}
+              style={{ width: charW, height: charH }}
               resizeMode="contain"
               accessibilityLabel={buddy}
             />
@@ -416,14 +431,14 @@ export default function Finale({
         <View
           style={[
             styles.grandmaSide,
-            isFa ? { left: Math.max(2, 4 * k) } : { right: Math.max(2, 4 * k) },
+            isFa ? { left: castInset } : { right: castInset },
             { bottom: blanketBottom },
           ]}
           pointerEvents="none"
         >
           <Image
             source={story.grandma}
-            style={{ width: grandmaW, height: charH }}
+            style={{ width: charW, height: charH }}
             resizeMode="contain"
             accessibilityLabel={isFa ? 'مادربزرگ' : 'Grandma'}
           />
@@ -539,7 +554,6 @@ const styles = StyleSheet.create({
   level: { color: '#B45309', textAlign: 'center' },
   albumChip: {
     position: 'absolute',
-    right: 8,
     backgroundColor: 'rgba(255,253,245,0.94)',
     borderRadius: 999,
     paddingVertical: 4,
