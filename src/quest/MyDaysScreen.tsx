@@ -3,20 +3,35 @@
 // No Modal here on purpose: every Modal needs a landscape prop on iPhone.
 
 import React, { useContext, useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import { AppContext } from '../store/AppContext';
 import { dir, ff } from '../theme/fonts';
 import { BUDDIES } from './buddyStore';
 import { MyDayEntry, loadMyDays } from './myDaysStore';
+import { STORIES } from './stories';
+import { COLOR_HEX } from './pickLists';
+import { buddyPose } from './questTheme';
 import WordArt from './WordArt';
+import Balloon from './Balloon';
 import { displayWordById } from './questGroups';
 
+// The album card shows the same picnic scene at a small size: garden
+// background, the counted fruit in a row, the dish, the tied balloons,
+// Grandma and the buddy at the blanket's edges. Nothing may overflow.
 function DayCard({ entry, cardW }: { entry: MyDayEntry; cardW: number }) {
   const { lang } = useContext(AppContext);
   const isFa = lang === 'fa' || lang === 'ar';
   const buddyName = BUDDIES.find(b => b.id === entry.buddy);
+  const story = STORIES.find(s => s.id === entry.storyId);
   const photoH = cardW * 0.52;
+  const fruitPick = entry.picks[0];
+  const dishPick = entry.picks[2];
+  const fruitWord = fruitPick ? displayWordById(fruitPick.id) : null;
+  const dishWord = dishPick ? displayWordById(dishPick.id) : null;
+  const fruitCount = Math.min(Math.max(fruitPick?.count ?? 1, 1), 5);
+  const balloonIds = (entry.balloonIds ?? []).slice(0, 3);
+  const castH = photoH * 0.52;
   return (
     <View style={[styles.card, { width: cardW, borderRadius: cardW * 0.05 }]}>
       <View
@@ -25,16 +40,68 @@ function DayCard({ entry, cardW }: { entry: MyDayEntry; cardW: number }) {
           {
             height: photoH,
             borderRadius: cardW * 0.03,
-            backgroundColor: entry.colorHex,
           },
         ]}
       >
-        <View style={styles.photoRow}>
-          {entry.picks.slice(0, 5).map(p => {
-            const word = displayWordById(p.id);
-            if (!word) return null;
-            return <WordArt key={p.id} word={word} size={photoH * 0.52} />;
-          })}
+        {story && (
+          <Image
+            source={story.background}
+            style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, width: '100%', height: '100%' }}
+            resizeMode="cover"
+          />
+        )}
+        {balloonIds.length > 0 && (
+          <View style={{ position: 'absolute', top: 2, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 2 }}>
+            {balloonIds.map(id => (
+              <Balloon key={id} color={COLOR_HEX[id] ?? '#CCCCCC'} size={photoH * 0.16} />
+            ))}
+          </View>
+        )}
+        {story && (
+          <Image
+            source={story.grandma}
+            style={{ position: 'absolute', left: 4, bottom: 2, width: castH * 0.85, height: castH }}
+            resizeMode="contain"
+          />
+        )}
+        <Image
+          source={buddyPose(entry.buddy, 'celebration')}
+          style={{ position: 'absolute', right: 4, bottom: 2, width: castH * 0.85, height: castH }}
+          resizeMode="contain"
+        />
+        <View
+          style={{
+            position: 'absolute',
+            left: castH * 0.7,
+            right: castH * 0.7,
+            bottom: 2,
+            height: photoH * 0.36,
+            borderRadius: 6,
+            overflow: 'hidden',
+            backgroundColor: entry.colorHex,
+            borderWidth: 1.5,
+            borderColor: '#FFFFFF',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+          }}
+        >
+          {Array.from({ length: 16 }).map((_, i) => (
+            <View
+              key={i}
+              style={{
+                width: '12.5%',
+                height: '50%',
+                backgroundColor: (Math.floor(i / 8) + i) % 2 === 0 ? entry.colorHex : 'rgba(255,255,255,0.88)',
+              }}
+            />
+          ))}
+          <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+            {fruitWord &&
+              Array.from({ length: fruitCount }).map((_, i) => (
+                <WordArt key={i} word={fruitWord} size={photoH * 0.15} />
+              ))}
+            {dishWord && <WordArt word={dishWord} size={photoH * 0.24} />}
+          </View>
         </View>
       </View>
       <Text

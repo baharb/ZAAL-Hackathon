@@ -103,23 +103,29 @@ export default function DailyQuestScreen() {
   };
 
   const buddyFace = Math.max(40, height * 0.07);
+  // The purple bar shows only where a parent or the picker needs it.
+  // During the drive and at the picnic the game owns the whole screen
+  // (only the floating buddy chip stays).
+  const showBar = phase === 'loading' || phase === 'buddy' || phase === 'picks';
 
   return (
     <View style={styles.root}>
-      <TopBar
-        title="My Daily Quest"
-        titleFa="بازی امروز من"
-        dark
-        showClose
-        onBack={goBack}
-      />
+      {showBar && (
+        <TopBar
+          title="My Daily Quest"
+          titleFa="بازی امروز من"
+          dark
+          showClose
+          onBack={goBack}
+        />
+      )}
       {(phase === 'picks' || phase === 'drive' || phase === 'arrived') && (
         <TouchableOpacity
           onPress={() => setPhase('buddy')}
           activeOpacity={0.8}
           accessibilityLabel={isFa ? 'تغییر دوست' : 'Change buddy'}
           accessibilityRole="button"
-          style={[styles.buddyChip, { top: topBarHeight(height, insets.top, {}) + 4 }]}
+          style={[styles.buddyChip, { top: (showBar ? topBarHeight(height, insets.top, {}) : insets.top) + 4 }]}
         >
           <Image source={buddyPose(buddy, 'base')} style={{ width: buddyFace, height: buddyFace }} resizeMode="contain" />
         </TouchableOpacity>
@@ -182,6 +188,10 @@ export default function DailyQuestScreen() {
             leveledUp={leveledUp}
             level={finalLevel}
             onDone={goBack}
+            onAlbum={() => {
+              setAlbumReturn('arrived');
+              setPhase('album');
+            }}
           />
         )}
         {/* Rendered last so it always sits on top of the finale. */}

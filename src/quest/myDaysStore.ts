@@ -12,6 +12,8 @@ const STORAGE_KEY = 'quest_my_days_v1';
 export type MyDayPick = {
   id: string;
   fa: string;
+  /** How many of the fruit were counted (fruit pick only). */
+  count?: number;
 };
 
 export type MyDayEntry = {
@@ -25,6 +27,8 @@ export type MyDayEntry = {
   picks: MyDayPick[];
   /** The child's chosen blanket color (hex), for the polaroid frame. */
   colorHex: string;
+  /** The tied balloon color ids, so the album card shows the same bunch. */
+  balloonIds?: string[];
 };
 
 function isMyDayEntry(value: unknown): value is MyDayEntry {
@@ -35,12 +39,14 @@ function isMyDayEntry(value: unknown): value is MyDayEntry {
   if (v.storyId !== 'picnic_grandma') return false;
   if (!Array.isArray(v.picks)) return false;
   if (typeof v.colorHex !== 'string') return false;
+  if (v.balloonIds !== undefined && (!Array.isArray(v.balloonIds) || !v.balloonIds.every(b => typeof b === 'string'))) return false;
   return v.picks.every(
     p =>
       !!p &&
       typeof p === 'object' &&
       typeof (p as MyDayPick).id === 'string' &&
-      typeof (p as MyDayPick).fa === 'string',
+      typeof (p as MyDayPick).fa === 'string' &&
+      ((p as MyDayPick).count === undefined || typeof (p as MyDayPick).count === 'number'),
   );
 }
 
