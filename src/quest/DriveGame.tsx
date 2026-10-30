@@ -62,12 +62,12 @@ const SCENERY_SRC: ImageSourcePropType[] = [
 
 export type DriveRound = { kind: PickKind; answer: DisplayWord };
 
-// Counting sizes: the number buttons run at half scale, the fruits keep
-// their size, and the whole column is shrunk only if it would overflow the
-// space above the parked car (short phones).
+// Counting sizes: number buttons run almost full scale (at least as tall
+// as a balloon body) and the whole column is shrunk only if it would
+// overflow the space above the parked car (short phones).
 function countingSizes(optSize: number, gw: number, carTop: number, count: number) {
-  const fruit = Math.min(optSize * 0.45, (gw * 0.92 - (count - 1) * 8) / Math.max(1, count));
-  const num = optSize * 0.5;
+  const fruit = Math.min(optSize * 0.55, (gw * 0.92 - (count - 1) * 8) / Math.max(1, count));
+  const num = optSize * 0.9;
   const natural = 28 + 7 + fruit + 8 + num * 1.05;
   const k = Math.min(1, (carTop - 16) / natural);
   return { fruitSize: fruit * k, numSize: num * k };
@@ -144,9 +144,11 @@ function OptionArt({ word, kind, size }: { word: DisplayWord; kind: PickKind; si
   }
   // Every picture gets the exact same square box (contain), so herbs and
   // peppers render equally big regardless of their art's aspect ratio.
+  // Art fills the box edge to edge: food choices must read as big as
+  // the balloon bodies on a phone.
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <WordArt word={word} size={size * 0.92} />
+      <WordArt word={word} size={size * 0.96} />
     </View>
   );
 }
@@ -281,11 +283,11 @@ function CountingView({
   return (
     <View style={[styles.question, { paddingBottom: lift }]} pointerEvents="box-none">
       <Text
-        style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize: Math.max(16, numSize * 0.22) }, dir(lang)]}
+        style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize: Math.max(16, numSize * 0.2) }, dir(lang)]}
       >
-        {isFa ? 'چندتا میبینی' : 'How many do you see?'}
+        {isFa ? 'چندتا می‌بینی؟' : 'How many do you see?'}
       </Text>
-      <View style={[styles.fruitRow, { gap: 8, marginTop: 7 }]}>
+      <View style={[styles.fruitRow, { gap: 6, marginTop: 6 }]}>
         {Array.from({ length: count }).map((_, i) => (
           <WordArt key={i} word={fruit} size={fruitSize} />
         ))}
@@ -898,6 +900,9 @@ export default function DriveGame({
             return (
               <View key={i} style={{ position: 'absolute', left: worldX - boxW / 2, top: boxY - boxH / 2, zIndex: 2 }}>
                 <Image source={BOX_CLOSED} style={{ width: boxW, height: boxH }} resizeMode="contain" />
+                <View pointerEvents="none" style={{ position: 'absolute', right: -boxW * 0.04, top: -boxH * 0.04 }}>
+                  <Text style={{ fontSize: boxW * 0.34 }}>⭐</Text>
+                </View>
               </View>
             );
           }
@@ -952,6 +957,11 @@ export default function DriveGame({
                   style={{ position: 'absolute', left: 0, top: 0, width: boxW, height: boxH }}
                   resizeMode="contain"
                 />
+                {!boxOpen && (
+                  <View pointerEvents="none" style={{ position: 'absolute', right: -boxW * 0.04, top: -boxH * 0.04 }}>
+                    <Text style={{ fontSize: boxW * 0.34 }}>⭐</Text>
+                  </View>
+                )}
                 {spark && <SparkBurst x={boxW / 2} y={-boxH * 0.2} size={boxW} />}
               </Animated.View>
             </TouchableOpacity>
@@ -1097,7 +1107,7 @@ export default function DriveGame({
               key={legIndex}
               round={rounds[legIndex]!}
               choices={choices}
-              optSize={optSize * fitFor(1.6)}
+              optSize={optSize * fitFor(1.5)}
               lift={questionLift}
               onCorrect={answerCorrect}
             />

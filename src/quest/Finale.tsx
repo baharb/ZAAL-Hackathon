@@ -85,6 +85,7 @@ export default function Finale({
   leveledUp,
   level,
   onDone,
+  onAlbum,
 }: {
   words: DisplayWord[];
   buddy: BuddyId;
@@ -92,6 +93,8 @@ export default function Finale({
   leveledUp: boolean;
   level: number;
   onDone: () => void;
+  /** Open the My Days album on top of the picnic (back returns here). */
+  onAlbum: () => void;
 }) {
   const { lang } = useContext(AppContext);
   const { width: W, height: H } = useWindowDimensions();
@@ -125,6 +128,14 @@ export default function Finale({
     if (exitedRef.current) return;
     exitedRef.current = true;
     onDone();
+  };
+
+  // Open the album instead of leaving: stop every pending timer first so
+  // the auto-exit can never fire from behind the album overlay.
+  const openAlbum = () => {
+    if (exitTimer.current) clearTimeout(exitTimer.current);
+    if (photoTimer.current) clearTimeout(photoTimer.current);
+    onAlbum();
   };
 
   // The real game area: this view sits below the title bar, so measure it
@@ -204,7 +215,14 @@ export default function Finale({
   const treeH = Math.min(charH * 0.9, gh * 0.3);
   const treeW = treeH;
   const treeBottom = blanketBottom + blanketH * 0.55;
-  const bs = Math.min(charH * 0.42, 84);
+  // The camera bar below reserves its space even after the photo (see the
+  // placeholder), so the scene height never changes mid-quest: the level
+  // pill is an overlay too. Balloons are capped so their tops always stay
+  // inside the scene, even on a 360pt-tall phone.
+  const sceneH = gh - (camSize + 4);
+  const bsRaw = Math.min(charH * 0.42, 84);
+  const bsMax = (sceneH - 8 - (treeBottom + treeH - 6)) / 1.36;
+  const bs = Math.min(bsRaw, Math.max(24, bsMax));
 
   // Polaroid card size (also from k, so it fits small phones).
   const cardW = Math.min(gw * 0.44, gh * 0.92, 330);
@@ -255,14 +273,21 @@ export default function Finale({
   const takePhoto = () => {
     if (photoTaken.current || !celebrating) return;
     photoTaken.current = true;
-    // Save first (device only): date, buddy, picks and story id.
+    // Save first (device only): date, buddy, picks and story id — plus
+    // the counted fruit number and balloon colors so the album card can
+    // show the same picnic scene.
     void saveMyDay({
       id: String(Date.now()),
       dateISO: todayISO,
       buddy,
       storyId: story.id,
-      picks: words.map(w => ({ id: w.id, fa: w.fa })),
+      picks: words.map((w, i) => ({
+        id: w.id,
+        fa: w.fa,
+        ...(i === 0 ? { count: fruitCount } : {}),
+      })),
       colorHex: blanketColor,
+      balloonIds,
     });
     playClick();
     setPhotoPhase('flash');
@@ -354,8 +379,13 @@ export default function Finale({
           accessibilityLabel={isFa ? 'باغ' : 'Garden'}
         />
       </View>
+      {/* Absolute overlay: it must never take layout space, or the whole
+          scene shifts when it appears. */}
       {leveledUp && (
-        <View style={[styles.levelPill, { paddingHorizontal: Math.max(8, 12 * k), marginTop: Math.max(2, 4 * k) }]}>
+        <View
+          pointerEvents="none"
+          style={[styles.levelPill, { position: 'absolute', top: Math.max(2, 4 * k), alignSelf: 'center', paddingHorizontal: Math.max(8, 12 * k) }]}
+        >
           <Text
             style={[styles.level, { fontFamily: ff(lang, 'black'), fontSize: levelFont }, dir(lang)]}
             numberOfLines={1}
@@ -365,13 +395,20 @@ export default function Finale({
         </View>
       )}
       {/* Album chip, top-LEFT so the buddy avatar (top-right) never covers
-          it. The polaroid flies into it after the photo. */}
-      {(photoPhase === 'flying' || photoPhase === 'saved') && (
-        <View style={[styles.albumChip, { top: Math.max(2, 4 * k), left: 8, paddingHorizontal: Math.max(8, 12 * k) }]}>
+          it. Tappable from the moment the photo shows: it opens the album
+          on top of the picnic (back returns here), it never leaves. */}
+      {(photoPhase === 'card' || photoPhase === 'flying' || photoPhase === 'saved') && (
+        <TouchableOpacity
+          onPress={openAlbum}
+          activeOpacity={0.85}
+          accessibilityLabel={isFa ? 'روزهای من' : 'My Days'}
+          accessibilityRole="button"
+          style={[styles.albumChip, { top: Math.max(2, 4 * k), left: 8, paddingHorizontal: Math.max(8, 12 * k) }]}
+        >
           <Text style={[styles.albumChipText, { fontFamily: ff(lang, 'black'), fontSize: levelFont }, dir(lang)]}>
             {isFa ? 'روزهای من 📸' : 'My Days 📸'}
           </Text>
-        </View>
+        </TouchableOpacity>
       )}
       {/* One real scene: tree with balloons behind the blanket, blanket on
           the grass, cast at its edges. */}
@@ -556,6 +593,9 @@ export default function Finale({
           </Text>
         </Animated.View>
       )}
+      {/* The bar keeps its exact height after the photo (empty
+          placeholder): if the space collapsed, the whole scene would drop
+          and the blanket would be cut off at the bottom. */}
       {camReady && photoPhase === 'none' && (
         <View style={styles.bottomBar}>
           <View>
@@ -588,6 +628,7 @@ export default function Finale({
           </View>
         </View>
       )}
+      {camReady && photoPhase !== 'none' && <View style={{ height: camSize + 4 }} />}
       {showCeleb && <PopperCelebration visible />}
     </View>
   );
