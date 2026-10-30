@@ -113,13 +113,15 @@ export default function DailyQuestScreen() {
     <View style={styles.root}>
       {(phase === 'buddy' || phase === 'picks' || phase === 'loading') && <QuestBackdrop />}
       {showBar && (
-        <TopBar
-          title="My Daily Quest"
-          titleFa="بازی امروز من"
-          dark
-          showClose
-          onBack={goBack}
-        />
+        <View style={styles.topWrap}>
+          <TopBar
+            title="My Daily Quest"
+            titleFa="بازی امروز من"
+            dark
+            showClose
+            onBack={goBack}
+          />
+        </View>
       )}
       {(phase === 'picks' || phase === 'drive' || phase === 'arrived') && (
         <TouchableOpacity
@@ -210,6 +212,7 @@ export default function DailyQuestScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: QUEST_SKY },
+  topWrap: { position: 'relative', zIndex: 10, elevation: 10 },
   body: { flex: 1, paddingHorizontal: 12, paddingBottom: 12 },
   loading: { color: '#3A2A6B', fontSize: 44, textAlign: 'center', marginTop: 60 },
   startWrap: { flex: 1 },

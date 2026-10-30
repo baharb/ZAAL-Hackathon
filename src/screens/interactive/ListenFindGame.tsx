@@ -132,7 +132,9 @@ export default function ListenFindGame() {
   return (
     <View style={s.root}>
       <QuestBackdrop />
-      <TopBar title="Listen & Find" titleFa="بشنو و پیدا کن" showClose dark topInset={10} onBack={() => reset({ name: 'Main', tab: 'Games' })} />
+      <View style={s.topWrap}>
+        <TopBar title="Listen & Find" titleFa="بشنو و پیدا کن" showClose dark topInset={10} onBack={() => reset({ name: 'Main', tab: 'Games' })} />
+      </View>
       <View style={s.body}>
         {done ? (
           <View style={s.endCard}>
@@ -187,6 +189,7 @@ const CARD_SHADOW = {
 const styles = (k: number) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: QUEST_SKY },
+    topWrap: { position: 'relative', zIndex: 10, elevation: 10 },
     body: { flex: 1, paddingHorizontal: 16 * k, paddingBottom: 12 * k, rowGap: 10 * k, justifyContent: 'center' },
     promptCard: {
       borderRadius: 22 * k,
