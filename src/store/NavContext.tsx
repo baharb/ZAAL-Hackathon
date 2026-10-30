@@ -35,6 +35,7 @@ export type Screen =
   | { name: 'ConversationGame' }
   | { name: 'GrandmaCall' }
   | { name: 'PhotoFarsi' }
+  | { name: 'MagicStory' }
   | { name: 'DailyQuest' }
   | { name: 'SolarPuzzle' }
   | { name: 'TimeUp' };

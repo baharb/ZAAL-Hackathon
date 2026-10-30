@@ -50,6 +50,7 @@ import ToothBrushGame      from './src/screens/interactive/ToothBrushGame';
 import ConversationGame    from './src/screens/interactive/ConversationGame';
 import GrandmaCallGame     from './src/screens/interactive/GrandmaCallGame';
 import PhotoFarsiGame      from './src/screens/interactive/PhotoFarsiGame';
+import MagicStoryGame       from './src/screens/interactive/MagicStoryGame';
 import SolarSystemPuzzleGame from './src/screens/interactive/SolarSystemPuzzleGame';
 import DailyQuestScreen from './src/quest/DailyQuestScreen';
 import GameLandscapeFrame  from './src/components/GameLandscapeFrame';
@@ -99,6 +100,7 @@ function Router() {
     case 'ConversationGame':  return <GameLandscapeFrame><ConversationGame /></GameLandscapeFrame>;
     case 'GrandmaCall':       return <GameLandscapeFrame><GrandmaCallGame /></GameLandscapeFrame>;
     case 'PhotoFarsi':        return <GameLandscapeFrame><PhotoFarsiGame /></GameLandscapeFrame>;
+    case 'MagicStory':        return <GameLandscapeFrame><MagicStoryGame /></GameLandscapeFrame>;
     case 'SolarPuzzle':      return <GameLandscapeFrame><SolarSystemPuzzleGame /></GameLandscapeFrame>;
     case 'DailyQuest':       return <GameLandscapeFrame><DailyQuestScreen /></GameLandscapeFrame>;
     case 'TimeUp':           return <TimeUpScreen />;
