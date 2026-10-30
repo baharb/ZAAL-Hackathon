@@ -86,6 +86,7 @@ export default function Finale({
   level,
   onDone,
   onAlbum,
+  albumActive,
 }: {
   words: DisplayWord[];
   buddy: BuddyId;
@@ -95,6 +96,8 @@ export default function Finale({
   onDone: () => void;
   /** Open the My Days album on top of the picnic (back returns here). */
   onAlbum: () => void;
+  /** True while the album overlay covers the picnic. */
+  albumActive: boolean;
 }) {
   const { lang } = useContext(AppContext);
   const { width: W, height: H } = useWindowDimensions();
@@ -131,12 +134,34 @@ export default function Finale({
   };
 
   // Open the album instead of leaving: stop every pending timer first so
-  // the auto-exit can never fire from behind the album overlay.
+  // the auto-exit can never fire from behind the album overlay, and park
+  // the polaroid on its full card so the return shows the photo, not a
+  // half-flown frame.
   const openAlbum = () => {
     if (exitTimer.current) clearTimeout(exitTimer.current);
     if (photoTimer.current) clearTimeout(photoTimer.current);
+    cardAnim.setValue(1);
+    setPhotoPhase('card');
     onAlbum();
   };
+
+  // After the album closes, the quest must still end: without the cleared
+  // timers the child would be trapped at the picnic (the title bar stays
+  // hidden here). Give them one last 4-second look, then exit.
+  const albumWasActive = useRef(false);
+  useEffect(() => {
+    if (albumActive) {
+      albumWasActive.current = true;
+      return;
+    }
+    if (albumWasActive.current && photoTaken.current && !exitedRef.current) {
+      albumWasActive.current = false;
+      const t = setTimeout(safeExit, 4000);
+      return () => clearTimeout(t);
+    }
+    albumWasActive.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [albumActive]);
 
   // The real game area: this view sits below the title bar, so measure it
   // and size everything from the measurement. Until the first measurement,

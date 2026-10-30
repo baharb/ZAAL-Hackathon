@@ -192,6 +192,7 @@ export default function DailyQuestScreen() {
               setAlbumReturn('arrived');
               setPhase('album');
             }}
+            albumActive={phase === 'album'}
           />
         )}
         {/* Rendered last so it always sits on top of the finale. */}
