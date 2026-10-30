@@ -21,7 +21,7 @@ export type MyDayEntry = {
   dateISO: string;
   buddy: BuddyId;
   storyId: StoryId;
-  /** The 5 picks in quest order: fruit, ingredient, color, ingredient, dish. */
+  /** The 3 picks in quest order: fruit, color, dish. */
   picks: MyDayPick[];
   /** The child's chosen blanket color (hex), for the polaroid frame. */
   colorHex: string;

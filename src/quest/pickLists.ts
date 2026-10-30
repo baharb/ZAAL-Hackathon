@@ -6,20 +6,19 @@
 import { QUEST_WORDS } from '../data/questWords';
 import { DisplayWord, displayWordById } from './questGroups';
 
-export type PickKind = 'fruit' | 'ingredient' | 'color' | 'dish';
+export type PickKind = 'fruit' | 'color' | 'dish';
 
-// Words small kids would not meet as simple everyday foods: raw cuts, ground
-// meat and dried herbs, plus non-food items a child would never pick to eat
-// (water, cooking oil, salt). (The info-cook instruction clip has no catalog
-// art, so it can never appear in a pool in the first place.)
-const INGREDIENT_EXCLUDE = new Set([
-  'ingredients/filletChickenRaw',
-  'ingredients/groundBeefRaw',
-  'ingredients/cutRawBeefForStew',
-  'ingredients/driedMint',
-  'ingredients/water',
-  'ingredients/oil',
-  'ingredients/salt',
+// Colors simple enough for a 3-year-old, all with recordings. Only these
+// eight ever appear in the quest.
+const SIMPLE_COLOR_IDS = new Set([
+  'painting/color/red',
+  'painting/color/blue',
+  'painting/color/yellow',
+  'painting/color/green',
+  'painting/color/orange',
+  'painting/color/purple',
+  'painting/color/pink',
+  'painting/color/brown',
 ]);
 
 const FRUIT_IDS = new Set([
@@ -31,6 +30,17 @@ const FRUIT_IDS = new Set([
 ]);
 
 // Flat fill for the color circles drawn in code (crayon art is not used).
+// Hues stay exactly as recorded; boldness comes from the darker outline
+// and gloss drawn by ColorDot, never by shifting the hue itself.
+export function darkenHex(hex: string, amount = 0.38): string {
+  const flat = hex.replace('#', '');
+  const full = flat.length === 3 ? flat.split('').map(c => c + c).join('') : flat;
+  const n = parseInt(full, 16);
+  if (Number.isNaN(n)) return '#333333';
+  const f = 1 - Math.min(0.85, Math.max(0, amount));
+  const part = (v: number) => Math.round(v * f).toString(16).padStart(2, '0');
+  return `#${part((n >> 16) & 255)}${part((n >> 8) & 255)}${part(n & 255)}`;
+}
 export const COLOR_HEX: Record<string, string> = {
   'painting/color/red': '#E53935',
   'painting/color/orange': '#FB8C00',
@@ -57,13 +67,9 @@ export function pickPool(kind: PickKind): DisplayWord[] {
       .map(w => displayWordById(w.id))
       .filter((w): w is DisplayWord => w !== null);
   }
-  if (kind === 'ingredient') {
-    return QUEST_WORDS.filter(w => w.category === 'ingredients' && !FRUIT_IDS.has(w.id) && !INGREDIENT_EXCLUDE.has(w.id))
-      .map(w => displayWordById(w.id))
-      .filter((w): w is DisplayWord => w !== null);
-  }
+
   if (kind === 'color') {
-    return QUEST_WORDS.filter(w => w.category === 'painting/color')
+    return QUEST_WORDS.filter(w => SIMPLE_COLOR_IDS.has(w.id))
       .map(w => displayWordById(w.id))
       .filter((w): w is DisplayWord => w !== null);
   }
@@ -87,7 +93,22 @@ export function shuffle<T>(items: T[]): T[] {
 // the answer's close list, so e.g. teal never appears with aqua (cyan) and
 // pink never appears with purple. Neutrals avoid each other too, so brown
 // never appears with gray or black.
-function colorsFarApart(a: string, b: string): boolean {
+// Two distractors far apart from the answer AND from each other.
+export function farApartPair(pool: DisplayWord[], answerId: string): DisplayWord[] {
+  const far = shuffle(pool.filter(w => w.id !== answerId && colorsFarApart(answerId, w.id)));
+  const picked: DisplayWord[] = [];
+  for (const w of far) {
+    if (picked.length >= 2) break;
+    if (picked.every(p => colorsFarApart(p.id, w.id))) picked.push(w);
+  }
+  for (const w of far) {
+    if (picked.length >= 2) break;
+    if (!picked.some(p => p.id === w.id)) picked.push(w);
+  }
+  return picked.slice(0, 2);
+}
+
+export function colorsFarApart(a: string, b: string): boolean {
   if (a === b) return false;
   return !(COLOR_CLOSE[a] ?? []).includes(b) && !(COLOR_CLOSE[b] ?? []).includes(a);
 }

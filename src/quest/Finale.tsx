@@ -1,8 +1,9 @@
 // Picnic finale (quest v2, section 3). One real scene: the garden picture
 // is pinned to the bottom so the grass always shows, the blanket lies on
-// the grass in the child's chosen color, and the picks are served on it —
-// fruit in a bowl, the dish on the big middle plate, the two ingredients on
-// small plates. Grandma and the buddy sit at the blanket's edges.
+// the grass in the child's chosen color, and the collected items are served
+// on it — the counted fruit in a bowl, the dish on the big middle plate —
+// with the trip balloons tied to the tree behind the blanket. Grandma and
+// the buddy sit at the blanket's edges.
 // Then a pretend-camera moment: flash + click, and the scene freezes into a
 // polaroid that flies into the روزهای من album (device only, no uploads).
 // No Modal here on purpose: every Modal needs a landscape prop on iPhone.
@@ -11,12 +12,12 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Animated, Image, LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { createAudioPlayer } from 'expo-audio';
 import { useWindowDimensions } from '../layout/PortraitFallback';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import PopperCelebration from '../components/PopperCelebration';
 import { AppContext } from '../store/AppContext';
 import { dir, ff } from '../theme/fonts';
 import { FaTestAudioKey } from '../assets/faTestAudio.generated';
 import { noteAudioPlayerReleased, playFaAudioSequence } from '../utils/faAudio';
-import { isQuestMuted, questPlay } from './questSound';
+import { isQuestMuted } from './questSound';
 import { BUDDIES, BuddyId } from './buddyStore';
 import { DisplayWord } from './questGroups';
 import { COLOR_HEX } from './pickLists';
@@ -24,8 +25,13 @@ import { Story } from './stories';
 import { buddyPose } from './questTheme';
 import { saveMyDay } from './myDaysStore';
 import WordArt from './WordArt';
+import Balloon from './Balloon';
+import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 
 const CLICK_SOUND = require('../../assets/audio/key-tap.wav');
+const YAY_SOUND = require('../../assets/audio/yay-kids.wav');
+const TREE_SRC = require('../../assets/neli-world/quest/landmarks/apple-tree.png');
+const PLATE_SRC = require('../../assets/neli-world/kitchen/plate.webp');
 
 // Reference height: a landscape phone is 360-440pt tall. k scales every
 // size AND every offset so nothing is cut off on phones or tablets.
@@ -50,70 +56,24 @@ function playClick() {
   }
 }
 
-function Plate({ size, children }: { size: number; children: React.ReactNode }) {
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: '#FFFFFF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#3A2A6B',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 4,
-      }}
-    >
-      <View
-        style={{
-          position: 'absolute',
-          width: size * 0.72,
-          height: size * 0.72,
-          borderRadius: size * 0.36,
-          borderWidth: Math.max(1.5, size * 0.03),
-          borderColor: '#E5DCC8',
-        }}
-      />
-      {children}
-    </View>
-  );
-}
-
-function Bowl({ size, children }: { size: number; children: React.ReactNode }) {
-  return (
-    <View
-      style={{
-        width: size,
-        height: size * 0.92,
-        borderRadius: size * 0.42,
-        backgroundColor: '#FFFFFF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#3A2A6B',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 4,
-      }}
-    >
-      <View
-        style={{
-          width: size * 0.74,
-          height: size * 0.66,
-          borderRadius: size * 0.33,
-          backgroundColor: '#DFF1FB',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-        }}
-      >
-        {children}
-      </View>
-    </View>
-  );
+// Kids cheering "yay", played WITH the celebration when the photo is done.
+function playYay() {
+  if (isQuestMuted()) return;
+  try {
+    const player = createAudioPlayer(YAY_SOUND);
+    player.volume = 0.7;
+    player.play();
+    const subscription = player.addListener('playbackStatusUpdate', status => {
+      if (status.isLoaded && status.didJustFinish) {
+        subscription.remove();
+        noteAudioPlayerReleased();
+        try { player.remove(); } catch { /* best effort */ }
+      }
+    });
+    setTimeout(() => { try { player.remove(); } catch { /* best effort */ } }, 6000);
+  } catch {
+    // Sound is a nice-to-have; the celebration goes on without it.
+  }
 }
 
 type PhotoPhase = 'none' | 'flash' | 'card' | 'flying' | 'saved';
@@ -125,7 +85,6 @@ export default function Finale({
   leveledUp,
   level,
   onDone,
-  onOpenAlbum,
 }: {
   words: DisplayWord[];
   buddy: BuddyId;
@@ -133,20 +92,40 @@ export default function Finale({
   leveledUp: boolean;
   level: number;
   onDone: () => void;
-  onOpenAlbum: () => void;
 }) {
   const { lang } = useContext(AppContext);
   const { width: W, height: H } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const isFa = lang === 'fa' || lang === 'ar';
 
   const [celebrating, setCelebrating] = useState(false);
   const [photoPhase, setPhotoPhase] = useState<PhotoPhase>('none');
+  const [showCeleb, setShowCeleb] = useState(false);
+  const [balloonsGone, setBalloonsGone] = useState(false);
   const pops = useRef(words.map(() => new Animated.Value(0))).current;
   const buddyBounce = useRef(new Animated.Value(1)).current;
   const flashAnim = useRef(new Animated.Value(0)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
+  const balloonRise = useRef(new Animated.Value(0)).current;
   const photoTaken = useRef(false);
+  const exitedRef = useRef(false);
+  const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const photoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The camera shows with a small delay, so the child sees the picnic
+  // scene first; the hand hint waits for the camera too.
+  const [camReady, setCamReady] = useState(false);
+  useEffect(() => {
+    if (!celebrating) return;
+    const t = setTimeout(() => setCamReady(true), 2500);
+    return () => clearTimeout(t);
+  }, [celebrating]);
+  const camIdle = useIdleHint(camReady && photoPhase === 'none', IDLE_HAND_DELAY, 0);
+
+  // The celebration ends the quest: confetti + yay cheer, then back.
+  const safeExit = () => {
+    if (exitedRef.current) return;
+    exitedRef.current = true;
+    onDone();
+  };
 
   // The real game area: this view sits below the title bar, so measure it
   // and size everything from the measurement. Until the first measurement,
@@ -162,31 +141,25 @@ export default function Finale({
   const gh = gameSize?.h ?? H;
   const k = gh / FINALE_REFERENCE_H;
 
-  // The 5 picks in quest order: fruit, ingredient, color, ingredient, dish.
-  const colorWord = words.find(w => w.id.startsWith('painting/color/')) ?? words[2];
-  const dishWord = words.find(w => w.id.startsWith('cooking/name/')) ?? words[4];
+  // The 3 picks in quest order: fruit, color, dish.
   const fruitWord = words[0];
-  const ingredientWords = words
-    .filter(w => w !== fruitWord && w !== colorWord && w !== dishWord)
-    .slice(0, 2);
+  const colorWord = words.find(w => w.id.startsWith('painting/color/')) ?? words[1];
+  const dishWord = words.find(w => w.id.startsWith('cooking/name/')) ?? words[2];
+  const fruitCount = fruitWord?.count ?? 1;
+  // The exact balloons from the trip (child's first), for the tree.
+  const balloonIds = (colorWord?.balloonIds ?? (colorWord ? [colorWord.id] : [])).slice(0, 3);
   const blanketColor = (colorWord && COLOR_HEX[colorWord.id]) ?? '#E33E54';
 
   // Title uses the chosen buddy's name, never a hard-coded one.
   const buddyName = BUDDIES.find(b => b.id === buddy);
-  const titleFa = `سفر ${buddyName?.fa ?? 'نلی'}: پیک‌نیک با مادربزرگ`;
-  const titleEn = `${buddyName?.en ?? "Neli"}'s Drive: picnic with Grandma`;
   const todayISO = new Date().toISOString().slice(0, 10);
 
   // Every size and offset below derives from k, so the whole scene fits a
   // 360pt-tall phone as well as a tablet.
-  const titleFont = Math.min(17, Math.max(12, 15 * k));
   const levelFont = Math.min(15, Math.max(11, 12.5 * k));
-  const byeFont = Math.min(17, Math.max(12, 14 * k));
   const buttonH = Math.max(38, Math.min(54, gh * 0.13));
-  const buttonFont = Math.max(13, buttonH * 0.34);
-  // Same size as the floating close button above this scene, so the album
-  // chip can sit just below it without overlapping.
-  const closeSize = Math.max(44, Math.min(gh * 0.12, 64));
+  // One big round camera button, no text on it.
+  const camSize = buttonH * 1.6;
 
   // Blanket on the grass at the bottom, in the child's chosen color.
   const blanketW = Math.min(gw * 0.46, gh * 1.12, 430);
@@ -196,24 +169,42 @@ export default function Finale({
   const cell = blanketW / cols;
   const blanketBottom = Math.max(2, 4 * k);
 
-  // Dishes served on the blanket: big dish plate in the middle, fruit bowl
-  // and two small ingredient plates beside it. The whole row (3 small + 1
-  // big + gaps) is shrunk to fit inside 90% of the blanket, so on wide
-  // tablets the side plates never hang off the blanket's edges.
-  const bigPlateRaw = Math.min(blanketW * 0.3, blanketH * 0.78);
-  const smallPlateRaw = Math.min(blanketW * 0.21, blanketH * 0.58);
+  // Served on the blanket: the counted fruit laid out on the real game
+  // plate and the dish with no plate under it. The row is shrunk to fit
+  // inside 90% of the blanket.
+  const plateWraw = Math.min(blanketW * 0.42, blanketH * 1.0);
+  const bigPlateRaw = Math.min(blanketW * 0.34, blanketH * 0.82);
   const foodGap = Math.max(3, 6 * k);
-  const fitScale = Math.min(1, (blanketW * 0.9) / (bigPlateRaw + smallPlateRaw * 3 + foodGap * 3));
+  const fitScale = Math.min(1, (blanketW * 0.9) / (plateWraw + bigPlateRaw + foodGap));
+  const plateW = plateWraw * fitScale;
+  const plateH = plateW * 0.82;
   const bigPlate = bigPlateRaw * fitScale;
-  const smallPlate = smallPlateRaw * fitScale;
+  const fruitF = plateW * 0.3;
+  // Fruit spots (fractions of the plate): a natural single layer, slight
+  // overlaps like a real serving.
+  const pileSpots = (n: number): [number, number, number][] => {
+    switch (n) {
+      case 1: return [[0.5, 0.46, 0]];
+      case 2: return [[0.36, 0.47, -8], [0.64, 0.47, 8]];
+      case 3: return [[0.3, 0.48, -8], [0.52, 0.43, 0], [0.72, 0.48, 8]];
+      case 4: return [[0.26, 0.48, -8], [0.43, 0.45, -3], [0.6, 0.45, 3], [0.76, 0.48, 8]];
+      default: return [[0.3, 0.52, -8], [0.5, 0.54, 0], [0.7, 0.52, 8], [0.4, 0.34, -4], [0.61, 0.34, 4]];
+    }
+  };
 
   // The cast stands right next to the blanket, both the same height, so
   // Grandma reads as AT the picnic instead of tiny at the far edge.
-  const charH = gh * 0.32;
+  const charH = gh * 0.384;
   const charW = charH * 0.85;
   // Distance of each figure from its screen edge: the blanket's edge minus
   // a small overlap, so each figure tucks just against the blanket.
   const castInset = Math.max(2, gw / 2 - blanketW / 2 - charW * 0.55);
+
+  // Tree behind the blanket with the trip balloons tied to it.
+  const treeH = Math.min(charH * 0.9, gh * 0.3);
+  const treeW = treeH;
+  const treeBottom = blanketBottom + blanketH * 0.55;
+  const bs = Math.min(charH * 0.42, 84);
 
   // Polaroid card size (also from k, so it fits small phones).
   const cardW = Math.min(gw * 0.44, gh * 0.92, 330);
@@ -237,11 +228,14 @@ export default function Finale({
       if (!alive) return;
       if (!isQuestMuted()) {
         await playFaAudioSequence(words.map(w => w.audioKey as FaTestAudioKey));
-        if (!alive) return;
-        await questPlay(story.praiseAudio);
       }
       if (!alive) return;
       setCelebrating(true);
+      // Safety net: a child who never taps the camera still leaves.
+      timers.push(setTimeout(() => {
+        if (!alive) return;
+        if (!photoTaken.current) safeExit();
+      }, 90000));
       Animated.loop(
         Animated.sequence([
           Animated.timing(buddyBounce, { toValue: 1.1, duration: 350, useNativeDriver: true }),
@@ -252,6 +246,8 @@ export default function Finale({
     return () => {
       alive = false;
       timers.forEach(clearTimeout);
+      if (exitTimer.current) clearTimeout(exitTimer.current);
+      if (photoTimer.current) clearTimeout(photoTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -275,16 +271,34 @@ export default function Finale({
       Animated.timing(flashAnim, { toValue: 0, duration: 320, useNativeDriver: true }),
     ]).start(() => {
       setPhotoPhase('card');
+      // The moment the captured photo shows: yay + celebration together
+      // while the balloons float up, all at once.
+      setShowCeleb(true);
+      playYay();
+      Animated.timing(balloonRise, { toValue: 1, duration: 1400, useNativeDriver: true }).start(() => {
+        setBalloonsGone(true);
+      });
       cardAnim.setValue(0);
       Animated.timing(cardAnim, { toValue: 1, duration: 450, useNativeDriver: true }).start(() => {
-        setPhotoPhase('flying');
-        cardAnim.setValue(0);
-        Animated.timing(cardAnim, { toValue: 1, duration: 650, useNativeDriver: true }).start(() => {
-          setPhotoPhase('saved');
-        });
+        // Let the child look at the captured photo for 4 seconds, then
+        // fly it into the album and close the quest.
+        photoTimer.current = setTimeout(() => {
+          setPhotoPhase('flying');
+          cardAnim.setValue(0);
+          Animated.timing(cardAnim, { toValue: 1, duration: 650, useNativeDriver: true }).start(() => {
+            setPhotoPhase('saved');
+            exitTimer.current = setTimeout(safeExit, 900);
+          });
+        }, 4000);
       });
     });
   };
+
+  // The trip balloons float up off the top together once the photo is shown.
+  const balloonRiseY = balloonRise.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -(treeBottom + treeH + bs * 1.3 + 40)],
+  });
 
   // The polaroid flies from the center into the album chip (top-left).
   const flyX = cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -gw * 0.3] });
@@ -295,44 +309,36 @@ export default function Finale({
   const servingOrder: { key: string; node: React.ReactNode }[] = [];
   if (fruitWord) {
     servingOrder.push({
-      key: `bowl-${fruitWord.id}`,
+      key: `plate-${fruitWord.id}`,
       node: (
-        <Bowl size={smallPlate}>
-          <WordArt word={fruitWord} size={smallPlate * 0.52} />
-        </Bowl>
-      ),
-    });
-  }
-  if (ingredientWords[0]) {
-    const ing = ingredientWords[0];
-    servingOrder.push({
-      key: `small-${ing.id}`,
-      node: (
-        <Plate size={smallPlate}>
-          <WordArt word={ing} size={smallPlate * 0.6} />
-        </Plate>
+        <View style={{ width: plateW, height: plateH }}>
+          <Image
+            source={PLATE_SRC}
+            style={{ position: 'absolute', left: 0, top: 0, width: plateW, height: plateH }}
+            resizeMode="contain"
+            accessibilityLabel={isFa ? 'بشقاب' : 'Plate'}
+          />
+          {pileSpots(fruitCount).map(([fx, fy, rot], i) => (
+            <View
+              key={i}
+              style={{
+                position: 'absolute',
+                left: fx * plateW - fruitF / 2,
+                top: fy * plateH - fruitF / 2,
+                transform: [{ rotate: `${rot}deg` }],
+              }}
+            >
+              <WordArt word={fruitWord} size={fruitF} />
+            </View>
+          ))}
+        </View>
       ),
     });
   }
   if (dishWord) {
     servingOrder.push({
       key: `big-${dishWord.id}`,
-      node: (
-        <Plate size={bigPlate}>
-          <WordArt word={dishWord} size={bigPlate * 0.66} />
-        </Plate>
-      ),
-    });
-  }
-  if (ingredientWords[1]) {
-    const ing = ingredientWords[1];
-    servingOrder.push({
-      key: `small-${ing.id}`,
-      node: (
-        <Plate size={smallPlate}>
-          <WordArt word={ing} size={smallPlate * 0.6} />
-        </Plate>
-      ),
+      node: <WordArt word={dishWord} size={bigPlate} />,
     });
   }
 
@@ -348,15 +354,6 @@ export default function Finale({
           accessibilityLabel={isFa ? 'باغ' : 'Garden'}
         />
       </View>
-      {/* Title on a small rounded cream pill so it reads on top of the art. */}
-      <View style={[styles.titlePill, { paddingHorizontal: Math.max(10, 14 * k), paddingVertical: Math.max(4, 6 * k) }]}>
-        <Text
-          style={[styles.title, { fontFamily: ff(lang, 'black'), fontSize: titleFont }, dir(lang)]}
-          numberOfLines={1}
-        >
-          {isFa ? titleFa : titleEn} 🎉
-        </Text>
-      </View>
       {leveledUp && (
         <View style={[styles.levelPill, { paddingHorizontal: Math.max(8, 12 * k), marginTop: Math.max(2, 4 * k) }]}>
           <Text
@@ -368,17 +365,60 @@ export default function Finale({
         </View>
       )}
       {/* Album chip, top-LEFT so the buddy avatar (top-right) never covers
-          it, and low enough to clear the floating close button. The
-          polaroid flies into it after the photo. */}
+          it. The polaroid flies into it after the photo. */}
       {(photoPhase === 'flying' || photoPhase === 'saved') && (
-        <View style={[styles.albumChip, { top: insets.top + 8 + closeSize + 6, left: 8, paddingHorizontal: Math.max(8, 12 * k) }]}>
+        <View style={[styles.albumChip, { top: Math.max(2, 4 * k), left: 8, paddingHorizontal: Math.max(8, 12 * k) }]}>
           <Text style={[styles.albumChipText, { fontFamily: ff(lang, 'black'), fontSize: levelFont }, dir(lang)]}>
             {isFa ? 'روزهای من 📸' : 'My Days 📸'}
           </Text>
         </View>
       )}
-      {/* One real scene: blanket on the grass, cast at its edges. */}
+      {/* One real scene: tree with balloons behind the blanket, blanket on
+          the grass, cast at its edges. */}
       <View style={styles.scene}>
+        <View
+          style={[styles.treeWrap, { left: gw / 2 - treeW / 2, bottom: treeBottom, width: treeW, height: treeH }]}
+          pointerEvents="none"
+        >
+          <Image
+            source={TREE_SRC}
+            style={{ width: treeW, height: treeH }}
+            resizeMode="contain"
+            accessibilityLabel={isFa ? 'درخت' : 'Tree'}
+          />
+        </View>
+        {balloonIds.length > 0 && !balloonsGone && (
+          <Animated.View
+            style={[
+              styles.balloonRow,
+              {
+                left: gw / 2 - (balloonIds.length * bs + (balloonIds.length - 1) * 6) / 2,
+                bottom: treeBottom + treeH - 6,
+                gap: 6,
+                transform: [{ translateY: balloonRiseY }],
+              },
+            ]}
+            pointerEvents="none"
+          >
+            {balloonIds.map(id => (
+              <Balloon key={id} color={COLOR_HEX[id] ?? '#CCCCCC'} size={bs} />
+            ))}
+          </Animated.View>
+        )}
+        {/* Soft contact shadow, tilted exactly like the mat. */}
+        <View
+          style={{
+            position: 'absolute',
+            left: gw / 2 - (blanketW * 1.04) / 2,
+            bottom: blanketBottom - 2,
+            width: blanketW * 1.04,
+            height: Math.max(10, 12 * k),
+            borderRadius: 999,
+            backgroundColor: 'rgba(31,61,31,0.28)',
+            transform: [{ rotate: '-3deg' }],
+          }}
+          pointerEvents="none"
+        />
         <View
           style={[
             styles.blanket,
@@ -387,7 +427,15 @@ export default function Finale({
               height: blanketH,
               borderRadius: cell * 0.25,
               marginBottom: blanketBottom,
-              transform: [{ rotate: '-3deg' }],
+              // Slight tilt back into the ground plane so the mat lies on
+              // the grass instead of looking pasted on top of it. The
+              // dishes ride along in the same plane.
+              transform: [{ perspective: 400 }, { rotateX: '18deg' }, { rotate: '-3deg' }],
+              shadowColor: '#1F3D1F',
+              shadowOffset: { width: 0, height: 5 },
+              shadowOpacity: 0.35,
+              shadowRadius: 7,
+              elevation: 6,
             },
           ]}
         >
@@ -465,12 +513,40 @@ export default function Finale({
             },
           ]}
         >
-          <View style={[styles.polaroidPhoto, { height: cardPhotoH, backgroundColor: blanketColor }]}>
-            <View style={[styles.items, { gap: 3 }]}>
-              {fruitWord && <WordArt word={fruitWord} size={cardPhotoH * 0.42} />}
-              {dishWord && <WordArt word={dishWord} size={cardPhotoH * 0.58} />}
-              {ingredientWords[0] && <WordArt word={ingredientWords[0]} size={cardPhotoH * 0.38} />}
+          <View style={[styles.polaroidPhoto, { height: cardPhotoH, backgroundColor: blanketColor, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' }]}>
+            <Image
+              source={story.grandma}
+              style={{ flex: 1, height: '100%' }}
+              resizeMode="contain"
+              accessibilityLabel={isFa ? 'مادربزرگ' : 'Grandma'}
+            />
+            <View style={{ flex: 1.1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 4 }}>
+              <View style={[styles.items, { gap: 3 }]}>
+                {fruitWord && <WordArt word={fruitWord} size={cardPhotoH * 0.3} />}
+                {dishWord && <WordArt word={dishWord} size={cardPhotoH * 0.4} />}
+              </View>
+              {balloonIds.length > 0 && (
+                <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+                  {balloonIds.map(id => (
+                    <View
+                      key={id}
+                      style={{
+                        width: cardW * 0.05,
+                        height: cardW * 0.05,
+                        borderRadius: cardW * 0.025,
+                        backgroundColor: COLOR_HEX[id] ?? '#CCCCCC',
+                      }}
+                    />
+                  ))}
+                </View>
+              )}
             </View>
+            <Image
+              source={buddyPose(buddy, 'celebration')}
+              style={{ flex: 1, height: '100%' }}
+              resizeMode="contain"
+              accessibilityLabel={buddy}
+            />
           </View>
           <Text
             style={[styles.polaroidCaption, { fontFamily: ff(lang, 'black'), fontSize: Math.max(11, cardW * 0.055) }, dir(lang)]}
@@ -480,70 +556,45 @@ export default function Finale({
           </Text>
         </Animated.View>
       )}
-      <View style={[styles.bottomBar, isFa && { flexDirection: 'row-reverse' }, { gap: Math.max(6, 10 * k) }]}>
-        <Text
-          style={[styles.bye, { fontFamily: ff(lang, 'black'), fontSize: byeFont }, dir(lang)]}
-          numberOfLines={1}
-        >
-          {photoPhase === 'saved'
-            ? isFa ? 'تو روزهای من ذخیره شد! 📸' : 'Saved to My Days! 📸'
-            : celebrating
-              ? isFa ? 'فردا می‌بینمت! 🌙' : 'See you tomorrow! 🌙'
-              : isFa ? 'به به! 😋' : 'Yummy! 😋'}
-        </Text>
-        {celebrating && photoPhase === 'none' && (
-          <TouchableOpacity
-            style={[styles.camera, { borderRadius: 999, paddingHorizontal: Math.max(16, 24 * k), height: buttonH }]}
-            onPress={takePhoto}
-            activeOpacity={0.85}
-            accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.cameraText, { fontFamily: ff(lang, 'black'), fontSize: buttonFont }, dir(lang)]}>
-              {isFa ? '📷 عکس!' : '📷 Photo!'}
-            </Text>
-          </TouchableOpacity>
-        )}
-        {photoPhase === 'saved' && (
-          <TouchableOpacity
-            style={[styles.album, { borderRadius: 999, paddingHorizontal: Math.max(16, 24 * k), height: buttonH }]}
-            onPress={onOpenAlbum}
-            activeOpacity={0.85}
-            accessibilityLabel={isFa ? 'روزهای من' : 'My Days'}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.albumText, { fontFamily: ff(lang, 'black'), fontSize: buttonFont }, dir(lang)]}>
-              {isFa ? 'روزهای من 📸' : 'My Days 📸'}
-            </Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[styles.home, { borderRadius: 999, paddingHorizontal: Math.max(16, 26 * k), height: buttonH }]}
-          onPress={onDone}
-          activeOpacity={0.85}
-          accessibilityLabel={isFa ? 'تمام' : 'Done'}
-          accessibilityRole="button"
-        >
-          <Text
-            style={[styles.homeText, { fontFamily: ff(lang, 'black'), fontSize: buttonFont }, dir(lang)]}
-          >
-            {isFa ? 'تمام! ⭐' : 'Done! ⭐'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {camReady && photoPhase === 'none' && (
+        <View style={styles.bottomBar}>
+          <View>
+            {camIdle && (
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 5,
+                }}
+              >
+                <IdleHand size={camSize * 0.65} />
+              </View>
+            )}
+            <TouchableOpacity
+              style={[styles.camera, { width: camSize, height: camSize, borderRadius: camSize / 2 }]}
+              onPress={takePhoto}
+              activeOpacity={0.85}
+              accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
+              accessibilityRole="button"
+            >
+              <Text style={{ fontSize: camSize * 0.55 }}>📷</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {showCeleb && <PopperCelebration visible />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', overflow: 'hidden', backgroundColor: '#8FD694', paddingTop: 6, paddingBottom: 6 },
-  titlePill: {
-    backgroundColor: 'rgba(255,253,245,0.94)',
-    borderRadius: 999,
-    maxWidth: '96%',
-    overflow: 'hidden',
-  },
-  title: { color: '#3A2A6B', textAlign: 'center' },
   levelPill: {
     backgroundColor: 'rgba(255,253,245,0.94)',
     borderRadius: 999,
@@ -560,6 +611,8 @@ const styles = StyleSheet.create({
   },
   albumChipText: { color: '#3A2A6B' },
   scene: { flex: 1, width: '100%', minHeight: 0, alignItems: 'center', justifyContent: 'flex-end', marginTop: 4 },
+  treeWrap: { position: 'absolute', justifyContent: 'flex-end' },
+  balloonRow: { position: 'absolute', flexDirection: 'row' },
   blanket: {
     overflow: 'hidden',
     alignItems: 'center',
@@ -586,16 +639,14 @@ const styles = StyleSheet.create({
   polaroidPhoto: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   polaroidCaption: { color: '#3A2A6B', marginTop: 6, textAlign: 'center' },
   bottomBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingTop: 4, maxWidth: '100%' },
-  bye: {
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(45,27,105,0.85)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6,
+  camera: {
+    backgroundColor: '#F59E0B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#7C2D12',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
-  camera: { backgroundColor: '#F59E0B', justifyContent: 'center' },
-  cameraText: { color: '#FFFFFF' },
-  album: { backgroundColor: '#6C4EFF', justifyContent: 'center' },
-  albumText: { color: '#FFFFFF' },
-  home: { backgroundColor: '#22C55E', justifyContent: 'center' },
-  homeText: { color: '#FFFFFF' },
 });

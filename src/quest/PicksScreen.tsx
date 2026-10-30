@@ -1,6 +1,6 @@
-// Quest v2 picks (section 2). One screen per pick: 3 random options, no
-// Next button. The app says the 3 options once (right to left) when the
-// screen opens; tapping one bounces it, says its name, and moves on.
+// Quest v2 picks (section 2). One screen per pick: 3 options, no Next
+// button and no auto narration. Tapping one bounces it, says its name,
+// and moves on.
 
 import React, { useContext, useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -9,15 +9,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { topBarHeight } from '../components/TopBar';
 import { AppContext } from '../store/AppContext';
 import { dir, ff } from '../theme/fonts';
-import { playFaAudio, stopFaAudio } from '../utils/faAudio';
-import { isQuestMuted, questPlay } from './questSound';
+import { questPlay } from './questSound';
 import { DisplayWord } from './questGroups';
-import { COLOR_HEX, PickKind } from './pickLists';
+import { PickKind } from './pickLists';
+import ColorDot from './ColorDot';
 import WordArt from './WordArt';
 
 const PROMPTS: Record<PickKind, { fa: string; en: string; emoji: string }> = {
   fruit: { fa: 'کدوم میوه رو دوست داری؟', en: 'Which fruit do you like?', emoji: '🍎' },
-  ingredient: { fa: 'کدوم رو دوست داری؟', en: 'Which one do you like?', emoji: '🥚' },
   color: { fa: 'کدوم رنگ رو دوست داری؟', en: 'Which color do you like?', emoji: '🎨' },
   dish: { fa: 'کدوم غذا رو دوست داری؟', en: 'Which food do you like?', emoji: '🍲' },
 };
@@ -51,15 +50,7 @@ function OptionButton({
     >
       <Animated.View style={{ transform: [{ scale: bounce }], alignItems: 'center' }}>
         {kind === 'color' ? (
-          <View
-            style={{
-              width: size * 0.8,
-              height: size * 0.8,
-              borderRadius: size * 0.4,
-              backgroundColor: COLOR_HEX[word.id] ?? '#CCCCCC',
-            }}
-            accessibilityLabel={word.fa}
-          />
+          <ColorDot id={word.id} size={size * 0.8} />
         ) : (
           <WordArt word={word} size={size * 0.8} />
         )}
@@ -99,24 +90,11 @@ export default function PicksScreen({
   const optionSize = Math.max(64, Math.min((width * 0.9 - gap * 2) / 3, bodyH * 0.52));
   const prompt = PROMPTS[kind];
 
-  // Say the 3 options once, right to left, one after another (no overlap).
+  // No auto narration: only the tapped favorite says its name (in tap).
   useEffect(() => {
-    let alive = true;
-    const speakOrder = isFa ? options : [...options].reverse();
-    void (async () => {
-      if (isQuestMuted()) return;
-      await stopFaAudio();
-      for (let i = 0; i < speakOrder.length; i += 1) {
-        if (!alive || isQuestMuted()) return;
-        await playFaAudio(speakOrder[i]!.audioKey, { awaitFinish: true, interrupt: i === 0 });
-      }
-    })();
     return () => {
-      alive = false;
       if (timer.current) clearTimeout(timer.current);
     };
-    // Remounted per step (key={stepIndex}), so options are fixed for this run.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const tap = (word: DisplayWord) => {
