@@ -125,6 +125,20 @@ function PictureIcon({ size }: { size: number }) {
   );
 }
 
+/** Open sticker book with colored pages (the ui book asset reads as pause). */
+function OpenBookIcon({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 48 48">
+      <Path d="M24 9 C18 5 10 5 5 7 L5 38 C10 36 18 36 24 40 C30 36 38 36 43 38 L43 7 C38 5 30 5 24 9 Z" fill="#7C3AED" />
+      <Path d="M24 13 C19 10 12 10 8 11 L8 34 C12 33 19 33 24 36 Z" fill="#FFE066" />
+      <Path d="M24 13 C29 10 36 10 40 11 L40 34 C36 33 29 33 24 36 Z" fill="#FDA4AF" />
+      <Path d="M12 18 L20 19.5 M12 23 L20 24.5" stroke="#B45309" strokeWidth={2} strokeLinecap="round" />
+      <Path d="M28 19.5 L36 18 M28 24.5 L36 23" stroke="#9F1239" strokeWidth={2} strokeLinecap="round" />
+      <Path d="M24 13 L24 36" stroke="#7C3AED" strokeWidth={2} />
+    </Svg>
+  );
+}
+
 export default function PhotoFarsiGame() {
   const { height } = useWindowDimensions();
   const k = height / REFERENCE_H;
@@ -258,7 +272,8 @@ export default function PhotoFarsiGame() {
             <View style={s.btnCol}>
               {!photo ? (
                 <CandyButton color={PLAY_ACCENTS.photo.color} edge={PLAY_ACCENTS.photo.edge} onPress={takePhoto} height={bigBtnH}>
-                  <Image source={neliWorldAssets.ui.camera} style={{ width: bigBtnH * 0.58, height: bigBtnH * 0.58 }} resizeMode="contain" />
+                  <Image source={neliWorldAssets.ui.camera} style={{ width: bigBtnH * 0.5, height: bigBtnH * 0.5 }} resizeMode="contain" />
+                  <Text style={[s.bigBtnText, dir('fa')]}>عکس بگیر</Text>
                 </CandyButton>
               ) : (
                 <CandyButton color={PLAY_ACCENTS.green.color} edge={PLAY_ACCENTS.green.edge} onPress={askNeli} disabled={asking} height={bigBtnH}>
@@ -270,7 +285,7 @@ export default function PhotoFarsiGame() {
                   <PictureIcon size={34 * k} />
                 </TouchableOpacity>
                 <TouchableOpacity style={s.smallBtn} onPress={() => { tap(); setBookOpen(true); }} activeOpacity={0.85} accessibilityRole="button">
-                  <Image source={neliWorldAssets.ui.book} style={{ width: 44 * k, height: 44 * k }} resizeMode="contain" />
+                  <OpenBookIcon size={44 * k} />
                   <View style={s.heardBadge}>
                     <Text style={s.heardText}>⭐ {heard.length}/15</Text>
                   </View>
