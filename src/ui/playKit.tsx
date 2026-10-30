@@ -259,6 +259,7 @@ const ALPHABET = (name: string): any => {
     house: require('../../assets/neli-world/alphabet-icons/house.webp'),
     tree: require('../../assets/neli-world/alphabet-icons/tree.webp'),
     river: require('../../assets/neli-world/alphabet-icons/river.webp'),
+    boat: require('../../assets/neli-world/alphabet-icons/boat.webp'),
   };
   return map[name] ?? null;
 };
@@ -290,5 +291,5 @@ export const HERO_ART: Record<string, any> = {
 export const PLACE_ART: Record<string, any> = {
   home: ALPHABET('house'),
   garden: ALPHABET('tree'),
-  sea: ALPHABET('river'),
+  sea: ALPHABET('boat'),
 };

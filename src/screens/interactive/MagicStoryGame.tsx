@@ -118,12 +118,12 @@ export default function MagicStoryGame() {
         maxTokens: 400,
       });
       if ('error' in res || !res.text || !res.text.trim()) {
-        setError('Neli is busy. Try again.');
+        setError('نلی الان نمی‌تونه، دوباره امتحان کن');
         return;
       }
       const parsed = parseLines(res.text);
       if (!parsed) {
-        setError('That story got tangled. Try again.');
+        setError('نلی الان نمی‌تونه، دوباره امتحان کن');
         return;
       }
       setFocus(nextFocus);
@@ -141,7 +141,7 @@ export default function MagicStoryGame() {
   const hero = STORY_HEROES.find(h => h.id === heroId) ?? STORY_HEROES[0]!;
   const place = STORY_PLACES.find(p => p.id === placeId) ?? STORY_PLACES[0]!;
   const mood: BuddyMood = asking ? 'thinking' : lines ? 'happy' : 'idle';
-  const wandH = Math.max(64, 68 * k);
+  const wandH = Math.max(60, 64 * k);
   const s = styles(k);
   return (
     <View style={s.root}>
@@ -176,19 +176,18 @@ export default function MagicStoryGame() {
           </View>
           <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={tellStory} disabled={asking} height={wandH}>
             <Image source={neliWorldAssets.ui.sparkle} style={{ width: wandH * 0.45, height: wandH * 0.45 }} resizeMode="contain" />
-            <Text style={s.tellText}>{asking ? '…' : 'قصه بگو'}</Text>
+            <Text style={s.tellText}>{asking ? '…' : error ? 'دوباره' : 'قصه بگو'}</Text>
           </CandyButton>
-          {error ? <Text style={s.error}>{error}</Text> : null}
           <Text style={s.parentNote}>📖 Parent reads the story aloud</Text>
         </View>
 
-        {/* Right: the open storybook */}
+        {/* Right: the storybook — a scene before the story, the open book after */}
         <View style={s.right}>
-          <GameCard radius={22 * k} style={s.storyCard}>
-            <View style={s.bookCorner}>
-              <BuddyGuide mood={mood} size={64 * k} />
-            </View>
-            {lines ? (
+          {lines ? (
+            <GameCard radius={22 * k} style={s.storyCard}>
+              <View style={s.bookCorner}>
+                <BuddyGuide mood={mood} size={64 * k} />
+              </View>
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.bookPages}>
                 <View style={s.bookCast}>
                   <WordArt art={HERO_ART[hero.id]} emoji={hero.emoji} size={56 * k} />
@@ -199,20 +198,33 @@ export default function MagicStoryGame() {
                   <Text key={i} style={[s.line, dir('fa'), { textAlign: 'center' }]}>{line}</Text>
                 ))}
               </ScrollView>
-            ) : (
-              <View style={s.storyEmpty}>
-                <View style={s.bookCast}>
-                  <WordArt art={HERO_ART[hero.id]} emoji={hero.emoji} size={56 * k} />
-                  <Text style={s.bookPlus}>＋</Text>
-                  <WordArt art={PLACE_ART[place.id]} emoji={place.emoji} size={56 * k} />
-                </View>
-                <Text style={[s.hint, dir('fa'), { textAlign: 'center' }]}>دوستت را انتخاب کن و قصه بساز</Text>
+              <View style={s.starChip}>
+                <Text style={s.starText}>⭐ {stories}</Text>
               </View>
-            )}
-            <View style={s.starChip}>
-              <Text style={s.starText}>⭐ {stories}</Text>
+            </GameCard>
+          ) : (
+            <View style={s.scene}>
+              <View style={s.sceneBg} pointerEvents="none">
+                <WordArt art={PLACE_ART[place.id]} emoji={place.emoji} size={Math.min(230 * k, height * 0.52)} />
+              </View>
+              <View style={s.sceneBubble}>
+                {error ? (
+                  <Text style={[s.sceneError, dir('fa'), { textAlign: 'center' }]}>{error}</Text>
+                ) : (
+                  <Text style={[s.sceneHint, dir('fa'), { textAlign: 'center' }]}>قصه بساز!</Text>
+                )}
+              </View>
+              <View style={s.sceneRow}>
+                <WordArt art={HERO_ART[hero.id]} emoji={hero.emoji} size={Math.min(110 * k, height * 0.26)} />
+                <BuddyGuide mood={asking ? 'thinking' : 'idle'} size={Math.min(92 * k, height * 0.22)} />
+              </View>
+              {error ? (
+                <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={tellStory} disabled={asking} height={Math.max(56, 60 * k)}>
+                  <Text style={s.tellText}>{asking ? '…' : 'دوباره'}</Text>
+                </CandyButton>
+              ) : null}
             </View>
-          </GameCard>
+          )}
           {focus ? (
             <TouchableOpacity style={s.focusChip} onPress={speakFocus} activeOpacity={0.85}>
               <WordArt art={WORD_ART[focus.id]} emoji={focus.emoji} size={30 * k} />
@@ -231,8 +243,8 @@ const styles = (k: number) =>
     root: { flex: 1, backgroundColor: PLAY_INK },
     topWrap: { position: 'relative', zIndex: 10, elevation: 10 },
     body: { flex: 1, flexDirection: 'row', paddingHorizontal: 14 * k, paddingBottom: 12 * k, columnGap: 12 * k },
-    left: { width: '38%', rowGap: 6 * k, justifyContent: 'center' },
-    label: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', fontSize: 14 * k, textShadowColor: 'rgba(46,26,107,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+    left: { width: '38%', rowGap: 5 * k, justifyContent: 'center' },
+    label: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', fontSize: 13 * k, textShadowColor: 'rgba(46,26,107,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
     pickRow: { flexDirection: 'row', columnGap: 8 * k },
     pick: {
       flex: 1,
@@ -249,10 +261,9 @@ const styles = (k: number) =>
       elevation: 5,
     },
     pickOn: { borderColor: '#FFB800' },
-    artBox: { width: 58 * k, height: 58 * k, alignItems: 'center', justifyContent: 'center' },
-    pickFa: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 14 * k },
+    artBox: { width: 48 * k, height: 48 * k, alignItems: 'center', justifyContent: 'center' },
+    pickFa: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 13 * k },
     tellText: { color: '#FFFFFF', fontSize: 20 * k, fontFamily: ff('fa', 'black') },
-    error: { color: '#DC2626', backgroundColor: '#FFFFFF', borderRadius: 10 * k, paddingHorizontal: 10 * k, paddingVertical: 4 * k, fontSize: 12 * k, overflow: 'hidden' },
     parentNote: { color: '#FFFFFF', fontSize: 11 * k, opacity: 0.85 },
     right: { flex: 1, rowGap: 8 * k, minHeight: 0, justifyContent: 'center' },
     storyCard: {
@@ -267,8 +278,38 @@ const styles = (k: number) =>
     bookCast: { flexDirection: 'row', alignItems: 'center', gap: 8 * k, marginBottom: 4 * k },
     bookPlus: { fontSize: 20 * k, color: PLAY_INK, fontFamily: ff('en', 'black') },
     line: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 21 * k, marginBottom: 6 * k },
-    storyEmpty: { alignItems: 'center', rowGap: 6 * k },
-    hint: { fontFamily: ff('fa', 'black'), color: '#6B5CA5', fontSize: 16 * k },
+    scene: {
+      flex: 1,
+      minHeight: 0,
+      borderRadius: 22 * k,
+      backgroundColor: '#D8F1FF',
+      overflow: 'hidden',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      paddingBottom: 10 * k,
+      rowGap: 6 * k,
+      shadowColor: 'rgba(45,27,105,0.30)',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 6,
+      elevation: 5,
+    },
+    sceneBg: { position: 'absolute', bottom: 28 * k, alignSelf: 'center', opacity: 0.95 },
+    sceneBubble: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16 * k,
+      paddingHorizontal: 12 * k,
+      paddingVertical: 7 * k,
+      maxWidth: '92%',
+      shadowColor: 'rgba(45,27,105,0.30)',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 6,
+      elevation: 5,
+    },
+    sceneHint: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 20 * k },
+    sceneError: { fontFamily: ff('fa', 'black'), color: '#DC2626', fontSize: 15 * k },
+    sceneRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 * k },
     starChip: { position: 'absolute', top: 6 * k, right: 8 * k, backgroundColor: '#FACC15', borderRadius: 10 * k, paddingHorizontal: 8 * k, paddingVertical: 2 * k },
     starText: { fontSize: 12 * k, fontFamily: ff('en', 'black'), color: PLAY_INK },
     focusChip: {
