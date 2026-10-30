@@ -26,6 +26,7 @@ import { Story } from './stories';
 import WordArt from './WordArt';
 
 const POP_SOUND = require('../../assets/audio/pop.wav');
+const DRIVE_SOUND = require('../../assets/audio/car-drive.wav');
 const GARDEN_BG = require('../../assets/neli-world/quest/garden-background.png');
 const BOX_CLOSED = require('../../assets/neli-world/quest/box-closed.png');
 const BOX_OPEN = require('../../assets/neli-world/quest/box-open.png');
@@ -92,6 +93,28 @@ function playPop() {
     setTimeout(() => { try { player.remove(); } catch { /* best effort */ } }, 1500);
   } catch {
     // Sound is a nice-to-have; the game goes on without it.
+  }
+}
+
+// Soft cartoon putter, played once per drive leg. The clip is 1.4s and
+// each leg is 1.5s, so it always ends before the word audio starts —
+// nothing ever talks over it. Same one-shot pattern as playPop.
+function playDrive() {
+  if (isQuestMuted()) return;
+  try {
+    const player = createAudioPlayer(DRIVE_SOUND);
+    player.volume = 0.8;
+    player.play();
+    const subscription = player.addListener('playbackStatusUpdate', status => {
+      if (status.isLoaded && status.didJustFinish) {
+        subscription.remove();
+        noteAudioPlayerReleased();
+        try { player.remove(); } catch { /* best effort */ }
+      }
+    });
+    setTimeout(() => { try { player.remove(); } catch { /* best effort */ } }, 2500);
+  } catch {
+    // Sound is a nice-to-have; the drive goes on without it.
   }
 }
 
@@ -588,6 +611,7 @@ export default function DriveGame({
   // The car glides still; stopBounce on arrival keeps it settled.
   const driveTo = (worldX: number, then?: () => void) => {
     setPhase('driving');
+    playDrive();
     driveAnim.current?.stop();
     const anim = Animated.parallel([
       Animated.timing(carX, {

@@ -43,7 +43,7 @@ const CAST: CastMember[] = [
   { key: 'dara', source: require('../../assets/neli-world/characters/Dara/happy_baby_giraffe_in_cheerful_pose.webp'), aspectRatio: 1, leftPct: 66.5, bottomPct: 34.5, heightPct: 24.5, tilt: '6deg', zIndex: 1 },
   { key: 'lila', source: characterAssets.lila.poses.base, aspectRatio: 1086 / 1448, leftPct: 50, bottomPct: 30.5, heightPct: 26.5, tilt: '0deg', zIndex: 2 },
   { key: 'aidin', source: characterAssets.aidin.poses.base, aspectRatio: 1472 / 2048, leftPct: 38.5, bottomPct: 16.5, heightPct: 30, tilt: '3deg', zIndex: 3 },
-  { key: 'mila', source: require('../../assets/neli-world/characters/Mila/mila_teeth.webp'), aspectRatio: 1087 / 1446, leftPct: 62.5, bottomPct: 14.5, heightPct: 30.5, tilt: '-3deg', zIndex: 3 },
+  { key: 'mila', source: characterAssets.mila.poses.laugh, aspectRatio: 329 / 420, leftPct: 62.5, bottomPct: 14.5, heightPct: 30.5, tilt: '-3deg', zIndex: 3 },
   { key: 'neli', source: characterAssets.neli.poses.base, aspectRatio: 1, leftPct: 50.5, bottomPct: 1, heightPct: 41, tilt: '0deg', zIndex: 4 },
 ];
 

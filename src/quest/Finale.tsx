@@ -662,6 +662,11 @@ export default function Finale({
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', overflow: 'hidden', backgroundColor: '#8FD694', paddingTop: 6, paddingBottom: 6 },
   levelPill: {
+    shadowColor: 'rgba(58,42,107,0.30)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 5,
+    elevation: 4,
     backgroundColor: 'rgba(255,253,245,0.94)',
     borderRadius: 999,
     paddingVertical: 3,
@@ -671,6 +676,11 @@ const styles = StyleSheet.create({
   level: { color: '#B45309', textAlign: 'center' },
   albumChip: {
     position: 'absolute',
+    shadowColor: 'rgba(58,42,107,0.30)',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 5,
+    elevation: 4,
     backgroundColor: 'rgba(255,253,245,0.94)',
     borderRadius: 999,
     paddingVertical: 4,

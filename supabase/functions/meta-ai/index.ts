@@ -16,7 +16,7 @@
 //     "prompt": "text for the model",          // required
 //     "imageBase64": "<base64 jpeg>",          // optional, for photo features
 //     "system": "extra instructions",          // optional, appended to the child-safety rules
-//     "maxTokens": 400                          // optional, capped at 1000
+//     "maxTokens": 400                          // optional, capped at 4000
 //   }
 // Response: { "text": "..." } or { "error": "..." }
 
@@ -26,7 +26,7 @@ const META_BASE_URL = 'https://api.meta.ai/v1';
 // that tier lets Meta train on prompts and answers, and this is a kids' app.
 const MODEL = 'muse-spark-1.3';
 
-const MAX_TOKENS_CAP = 1000;
+const MAX_TOKENS_CAP = 4000;
 const MAX_IMAGE_BASE64_CHARS = 6_000_000; // ~4.5 MB image
 
 const CHILD_SAFETY_RULES = `You are part of ZAAL, a Persian (Farsi) learning app for children aged 3 to 8 in diaspora families.
@@ -80,7 +80,7 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const maxTokens = Math.min(Math.max(Number(body.maxTokens) || 400, 1), MAX_TOKENS_CAP);
+  const maxTokens = Math.min(Math.max(Number(body.maxTokens) || 800, 1), MAX_TOKENS_CAP);
 
   try {
     const res = await fetch(`${META_BASE_URL}/chat/completions`, {
@@ -92,6 +92,10 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         model: MODEL,
         max_tokens: maxTokens,
+        // Muse Spark always reasons silently and hidden reasoning tokens
+        // count toward max_tokens. 'minimal' keeps short kids' answers
+        // from being starved of visible output tokens.
+        reasoning_effort: 'minimal',
         messages: [
           { role: 'system', content: systemText },
           { role: 'user', content: userContent },
@@ -106,7 +110,14 @@ Deno.serve(async (req: Request) => {
     }
 
     const data = await res.json();
-    const text: string = data?.choices?.[0]?.message?.content ?? '';
+    const raw = data?.choices?.[0]?.message?.content ?? '';
+    const text: string = Array.isArray(raw)
+      ? raw.map((p: unknown) => (typeof p === 'string' ? p : (p as { text?: unknown })?.text ?? '')).join('')
+      : String(raw ?? '');
+    if (!text.trim()) {
+      console.error('Meta API returned no visible text');
+      return json({ error: 'Model returned no text' }, 502);
+    }
     return json({ text });
   } catch (err) {
     console.error('Meta API request failed', err);
