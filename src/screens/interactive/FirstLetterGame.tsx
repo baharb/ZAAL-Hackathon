@@ -9,7 +9,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useWindowDimensions } from '../../layout/PortraitFallback';
+import { useNav } from '../../store/NavContext';
 import TopBar from '../../components/TopBar';
+import QuestBackdrop, { QUEST_SKY } from '../../quest/QuestBackdrop';
 import { dir, ff } from '../../theme/fonts';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../../assets/faTestAudio.generated';
 import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
@@ -42,11 +44,17 @@ type Deal = { word: PhotoFarsiWord; answer: FirstLetter; choices: FirstLetter[] 
 
 export default function FirstLetterGame() {
   const { height } = useWindowDimensions();
+  const { reset } = useNav();
   const k = height / REFERENCE_H;
   const [round, setRound] = useState(0);
-  // One deal per round: the answer is always among the shown letters.
+  // One deal per round: the answer is always among the shown letters, and
+  // the word never repeats twice in a row.
+  const lastWordId = useRef<string | null>(null);
   const freshDeal = (): Deal => {
-    const word = shuffle(PROMPT_WORDS)[0];
+    let pool = PROMPT_WORDS.filter(w => w.id !== lastWordId.current);
+    if (pool.length === 0) pool = PROMPT_WORDS;
+    const word = shuffle(pool)[0]!;
+    lastWordId.current = word.id;
     const answer = findFirstLetter(WORD_FIRST_LETTER[word.id])!;
     const others = shuffle(FIRST_LETTERS.filter(l => l.id !== answer.id)).slice(0, CHOICES - 1);
     return { word, answer, choices: shuffle([answer, ...others]) };
@@ -56,6 +64,7 @@ export default function FirstLetterGame() {
   const [stars, setStars] = useState(0);
   const [done, setDone] = useState(false);
   const [wrongId, setWrongId] = useState<string | null>(null);
+  const [rightId, setRightId] = useState<string | null>(null);
   const alive = useRef(true);
 
   // Recorded clips and TTS must never overlap — silence both on exit.
@@ -87,6 +96,7 @@ export default function FirstLetterGame() {
     const nextDeal = freshDeal();
     setDeal(nextDeal);
     setWrongId(null);
+    setRightId(null);
     setRound(next);
     void speakPrompt(nextDeal.word);
   };
@@ -99,6 +109,7 @@ export default function FirstLetterGame() {
     await playFaAudio(letter.audioKey as FaTestAudioKey, { awaitFinish: true });
     if (!alive.current) return;
     if (letter.id === deal.answer.id) {
+      setRightId(letter.id);
       await playFaAudio('feedback/afarin');
       if (!alive.current) return;
       setStars(s => s + 1);
@@ -125,13 +136,15 @@ export default function FirstLetterGame() {
     setDone(false);
     setDeal(nextDeal);
     setWrongId(null);
+    setRightId(null);
     void speakPrompt(nextDeal.word);
   };
 
   const s = styles(k);
   return (
     <View style={s.root}>
-      <TopBar title="First Letter" titleFa="حرف اول" showBack />
+      <QuestBackdrop />
+      <TopBar title="First Letter" titleFa="حرف اول" showClose dark topInset={10} onBack={() => reset({ name: 'Main', tab: 'Games' })} />
       <View style={s.body}>
         {done ? (
           <View style={s.endCard}>
@@ -159,7 +172,7 @@ export default function FirstLetterGame() {
               {deal.choices.map(c => (
                 <TouchableOpacity
                   key={c.id}
-                  style={[s.card, c.id === wrongId && s.cardWrong]}
+                  style={[s.card, c.id === wrongId && s.cardWrong, c.id === rightId && s.cardRight]}
                   onPress={() => void choose(c)}
                   disabled={prompting}
                   activeOpacity={0.85}
@@ -175,50 +188,61 @@ export default function FirstLetterGame() {
   );
 }
 
+const CARD_SHADOW = {
+  shadowColor: 'rgba(58,42,107,0.30)',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 1,
+  shadowRadius: 6,
+  elevation: 5,
+};
+
 const styles = (k: number) =>
   StyleSheet.create({
-    root: { flex: 1, backgroundColor: '#164E63' },
+    root: { flex: 1, backgroundColor: QUEST_SKY },
     body: { flex: 1, paddingHorizontal: 16 * k, paddingBottom: 12 * k, rowGap: 10 * k, justifyContent: 'center' },
     promptCard: {
-      borderRadius: 20 * k,
-      backgroundColor: '#FFF6E5',
+      borderRadius: 22 * k,
+      backgroundColor: '#FFFFFF',
       paddingVertical: 8 * k,
       alignItems: 'center',
       justifyContent: 'center',
       flexDirection: 'row',
       columnGap: 12 * k,
+      ...CARD_SHADOW,
     },
     wordEmoji: { fontSize: 44 * k },
     speaker: {
       width: 60 * k,
       height: 60 * k,
       borderRadius: 30 * k,
-      backgroundColor: '#6C4EFF',
+      backgroundColor: '#FFB800',
       alignItems: 'center',
       justifyContent: 'center',
     },
     speakerText: { fontSize: 28 * k },
-    askFa: { fontFamily: ff('fa', 'black'), color: '#2D1B69', fontSize: 20 * k },
-    roundText: { color: '#8A7BB8', fontSize: 13 * k, fontFamily: ff('en', 'black') },
+    askFa: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 20 * k },
+    roundText: { color: '#6B5CA5', fontSize: 13 * k, fontFamily: ff('en', 'black') },
     starChip: { position: 'absolute', top: 8 * k, right: 10 * k, backgroundColor: '#FACC15', borderRadius: 10 * k, paddingHorizontal: 8 * k, paddingVertical: 2 * k },
-    starText: { fontSize: 12 * k, fontFamily: ff('en', 'black'), color: '#2D1B69' },
+    starText: { fontSize: 12 * k, fontFamily: ff('en', 'black'), color: '#3A2A6B' },
     choiceRow: { flexDirection: 'row', columnGap: 10 * k },
     card: {
       flex: 1,
-      borderRadius: 20 * k,
-      backgroundColor: '#FFF6E5',
+      borderRadius: 22 * k,
+      backgroundColor: '#FFFFFF',
       alignItems: 'center',
       justifyContent: 'center',
       paddingVertical: 10 * k,
       borderWidth: 3 * k,
       borderColor: 'transparent',
+      ...CARD_SHADOW,
     },
     cardWrong: { borderColor: '#EF4444' },
-    cardGlyph: { fontFamily: ff('fa', 'black'), color: '#164E63', fontSize: 64 * k },
-    endCard: { alignItems: 'center', rowGap: 8 * k, backgroundColor: '#FFF6E5', borderRadius: 24 * k, paddingVertical: 20 * k, marginHorizontal: 60 * k },
+    cardRight: { borderColor: '#22C55E' },
+    cardGlyph: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 64 * k },
+    endCard: { alignItems: 'center', rowGap: 8 * k, backgroundColor: '#FFFFFF', borderRadius: 26 * k, paddingVertical: 20 * k, marginHorizontal: 60 * k, ...CARD_SHADOW },
     endEmoji: { fontSize: 56 * k },
-    endFa: { fontFamily: ff('fa', 'black'), color: '#2D1B69', fontSize: 24 * k },
-    endStars: { fontSize: 20 * k, fontFamily: ff('en', 'black'), color: '#2D1B69' },
+    endFa: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 24 * k },
+    endStars: { fontSize: 20 * k, fontFamily: ff('en', 'black'), color: '#3A2A6B' },
     againBtn: { backgroundColor: '#22C55E', borderRadius: 14 * k, paddingHorizontal: 22 * k, paddingVertical: 8 * k },
     againText: { color: '#FFFFFF', fontSize: 16 * k, fontFamily: ff('en', 'black') },
   });

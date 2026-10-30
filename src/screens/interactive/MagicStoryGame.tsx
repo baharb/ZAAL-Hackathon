@@ -8,7 +8,9 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useWindowDimensions } from '../../layout/PortraitFallback';
+import { useNav } from '../../store/NavContext';
 import TopBar from '../../components/TopBar';
+import QuestBackdrop, { QUEST_SKY } from '../../quest/QuestBackdrop';
 import { dir, ff } from '../../theme/fonts';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../../assets/faTestAudio.generated';
 import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
@@ -28,23 +30,37 @@ function tap() {
 }
 
 function parseLines(text: string): string[] | null {
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) return null;
-  try {
-    const obj = JSON.parse(match[0]);
-    if (!Array.isArray(obj.lines)) return null;
-    const lines = obj.lines.filter((l: unknown) => typeof l === 'string').map((l: string) => l.slice(0, 80));
-    return lines.length >= 1 && lines.length <= 6 ? lines : null;
-  } catch {
-    return null;
+  const clean = (text ?? '').replace(/```json|```/g, '');
+  const match = clean.match(/\{[\s\S]*\}/);
+  if (match) {
+    try {
+      const obj = JSON.parse(match[0]);
+      if (Array.isArray(obj.lines)) {
+        const lines = obj.lines.filter((l: unknown) => typeof l === 'string').map((l: string) => l.slice(0, 80));
+        if (lines.length >= 1 && lines.length <= 6) return lines;
+      }
+    } catch {
+      // Fall through to salvage mode below.
+    }
   }
+  // Salvage mode: the model chatted instead of sending JSON. Keep the
+  // Farsi-looking lines so the child still gets a story.
+  const faRange = new RegExp('[\\u0600-\\u06FF]');
+  const seen = new Set<string>();
+  const lines = clean
+    .split('\n')
+    .map(l => l.replace(/^[\s*#\-–—\d.)\]]+/, '').replace(/["*]/g, '').trim())
+    .filter(l => l.length > 0 && l.length <= 80 && faRange.test(l))
+    .filter(l => (seen.has(l) ? false : (seen.add(l), true)));
+  return lines.length >= 1 ? lines.slice(0, 6) : null;
 }
 
 export default function MagicStoryGame() {
   const { height } = useWindowDimensions();
+  const { reset } = useNav();
   const k = height / REFERENCE_H;
-  const [heroId, setHeroId] = useState(STORY_HEROES[0].id);
-  const [placeId, setPlaceId] = useState(STORY_PLACES[0].id);
+  const [heroId, setHeroId] = useState(STORY_HEROES[0]!.id);
+  const [placeId, setPlaceId] = useState(STORY_PLACES[0]!.id);
   const [focus, setFocus] = useState<StoryFocus | null>(null);
   const [lines, setLines] = useState<string[] | null>(null);
   const [asking, setAsking] = useState(false);
@@ -75,11 +91,11 @@ export default function MagicStoryGame() {
     setError(null);
     setLines(null);
     try {
-      const hero = STORY_HEROES.find(h => h.id === heroId) ?? STORY_HEROES[0];
-      const place = STORY_PLACES.find(p => p.id === placeId) ?? STORY_PLACES[0];
+      const hero = STORY_HEROES.find(h => h.id === heroId) ?? STORY_HEROES[0]!;
+      const place = STORY_PLACES.find(p => p.id === placeId) ?? STORY_PLACES[0]!;
       // The focus word is drawn from recorded words only, so the one spoken
       // word always has the real voice no matter what the story says.
-      const nextFocus = STORY_FOCUS_WORDS[Math.floor(Math.random() * STORY_FOCUS_WORDS.length)];
+      const nextFocus = STORY_FOCUS_WORDS[Math.floor(Math.random() * STORY_FOCUS_WORDS.length)]!;
       const res = await askMeta({
         prompt:
           `Write a tiny bedtime story in Farsi for a 4-year-old. Hero: ${hero.fa} (${hero.en}). ` +
@@ -88,9 +104,9 @@ export default function MagicStoryGame() {
         system:
           'Four lines only. Each line at most 8 very simple Farsi words in Persian script. ' +
           'Kind, calm and sleepy. JSON only, never any other text.',
-        maxTokens: 200,
+        maxTokens: 400,
       });
-      if ('error' in res) {
+      if ('error' in res || !res.text || !res.text.trim()) {
         setError('Neli is busy. Try again.');
         return;
       }
@@ -111,12 +127,13 @@ export default function MagicStoryGame() {
     }
   };
 
-  const hero = STORY_HEROES.find(h => h.id === heroId) ?? STORY_HEROES[0];
-  const place = STORY_PLACES.find(p => p.id === placeId) ?? STORY_PLACES[0];
+  const hero = STORY_HEROES.find(h => h.id === heroId) ?? STORY_HEROES[0]!;
+  const place = STORY_PLACES.find(p => p.id === placeId) ?? STORY_PLACES[0]!;
   const s = styles(k);
   return (
     <View style={s.root}>
-      <TopBar title="Magic Story" titleFa="قصه جادویی" showBack />
+      <QuestBackdrop />
+      <TopBar title="Magic Story" titleFa="قصه جادویی" showClose dark topInset={10} onBack={() => reset({ name: 'Main', tab: 'Games' })} />
       <View style={s.body}>
         {/* Left: pick hero + place, then ask */}
         <View style={s.left}>
@@ -177,64 +194,76 @@ export default function MagicStoryGame() {
   );
 }
 
+const CARD_SHADOW = {
+  shadowColor: 'rgba(58,42,107,0.30)',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 1,
+  shadowRadius: 6,
+  elevation: 5,
+};
+
 const styles = (k: number) =>
   StyleSheet.create({
-    root: { flex: 1, backgroundColor: '#2D1B69' },
+    root: { flex: 1, backgroundColor: QUEST_SKY },
     body: { flex: 1, flexDirection: 'row', paddingHorizontal: 16 * k, paddingBottom: 12 * k, columnGap: 12 * k },
     left: { width: '38%', rowGap: 6 * k },
-    label: { color: '#C4B5FD', fontSize: 13 * k, fontFamily: ff('en', 'black') },
+    label: { color: '#3A2A6B', fontSize: 13 * k, fontFamily: ff('en', 'black') },
     pickRow: { flexDirection: 'row', columnGap: 8 * k },
     pick: {
       flex: 1,
-      borderRadius: 16 * k,
-      backgroundColor: '#FFF6E5',
+      borderRadius: 18 * k,
+      backgroundColor: '#FFFFFF',
       alignItems: 'center',
       paddingVertical: 6 * k,
       borderWidth: 3 * k,
       borderColor: 'transparent',
+      ...CARD_SHADOW,
     },
-    pickOn: { borderColor: '#FACC15' },
+    pickOn: { borderColor: '#FFB800' },
     pickEmoji: { fontSize: 30 * k },
-    pickFa: { fontFamily: ff('fa', 'black'), color: '#2D1B69', fontSize: 14 * k },
+    pickFa: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 14 * k },
     tellBtn: {
       marginTop: 4 * k,
       height: 52 * k,
-      borderRadius: 16 * k,
+      borderRadius: 18 * k,
       backgroundColor: '#22C55E',
       alignItems: 'center',
       justifyContent: 'center',
+      ...CARD_SHADOW,
     },
-    tellBtnOff: { backgroundColor: '#8A7BB8' },
+    tellBtnOff: { backgroundColor: '#B9C4D6' },
     tellText: { color: '#FFFFFF', fontSize: 18 * k, fontFamily: ff('en', 'black') },
-    error: { color: '#FDA4AF', fontSize: 12 * k },
-    parentNote: { color: '#C4B5FD', fontSize: 12 * k },
+    error: { color: '#DC2626', backgroundColor: '#FFFFFF', borderRadius: 10 * k, paddingHorizontal: 10 * k, paddingVertical: 4 * k, fontSize: 12 * k, overflow: 'hidden' },
+    parentNote: { color: '#3A2A6B', fontSize: 12 * k },
     right: { flex: 1, rowGap: 8 * k, minHeight: 0 },
     storyCard: {
       flex: 1,
       minHeight: 0,
-      borderRadius: 20 * k,
-      backgroundColor: '#FFF6E5',
+      borderRadius: 22 * k,
+      backgroundColor: '#FFFFFF',
       paddingVertical: 10 * k,
       paddingHorizontal: 14 * k,
       justifyContent: 'center',
+      ...CARD_SHADOW,
     },
-    line: { fontFamily: ff('fa', 'black'), color: '#2D1B69', fontSize: 21 * k, marginBottom: 6 * k },
+    line: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 21 * k, marginBottom: 6 * k },
     storyEmpty: { alignItems: 'center', rowGap: 6 * k },
     storyEmoji: { fontSize: 52 * k },
-    hint: { fontFamily: ff('fa', 'black'), color: '#6C4EFF', fontSize: 16 * k },
+    hint: { fontFamily: ff('fa', 'black'), color: '#6B5CA5', fontSize: 16 * k },
     starChip: { position: 'absolute', top: 6 * k, right: 8 * k, backgroundColor: '#FACC15', borderRadius: 10 * k, paddingHorizontal: 8 * k, paddingVertical: 2 * k },
-    starText: { fontSize: 12 * k, fontFamily: ff('en', 'black'), color: '#2D1B69' },
+    starText: { fontSize: 12 * k, fontFamily: ff('en', 'black'), color: '#3A2A6B' },
     focusChip: {
       flexDirection: 'row',
       alignItems: 'center',
       alignSelf: 'center',
       columnGap: 8 * k,
-      backgroundColor: '#6C4EFF',
-      borderRadius: 16 * k,
+      backgroundColor: '#FFB800',
+      borderRadius: 18 * k,
       paddingHorizontal: 16 * k,
       paddingVertical: 6 * k,
+      ...CARD_SHADOW,
     },
     focusEmoji: { fontSize: 22 * k },
-    focusFa: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', fontSize: 18 * k },
+    focusFa: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 18 * k },
     focusReplay: { fontSize: 16 * k },
   });
