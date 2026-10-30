@@ -5,17 +5,29 @@
 // aloud (iPhones have no Persian voice; garbled TTS is worse than silence).
 
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useWindowDimensions } from '../../layout/PortraitFallback';
-import { useNav } from '../../store/NavContext';
-import TopBar from '../../components/TopBar';
-import QuestBackdrop, { QUEST_SKY } from '../../quest/QuestBackdrop';
 import { dir, ff } from '../../theme/fonts';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../../assets/faTestAudio.generated';
 import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
 import { askMeta } from '../../services/metaAI';
+import { roomBackgroundPickers, neliWorldAssets } from '../../assets/neliWorldAssets';
 import { STORY_HEROES, STORY_PLACES, STORY_FOCUS_WORDS, StoryFocus } from '../../data/magicStory';
+import {
+  BuddyGuide,
+  BuddyMood,
+  CandyButton,
+  GameBg,
+  GameCard,
+  GameTopBar,
+  HERO_ART,
+  PLACE_ART,
+  PLAY_ACCENTS,
+  PLAY_INK,
+  WORD_ART,
+  WordArt,
+} from '../../ui/playKit';
 
 // Everything scales from a 400pt-tall reference (a landscape phone is
 // 360–440pt tall). k multiplies every size AND offset — see CLAUDE.md.
@@ -57,7 +69,6 @@ function parseLines(text: string): string[] | null {
 
 export default function MagicStoryGame() {
   const { height } = useWindowDimensions();
-  const { reset } = useNav();
   const k = height / REFERENCE_H;
   const [heroId, setHeroId] = useState(STORY_HEROES[0]!.id);
   const [placeId, setPlaceId] = useState(STORY_PLACES[0]!.id);
@@ -129,63 +140,82 @@ export default function MagicStoryGame() {
 
   const hero = STORY_HEROES.find(h => h.id === heroId) ?? STORY_HEROES[0]!;
   const place = STORY_PLACES.find(p => p.id === placeId) ?? STORY_PLACES[0]!;
+  const mood: BuddyMood = asking ? 'thinking' : lines ? 'happy' : 'idle';
+  const wandH = Math.max(64, 68 * k);
   const s = styles(k);
   return (
     <View style={s.root}>
-      <QuestBackdrop />
-      <TopBar title="Magic Story" titleFa="قصه جادویی" showClose dark topInset={10} onBack={() => reset({ name: 'Main', tab: 'Games' })} />
+      <GameBg pick={roomBackgroundPickers.garden} />
+      <GameTopBar title="Magic Story" titleFa="قصه جادویی" />
       <View style={s.body}>
         {/* Left: pick hero + place, then ask */}
         <View style={s.left}>
-          <Text style={s.label}>Who?</Text>
+          <Text style={[s.label, dir('fa'), { textAlign: 'center' }]}>کی؟</Text>
           <View style={s.pickRow}>
             {STORY_HEROES.map(h => (
               <TouchableOpacity key={h.id} style={[s.pick, h.id === heroId && s.pickOn]} onPress={() => pick(setHeroId)(h.id)} activeOpacity={0.85}>
-                <Text style={s.pickEmoji}>{h.emoji}</Text>
+                <View style={s.artBox}>
+                  <WordArt art={HERO_ART[h.id]} emoji={h.emoji} size={52 * k} />
+                </View>
                 <Text style={[s.pickFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{h.fa}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={s.label}>Where?</Text>
+          <Text style={[s.label, dir('fa'), { textAlign: 'center' }]}>کجا؟</Text>
           <View style={s.pickRow}>
             {STORY_PLACES.map(p => (
               <TouchableOpacity key={p.id} style={[s.pick, p.id === placeId && s.pickOn]} onPress={() => pick(setPlaceId)(p.id)} activeOpacity={0.85}>
-                <Text style={s.pickEmoji}>{p.emoji}</Text>
+                <View style={s.artBox}>
+                  <WordArt art={PLACE_ART[p.id]} emoji={p.emoji} size={52 * k} />
+                </View>
                 <Text style={[s.pickFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{p.fa}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          <TouchableOpacity style={[s.tellBtn, asking && s.tellBtnOff]} onPress={tellStory} disabled={asking} activeOpacity={0.85}>
-            <Text style={s.tellText}>{asking ? '✨ …' : '✨ Tell my story'}</Text>
-          </TouchableOpacity>
+          <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={tellStory} disabled={asking} height={wandH}>
+            <Image source={neliWorldAssets.ui.sparkle} style={{ width: wandH * 0.45, height: wandH * 0.45 }} resizeMode="contain" />
+            <Text style={s.tellText}>{asking ? '…' : 'قصه بگو'}</Text>
+          </CandyButton>
           {error ? <Text style={s.error}>{error}</Text> : null}
           <Text style={s.parentNote}>📖 Parent reads the story aloud</Text>
         </View>
 
-        {/* Right: the story */}
+        {/* Right: the open storybook */}
         <View style={s.right}>
-          <View style={s.storyCard}>
+          <GameCard radius={22 * k} style={s.storyCard}>
+            <View style={s.bookCorner}>
+              <BuddyGuide mood={mood} size={64 * k} />
+            </View>
             {lines ? (
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.bookPages}>
+                <View style={s.bookCast}>
+                  <WordArt art={HERO_ART[hero.id]} emoji={hero.emoji} size={56 * k} />
+                  <Text style={s.bookPlus}>＋</Text>
+                  <WordArt art={PLACE_ART[place.id]} emoji={place.emoji} size={56 * k} />
+                </View>
                 {lines.map((line, i) => (
                   <Text key={i} style={[s.line, dir('fa'), { textAlign: 'center' }]}>{line}</Text>
                 ))}
               </ScrollView>
             ) : (
               <View style={s.storyEmpty}>
-                <Text style={s.storyEmoji}>{hero.emoji}{place.emoji}</Text>
+                <View style={s.bookCast}>
+                  <WordArt art={HERO_ART[hero.id]} emoji={hero.emoji} size={56 * k} />
+                  <Text style={s.bookPlus}>＋</Text>
+                  <WordArt art={PLACE_ART[place.id]} emoji={place.emoji} size={56 * k} />
+                </View>
                 <Text style={[s.hint, dir('fa'), { textAlign: 'center' }]}>دوستت را انتخاب کن و قصه بساز</Text>
               </View>
             )}
             <View style={s.starChip}>
               <Text style={s.starText}>⭐ {stories}</Text>
             </View>
-          </View>
+          </GameCard>
           {focus ? (
             <TouchableOpacity style={s.focusChip} onPress={speakFocus} activeOpacity={0.85}>
-              <Text style={s.focusEmoji}>{focus.emoji}</Text>
+              <WordArt art={WORD_ART[focus.id]} emoji={focus.emoji} size={30 * k} />
               <Text style={[s.focusFa, dir('fa')]}>{focus.fa}</Text>
-              <Text style={s.focusReplay}>🔊</Text>
+              <Image source={neliWorldAssets.ui.voice} style={{ width: 30 * k, height: 30 * k }} resizeMode="contain" />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -194,20 +224,12 @@ export default function MagicStoryGame() {
   );
 }
 
-const CARD_SHADOW = {
-  shadowColor: 'rgba(58,42,107,0.30)',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 1,
-  shadowRadius: 6,
-  elevation: 5,
-};
-
 const styles = (k: number) =>
   StyleSheet.create({
-    root: { flex: 1, backgroundColor: QUEST_SKY },
-    body: { flex: 1, flexDirection: 'row', paddingHorizontal: 16 * k, paddingBottom: 12 * k, columnGap: 12 * k },
-    left: { width: '38%', rowGap: 6 * k },
-    label: { color: '#3A2A6B', fontSize: 13 * k, fontFamily: ff('en', 'black') },
+    root: { flex: 1, backgroundColor: PLAY_INK },
+    body: { flex: 1, flexDirection: 'row', paddingHorizontal: 14 * k, paddingBottom: 12 * k, columnGap: 12 * k },
+    left: { width: '38%', rowGap: 6 * k, justifyContent: 'center' },
+    label: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', fontSize: 14 * k, textShadowColor: 'rgba(46,26,107,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
     pickRow: { flexDirection: 'row', columnGap: 8 * k },
     pick: {
       flex: 1,
@@ -217,41 +239,35 @@ const styles = (k: number) =>
       paddingVertical: 6 * k,
       borderWidth: 3 * k,
       borderColor: 'transparent',
-      ...CARD_SHADOW,
+      shadowColor: 'rgba(45,27,105,0.30)',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 6,
+      elevation: 5,
     },
     pickOn: { borderColor: '#FFB800' },
-    pickEmoji: { fontSize: 30 * k },
-    pickFa: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 14 * k },
-    tellBtn: {
-      marginTop: 4 * k,
-      height: 52 * k,
-      borderRadius: 18 * k,
-      backgroundColor: '#22C55E',
-      alignItems: 'center',
-      justifyContent: 'center',
-      ...CARD_SHADOW,
-    },
-    tellBtnOff: { backgroundColor: '#B9C4D6' },
-    tellText: { color: '#FFFFFF', fontSize: 18 * k, fontFamily: ff('en', 'black') },
+    artBox: { width: 58 * k, height: 58 * k, alignItems: 'center', justifyContent: 'center' },
+    pickFa: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 14 * k },
+    tellText: { color: '#FFFFFF', fontSize: 20 * k, fontFamily: ff('fa', 'black') },
     error: { color: '#DC2626', backgroundColor: '#FFFFFF', borderRadius: 10 * k, paddingHorizontal: 10 * k, paddingVertical: 4 * k, fontSize: 12 * k, overflow: 'hidden' },
-    parentNote: { color: '#3A2A6B', fontSize: 12 * k },
-    right: { flex: 1, rowGap: 8 * k, minHeight: 0 },
+    parentNote: { color: '#FFFFFF', fontSize: 11 * k, opacity: 0.85 },
+    right: { flex: 1, rowGap: 8 * k, minHeight: 0, justifyContent: 'center' },
     storyCard: {
       flex: 1,
       minHeight: 0,
-      borderRadius: 22 * k,
-      backgroundColor: '#FFFFFF',
       paddingVertical: 10 * k,
       paddingHorizontal: 14 * k,
       justifyContent: 'center',
-      ...CARD_SHADOW,
     },
-    line: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 21 * k, marginBottom: 6 * k },
+    bookCorner: { position: 'absolute', top: 6 * k, left: 8 * k, zIndex: 5 },
+    bookPages: { alignItems: 'center', rowGap: 4 * k, paddingTop: 8 * k },
+    bookCast: { flexDirection: 'row', alignItems: 'center', gap: 8 * k, marginBottom: 4 * k },
+    bookPlus: { fontSize: 20 * k, color: PLAY_INK, fontFamily: ff('en', 'black') },
+    line: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 21 * k, marginBottom: 6 * k },
     storyEmpty: { alignItems: 'center', rowGap: 6 * k },
-    storyEmoji: { fontSize: 52 * k },
     hint: { fontFamily: ff('fa', 'black'), color: '#6B5CA5', fontSize: 16 * k },
     starChip: { position: 'absolute', top: 6 * k, right: 8 * k, backgroundColor: '#FACC15', borderRadius: 10 * k, paddingHorizontal: 8 * k, paddingVertical: 2 * k },
-    starText: { fontSize: 12 * k, fontFamily: ff('en', 'black'), color: '#3A2A6B' },
+    starText: { fontSize: 12 * k, fontFamily: ff('en', 'black'), color: PLAY_INK },
     focusChip: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -261,9 +277,12 @@ const styles = (k: number) =>
       borderRadius: 18 * k,
       paddingHorizontal: 16 * k,
       paddingVertical: 6 * k,
-      ...CARD_SHADOW,
+      minHeight: Math.max(64, 60 * k),
+      shadowColor: 'rgba(45,27,105,0.30)',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 6,
+      elevation: 5,
     },
-    focusEmoji: { fontSize: 22 * k },
-    focusFa: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 18 * k },
-    focusReplay: { fontSize: 16 * k },
+    focusFa: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 18 * k },
   });
