@@ -176,6 +176,7 @@ export const roomBackgroundPickers = {
   garden: (width: number, height: number) => pickRoomBackground(yardBackgrounds, width, height),
   splash: (width: number, height: number) => pickRoomBackground(yardBackgrounds, width, height),
   feedAnimalsJungle: (width: number, height: number) => pickJungleBackground(width, height),
+  playground: (width: number, height: number) => pickRoomBackground(playgroundBackgrounds, width, height),
 } as const;
 
 export const neliWorldAssets = {
