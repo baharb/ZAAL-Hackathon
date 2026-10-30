@@ -12,7 +12,7 @@ import { neliWorldAssets, roomBackgroundPickers } from '../assets/neliWorldAsset
 import { SOLAR_SYSTEM_BACKGROUND, SOLAR_SYSTEM_PLANETS } from '../assets/solarSystemPuzzle';
 import { BOX_CHARACTER_WIDTH } from '../theme/characterSizes';
 
-type Kind = 'talk' | 'grandma' | 'dress' | 'tooth' | 'animal' | 'cook' | 'paint' | 'routine' | 'room' | 'memory' | 'quiz' | 'color' | 'count' | 'culture' | 'tracing' | 'firstTracing' | 'alphabet' | 'alphabetTrain' | 'video' | 'solarPuzzle' | 'quest' | 'photo';
+type Kind = 'talk' | 'grandma' | 'dress' | 'tooth' | 'animal' | 'cook' | 'paint' | 'routine' | 'room' | 'memory' | 'quiz' | 'color' | 'count' | 'culture' | 'tracing' | 'firstTracing' | 'alphabet' | 'alphabetTrain' | 'video' | 'solarPuzzle' | 'quest' | 'photo' | 'story';
 type Tile = {
   id: string;
   route: any;
@@ -30,6 +30,7 @@ type Tile = {
 const GAMES: Tile[] = [
   { id: 'dailyQuest', route: { name: 'DailyQuest' }, en: 'My Daily Quest', fa: 'بازی امروز من', descEn: 'A new game every day', descFa: 'هر روز یک بازی تازه', kind: 'quest', color: '#FF5C8A', accent: '#FACC15', group: 'play' },
   { id: 'photoFarsi', route: { name: 'PhotoFarsi' }, en: 'Photo Farsi', fa: 'فارسی با عکس', descEn: 'Photograph and name', descFa: 'عکس بگیر و یاد بگیر', kind: 'photo', color: '#22D3EE', accent: '#FACC15', group: 'play' },
+  { id: 'magicStory', route: { name: 'MagicStory' }, en: 'Magic Story', fa: 'قصه جادویی', descEn: 'A story with your hero', descFa: 'با قهرمانت قصه بساز', kind: 'story', color: '#A855F7', accent: '#FACC15', group: 'play' },
   { id: 'talk', route: { name: 'ConversationGame' }, en: 'Talk with Neli', fa: 'گفت و گو', descEn: 'Listen and answer', descFa: 'بشنو و جواب بده', kind: 'talk', color: '#6C4EFF', accent: '#FACC15', group: 'play' },
   { id: 'grandma', route: { name: 'GrandmaCall' }, en: "Grandma's Call", fa: 'زنگ مامان‌بزرگ', descEn: 'Answer Grandma in Farsi', descFa: 'به مامان‌بزرگ جواب بده', kind: 'grandma', color: '#FF7A5C', accent: '#FFD86B', group: 'play' },
   { id: 'animals', route: { name: 'FeedAnimals' }, en: 'Feed Animals', fa: 'غذا بده', descEn: 'Drag food to animals', descFa: 'غذا را به حیوان بده', kind: 'animal', color: '#22C55E', accent: '#FACC15', group: 'play' },
@@ -287,6 +288,19 @@ function TileArt({ kind, color, accent, characterId, box }: { kind: Kind; color:
         <View style={{ position: 'absolute', bottom: 12 * k, left: 12 * k, backgroundColor: '#6C4EFF', borderRadius: 14 * k, paddingHorizontal: 10 * k, paddingVertical: 4 * k }}>
           <Text style={{ color: '#FFFFFF', fontSize: 18 * k }}>✨</Text>
         </View>
+      </View>
+    );
+  }
+  if (kind === 'story') {
+    // Magic Story: night sky, moon, stars and an open book — original art.
+    return (
+      <View style={[styles.sceneArt, { backgroundColor: '#2D1B69' }]}>
+        <View style={{ position: 'absolute', width: 70 * k, height: 70 * k, borderRadius: 35 * k, backgroundColor: '#FFE45E', top: 12 * k, left: 18 * k }} />
+        <View style={{ position: 'absolute', width: 56 * k, height: 56 * k, borderRadius: 28 * k, backgroundColor: '#2D1B69', top: 6 * k, left: 30 * k }} />
+        <Text style={{ position: 'absolute', top: 14 * k, right: 40 * k, fontSize: 22 * k }}>✨</Text>
+        <Text style={{ position: 'absolute', top: 52 * k, right: 22 * k, fontSize: 16 * k }}>✨</Text>
+        <Text style={{ fontSize: 84 * k }}>📖</Text>
+        <View style={{ position: 'absolute', bottom: -30 * k, left: -40 * k, width: 220 * k, height: 90 * k, borderRadius: 45 * k, backgroundColor: '#4C2E9E' }} />
       </View>
     );
   }
