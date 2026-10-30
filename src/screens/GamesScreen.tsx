@@ -12,7 +12,7 @@ import { neliWorldAssets, roomBackgroundPickers } from '../assets/neliWorldAsset
 import { SOLAR_SYSTEM_BACKGROUND, SOLAR_SYSTEM_PLANETS } from '../assets/solarSystemPuzzle';
 import { BOX_CHARACTER_WIDTH } from '../theme/characterSizes';
 
-type Kind = 'talk' | 'grandma' | 'dress' | 'tooth' | 'animal' | 'cook' | 'paint' | 'routine' | 'room' | 'memory' | 'quiz' | 'color' | 'count' | 'culture' | 'tracing' | 'firstTracing' | 'alphabet' | 'alphabetTrain' | 'video' | 'solarPuzzle' | 'quest';
+type Kind = 'talk' | 'grandma' | 'dress' | 'tooth' | 'animal' | 'cook' | 'paint' | 'routine' | 'room' | 'memory' | 'quiz' | 'color' | 'count' | 'culture' | 'tracing' | 'firstTracing' | 'alphabet' | 'alphabetTrain' | 'video' | 'solarPuzzle' | 'quest' | 'photo';
 type Tile = {
   id: string;
   route: any;
@@ -29,6 +29,7 @@ type Tile = {
 
 const GAMES: Tile[] = [
   { id: 'dailyQuest', route: { name: 'DailyQuest' }, en: 'My Daily Quest', fa: 'بازی امروز من', descEn: 'A new game every day', descFa: 'هر روز یک بازی تازه', kind: 'quest', color: '#FF5C8A', accent: '#FACC15', group: 'play' },
+  { id: 'photoFarsi', route: { name: 'PhotoFarsi' }, en: 'Photo Farsi', fa: 'فارسی با عکس', descEn: 'Photograph and name', descFa: 'عکس بگیر و یاد بگیر', kind: 'photo', color: '#22D3EE', accent: '#FACC15', group: 'play' },
   { id: 'talk', route: { name: 'ConversationGame' }, en: 'Talk with Neli', fa: 'گفت و گو', descEn: 'Listen and answer', descFa: 'بشنو و جواب بده', kind: 'talk', color: '#6C4EFF', accent: '#FACC15', group: 'play' },
   { id: 'grandma', route: { name: 'GrandmaCall' }, en: "Grandma's Call", fa: 'زنگ مامان‌بزرگ', descEn: 'Answer Grandma in Farsi', descFa: 'به مامان‌بزرگ جواب بده', kind: 'grandma', color: '#FF7A5C', accent: '#FFD86B', group: 'play' },
   { id: 'animals', route: { name: 'FeedAnimals' }, en: 'Feed Animals', fa: 'غذا بده', descEn: 'Drag food to animals', descFa: 'غذا را به حیوان بده', kind: 'animal', color: '#22C55E', accent: '#FACC15', group: 'play' },
@@ -271,6 +272,20 @@ function TileArt({ kind, color, accent, characterId, box }: { kind: Kind; color:
         <Image source={characterAssets.neli.poses.base} style={{ position: 'absolute', width: 132 * k, height: 165 * k, bottom: 48 * k, right: 10 * k }} resizeMode="contain" />
         <View style={{ position: 'absolute', top: 10 * k, left: 10 * k, backgroundColor: '#FF5C8A', borderRadius: 20 * k, paddingHorizontal: 12 * k, paddingVertical: 4 * k }}>
           <Text style={{ color: '#FFFFFF', fontSize: 17 * k }}>✨</Text>
+        </View>
+      </View>
+    );
+  }
+  if (kind === 'photo') {
+    // Photo Farsi: bright sky, sun, hills and a big camera — original art.
+    return (
+      <View style={[styles.sceneArt, { backgroundColor: '#7ED6F2' }]}>
+        <View style={{ position: 'absolute', width: 90 * k, height: 90 * k, borderRadius: 45 * k, backgroundColor: '#FFE45E', top: 10 * k, right: 14 * k }} />
+        <View style={{ position: 'absolute', width: 300 * k, height: 120 * k, borderRadius: 60 * k, backgroundColor: '#8FD694', bottom: -40 * k, left: -50 * k }} />
+        <View style={{ position: 'absolute', width: 260 * k, height: 100 * k, borderRadius: 50 * k, backgroundColor: '#6FBF73', bottom: -46 * k, right: -60 * k }} />
+        <Text style={{ fontSize: 92 * k }}>📷</Text>
+        <View style={{ position: 'absolute', bottom: 12 * k, left: 12 * k, backgroundColor: '#6C4EFF', borderRadius: 14 * k, paddingHorizontal: 10 * k, paddingVertical: 4 * k }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 18 * k }}>✨</Text>
         </View>
       </View>
     );

@@ -20,7 +20,9 @@
       "bundleIdentifier": "com.zaal.app.quest",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSMicrophoneUsageDescription": "ZAAL lets your child say Farsi words out loud. Recordings stay on this device and are never uploaded."
+        "NSMicrophoneUsageDescription": "ZAAL lets your child say Farsi words out loud. Recordings stay on this device and are never uploaded.",
+        "NSCameraUsageDescription": "ZAAL lets your child photograph toys and rooms so Neli can name them in Farsi. Photos stay on this device and are never uploaded.",
+        "NSPhotoLibraryUsageDescription": "ZAAL lets your child choose a photo from the library so Neli can name it in Farsi. Photos stay on this device and are never uploaded."
       },
       "buildNumber": "1"
     },
