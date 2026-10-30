@@ -12,6 +12,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import { Svg, Rect, Circle, Path } from 'react-native-svg';
 import { useWindowDimensions } from '../../layout/PortraitFallback';
 import { dir, ff } from '../../theme/fonts';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../../assets/faTestAudio.generated';
@@ -110,6 +111,17 @@ function ThinkingDots({ size }: { size: number }) {
         <Animated.View key={i} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: PLAY_ACCENTS.photo.color, opacity: pulse }} />
       ))}
     </View>
+  );
+}
+
+/** Simple drawn picture icon (no gallery art exists in ui-icons). */
+function PictureIcon({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 48 48">
+      <Rect x={4} y={8} width={40} height={32} rx={7} fill="#22D3EE" />
+      <Circle cx={16} cy={18} r={5} fill="#FFFFFF" />
+      <Path d="M6 36 L20 22 L30 32 L34 28 L42 36 Z" fill="#22C55E" />
+    </Svg>
   );
 }
 
@@ -227,43 +239,49 @@ export default function PhotoFarsiGame() {
   const s = styles(k);
   return (
     <View style={s.root}>
-      <GameTopBar title="Photo Farsi" titleFa="فارسی با عکس" />
       <GameBg pick={roomBackgroundPickers.bedroom} />
+      <GameTopBar title="Photo Farsi" titleFa="فارسی با عکس" />
       <View style={s.body}>
-        {/* Left: buddy + actions */}
+        {/* Left: speech bubble, then buddy standing on the floor with the buttons beside them */}
         <View style={s.left}>
-          <BuddyGuide mood={bookOpen ? 'idle' : mood} size={Math.min(150 * k, height * 0.32)} />
           {!photo ? (
-            <CandyButton color={PLAY_ACCENTS.photo.color} edge={PLAY_ACCENTS.photo.edge} onPress={takePhoto} height={bigBtnH}>
-              <Image source={neliWorldAssets.ui.camera} style={{ width: bigBtnH * 0.55, height: bigBtnH * 0.55 }} resizeMode="contain" />
-              <Text style={[s.bigBtnText, dir('fa')]}>عکس بگیر</Text>
-            </CandyButton>
-          ) : (
-            <CandyButton color={PLAY_ACCENTS.green.color} edge={PLAY_ACCENTS.green.edge} onPress={askNeli} disabled={asking} height={bigBtnH}>
-              <Text style={[s.bigBtnText, dir('fa')]}>{asking ? '…' : 'نلی بگو'}</Text>
-            </CandyButton>
-          )}
-          <View style={s.smallRow}>
-            <TouchableOpacity style={s.smallBtn} onPress={() => { tap(); void choosePhoto(); }} activeOpacity={0.85} accessibilityRole="button">
-              <Text style={{ fontSize: 30 * k }}>🖼️</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.smallBtn} onPress={() => { tap(); setBookOpen(true); }} activeOpacity={0.85} accessibilityRole="button">
-              <Image source={neliWorldAssets.ui.book} style={{ width: 36 * k, height: 36 * k }} resizeMode="contain" />
-              <View style={s.heardBadge}>
-                <Text style={s.heardText}>⭐ {heard.length}/15</Text>
+            <View style={s.bubble}>
+              <Text style={[s.bubbleText, dir('fa'), { textAlign: 'center' }]}>از اتاقت عکس بگیر</Text>
+              <View style={s.bubbleTail} />
+            </View>
+          ) : null}
+          <View style={{ flex: 1, minHeight: 0 }} />
+          <View style={s.buddyRow}>
+            <BuddyGuide mood={bookOpen ? 'idle' : mood} size={Math.min(170 * k, height * 0.38)} />
+            <View style={s.btnCol}>
+              {!photo ? (
+                <CandyButton color={PLAY_ACCENTS.photo.color} edge={PLAY_ACCENTS.photo.edge} onPress={takePhoto} height={bigBtnH}>
+                  <Image source={neliWorldAssets.ui.camera} style={{ width: bigBtnH * 0.58, height: bigBtnH * 0.58 }} resizeMode="contain" />
+                </CandyButton>
+              ) : (
+                <CandyButton color={PLAY_ACCENTS.green.color} edge={PLAY_ACCENTS.green.edge} onPress={askNeli} disabled={asking} height={bigBtnH}>
+                  <Text style={[s.bigBtnText, dir('fa')]}>{asking ? '…' : 'نلی بگو'}</Text>
+                </CandyButton>
+              )}
+              <View style={s.smallRow}>
+                <TouchableOpacity style={s.smallBtn} onPress={() => { tap(); void choosePhoto(); }} activeOpacity={0.85} accessibilityRole="button">
+                  <PictureIcon size={34 * k} />
+                </TouchableOpacity>
+                <TouchableOpacity style={s.smallBtn} onPress={() => { tap(); setBookOpen(true); }} activeOpacity={0.85} accessibilityRole="button">
+                  <Image source={neliWorldAssets.ui.book} style={{ width: 44 * k, height: 44 * k }} resizeMode="contain" />
+                  <View style={s.heardBadge}>
+                    <Text style={s.heardText}>⭐ {heard.length}/15</Text>
+                  </View>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
+            </View>
           </View>
           <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]}>عکس‌ها از دستگاه بیرون نمی‌رود</Text>
         </View>
 
         {/* Right: polaroid / thinking / answer */}
         <View style={s.right}>
-          {!photo ? (
-            <GameCard radius={22 * k} style={s.emptyCard}>
-              <Text style={[s.emptyHint, dir('fa'), { textAlign: 'center' }]}>از اتاقت عکس بگیر</Text>
-            </GameCard>
-          ) : asking && !result ? (
+          {!photo ? null : asking && !result ? (
             <GameCard radius={22 * k} style={s.thinkCard}>
               <ThinkingDots size={14 * k} />
             </GameCard>
@@ -320,7 +338,9 @@ export default function PhotoFarsiGame() {
                     onPress={() => { void speakEntry(w); setBookOpen(false); }}
                     activeOpacity={0.85}
                   >
-                    <WordArt art={WORD_ART[w.id]} emoji={w.emoji} size={44 * k} />
+                    <View style={s.wordBox}>
+                      <WordArt art={WORD_ART[w.id]} emoji={w.emoji} size={46 * k} />
+                    </View>
                     <Text style={[s.wordFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{w.fa}</Text>
                     {hasVoice ? (
                       <Image source={neliWorldAssets.ui.voice} style={s.voiceBadge} resizeMode="contain" />
@@ -348,8 +368,32 @@ const styles = (k: number) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: PLAY_INK },
     body: { flex: 1, flexDirection: 'row', paddingHorizontal: 14 * k, paddingBottom: 12 * k, columnGap: 12 * k },
-    left: { width: '36%', alignItems: 'center', justifyContent: 'center', rowGap: 10 * k },
-    bigBtnText: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', fontSize: 24 * k },
+    left: { width: '36%', alignItems: 'center', justifyContent: 'flex-end', rowGap: 8 * k },
+    bubble: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16 * k,
+      paddingHorizontal: 14 * k,
+      paddingVertical: 8 * k,
+      width: '100%',
+      shadowColor: 'rgba(45,27,105,0.30)',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 6,
+      elevation: 5,
+    },
+    bubbleText: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 15 * k },
+    bubbleTail: {
+      position: 'absolute',
+      bottom: -7 * k,
+      left: '30%',
+      width: 14 * k,
+      height: 14 * k,
+      backgroundColor: '#FFFFFF',
+      transform: [{ rotate: '45deg' }],
+    },
+    buddyRow: { flexDirection: 'row', alignItems: 'flex-end', columnGap: 8 * k, width: '100%' },
+    btnCol: { flex: 1, minWidth: 0, rowGap: 8 * k, justifyContent: 'flex-end' },
+    bigBtnText: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', fontSize: 22 * k },
     smallRow: { flexDirection: 'row', gap: 10 * k },
     smallBtn: {
       width: Math.max(64, 68 * k),
@@ -368,8 +412,6 @@ const styles = (k: number) =>
     heardText: { fontSize: 11 * k, fontFamily: ff('en', 'black'), color: PLAY_INK },
     privacy: { fontFamily: ff('fa', 'regular'), color: '#FFFFFF', fontSize: 12 * k, opacity: 0.9 },
     right: { flex: 1, rowGap: 8 * k, minHeight: 0, alignItems: 'center', justifyContent: 'center' },
-    emptyCard: { width: '100%', paddingVertical: 30 * k, alignItems: 'center' },
-    emptyHint: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 20 * k },
     thinkCard: { width: '100%', paddingVertical: 30 * k, alignItems: 'center' },
     answerCard: { width: '100%', alignItems: 'center', paddingVertical: 12 * k, rowGap: 6 * k },
     answerFa: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 34 * k },
@@ -429,6 +471,7 @@ const styles = (k: number) =>
       paddingVertical: 6 * k,
     },
     wordDone: { borderWidth: 2 * k, borderColor: '#22C55E' },
+    wordBox: { width: 56 * k, height: 56 * k, alignItems: 'center', justifyContent: 'center' },
     wordFa: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 15 * k },
     voiceBadge: { position: 'absolute', top: 3 * k, left: 6 * k, width: 14 * k, height: 14 * k },
     seedBadge: { position: 'absolute', top: 3 * k, left: 6 * k, fontSize: 10 * k },
