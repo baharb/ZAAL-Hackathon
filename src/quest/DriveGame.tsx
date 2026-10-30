@@ -99,20 +99,48 @@ function playPop() {
 // Soft cartoon putter, played once per drive leg. The clip is 1.4s and
 // each leg is 1.5s, so it always ends before the word audio starts —
 // nothing ever talks over it. Same one-shot pattern as playPop.
+//
+// The engine "revs": playback speed rises then falls through the clip,
+// like accelerating then easing off, instead of one flat putter.
+// shouldCorrectPitch stays off so the pitch follows the speed like a
+// real engine. The curve averages ~1x, so the clip keeps its ~1.4s length.
+export const DRIVE_CLIP_MS = 1400;
+export function driveEngineRateAt(elapsedMs: number): number {
+  const t = Math.max(0, Math.min(DRIVE_CLIP_MS, elapsedMs));
+  if (t <= 850) return 0.8 + (t / 850) * 0.5;
+  return 1.3 - ((t - 850) / 550) * 0.35;
+}
 function playDrive() {
   if (isQuestMuted()) return;
   try {
     const player = createAudioPlayer(DRIVE_SOUND);
-    player.volume = 0.8;
+    try { player.shouldCorrectPitch = false; } catch { /* older clients */ }
+    player.playbackRate = driveEngineRateAt(0);
+    player.volume = 0.7;
     player.play();
+    const startedAt = Date.now();
+    const revTimer = setInterval(() => {
+      try {
+        const rate = driveEngineRateAt(Date.now() - startedAt);
+        player.playbackRate = rate;
+        player.volume = 0.55 + rate * 0.2;
+      } catch { /* keep driving without the rev */ }
+    }, 90);
+    let cleaned = false;
+    const cleanup = (finished: boolean) => {
+      if (cleaned) return;
+      cleaned = true;
+      clearInterval(revTimer);
+      if (finished) noteAudioPlayerReleased();
+      try { player.remove(); } catch { /* best effort */ }
+    };
     const subscription = player.addListener('playbackStatusUpdate', status => {
       if (status.isLoaded && status.didJustFinish) {
         subscription.remove();
-        noteAudioPlayerReleased();
-        try { player.remove(); } catch { /* best effort */ }
+        cleanup(true);
       }
     });
-    setTimeout(() => { try { player.remove(); } catch { /* best effort */ } }, 2500);
+    setTimeout(() => { try { subscription.remove(); } catch { /* best effort */ } cleanup(false); }, 2500);
   } catch {
     // Sound is a nice-to-have; the drive goes on without it.
   }
