@@ -240,7 +240,9 @@ export default function PhotoFarsiGame() {
   return (
     <View style={s.root}>
       <GameBg pick={roomBackgroundPickers.bedroom} />
-      <GameTopBar title="Photo Farsi" titleFa="فارسی با عکس" />
+      <View style={s.topWrap}>
+        <GameTopBar title="Photo Farsi" titleFa="فارسی با عکس" />
+      </View>
       <View style={s.body}>
         {/* Left: speech bubble, then buddy standing on the floor with the buttons beside them */}
         <View style={s.left}>
@@ -367,6 +369,7 @@ export default function PhotoFarsiGame() {
 const styles = (k: number) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: PLAY_INK },
+    topWrap: { position: 'relative', zIndex: 10, elevation: 10 },
     body: { flex: 1, flexDirection: 'row', paddingHorizontal: 14 * k, paddingBottom: 12 * k, columnGap: 12 * k },
     left: { width: '36%', alignItems: 'center', justifyContent: 'flex-end', rowGap: 8 * k },
     bubble: {

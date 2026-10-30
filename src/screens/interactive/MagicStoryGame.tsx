@@ -146,7 +146,9 @@ export default function MagicStoryGame() {
   return (
     <View style={s.root}>
       <GameBg pick={roomBackgroundPickers.garden} />
-      <GameTopBar title="Magic Story" titleFa="قصه جادویی" />
+      <View style={s.topWrap}>
+        <GameTopBar title="Magic Story" titleFa="قصه جادویی" />
+      </View>
       <View style={s.body}>
         {/* Left: pick hero + place, then ask */}
         <View style={s.left}>
@@ -227,6 +229,7 @@ export default function MagicStoryGame() {
 const styles = (k: number) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: PLAY_INK },
+    topWrap: { position: 'relative', zIndex: 10, elevation: 10 },
     body: { flex: 1, flexDirection: 'row', paddingHorizontal: 14 * k, paddingBottom: 12 * k, columnGap: 12 * k },
     left: { width: '38%', rowGap: 6 * k, justifyContent: 'center' },
     label: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', fontSize: 14 * k, textShadowColor: 'rgba(46,26,107,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
