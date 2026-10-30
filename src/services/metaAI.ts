@@ -20,16 +20,33 @@ export type MetaRequest = {
 
 export type MetaResult = { text: string } | { error: string };
 
-export async function askMeta(req: MetaRequest): Promise<MetaResult> {
+export async function askMeta(req: MetaRequest, retries = 1): Promise<MetaResult> {
   if (!supabaseConfigured) {
     return { error: 'Supabase is not configured (.env is missing EXPO_PUBLIC_SUPABASE_URL / ANON_KEY).' };
   }
-  try {
-    const { data, error } = await supabase.functions.invoke('meta-ai', { body: req });
-    if (error) return { error: error.message ?? 'Request failed' };
-    if (data?.error) return { error: String(data.error) };
-    return { text: String(data?.text ?? '') };
-  } catch (e: any) {
-    return { error: e?.message ?? 'Network error' };
+  // Photo answers are flaky (model thinking varies per image), so retry
+  // failures and empty replies instead of bothering the child.
+  let last: MetaResult = { error: 'Request failed' };
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const { data, error } = await supabase.functions.invoke('meta-ai', { body: req });
+      if (error) {
+        last = { error: error.message ?? 'Request failed' };
+        continue;
+      }
+      if (data?.error) {
+        last = { error: String(data.error) };
+        continue;
+      }
+      const text = String(data?.text ?? '');
+      if (!text.trim()) {
+        last = { error: 'Empty reply' };
+        continue;
+      }
+      return { text };
+    } catch (e: any) {
+      last = { error: e?.message ?? 'Network error' };
+    }
   }
+  return last;
 }

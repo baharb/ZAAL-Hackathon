@@ -129,18 +129,23 @@ export default function BuddyPicker({
 
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: { color: '#FFFFFF', marginBottom: 14, textAlign: 'center' },
+  title: { color: '#3A2A6B', backgroundColor: '#FFFFFF', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 8, marginBottom: 14, textAlign: 'center', overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   card: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
+    shadowColor: 'rgba(58,42,107,0.30)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 5,
     borderColor: '#FACC15',
     alignItems: 'center',
     justifyContent: 'center',
   },
   name: {
-    color: '#FFFFFF',
+    color: '#3A2A6B',
     marginTop: 4,
-    textShadowColor: 'rgba(23,7,54,0.6)',
+    textShadowColor: 'transparent',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },

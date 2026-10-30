@@ -22,6 +22,7 @@ import PicksScreen from './PicksScreen';
 import DriveGame, { DriveRound } from './DriveGame';
 import Finale from './Finale';
 import MyDaysScreen from './MyDaysScreen';
+import QuestBackdrop, { QUEST_SKY } from './QuestBackdrop';
 
 // The three picks, in order: fruit, color, food. None of the options shown
 // earlier may appear again in the same quest.
@@ -110,6 +111,7 @@ export default function DailyQuestScreen() {
 
   return (
     <View style={styles.root}>
+      {(phase === 'buddy' || phase === 'picks' || phase === 'loading') && <QuestBackdrop />}
       {showBar && (
         <TopBar
           title="My Daily Quest"
@@ -207,9 +209,9 @@ export default function DailyQuestScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#2D1B69' },
+  root: { flex: 1, backgroundColor: QUEST_SKY },
   body: { flex: 1, paddingHorizontal: 12, paddingBottom: 12 },
-  loading: { color: '#FFFFFF', fontSize: 44, textAlign: 'center', marginTop: 60 },
+  loading: { color: '#3A2A6B', fontSize: 44, textAlign: 'center', marginTop: 60 },
   startWrap: { flex: 1 },
   startBody: { flex: 1 },
   albumButton: {
