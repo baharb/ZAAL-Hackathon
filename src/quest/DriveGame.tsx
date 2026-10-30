@@ -1,8 +1,9 @@
 // Game 1: Neli's Drive (quest v2, section 3). The chosen buddy drives a
-// small car right → left along a cream road. Five mystery boxes — one per
-// pick — each open a question with the child's own pick + 2 distractors.
-// Right: the item flies into the car. Wrong: shake + fade, try again, glow
-// after 2 wrong tries. No losing, no going back. Ends at the picnic.
+// small car right → left along a cream road. Three mystery boxes — one per
+// pick — each a different mini-game: counting the fruit, popping the color
+// balloon, finding the dish. Right: the item flies into the car. Wrong:
+// try again voice only, hand guides to the right one. No losing, no going
+// back. Ends at the picnic.
 
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, ImageSourcePropType, LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -16,7 +17,11 @@ import { recordQuestAnswer } from '../store/wordLog';
 import { isQuestMuted, questPlay } from './questSound';
 import { BuddyId } from './buddyStore';
 import { DisplayWord } from './questGroups';
-import { COLOR_HEX, PickKind, pickPool, sampleOptions, shuffle } from './pickLists';
+import { COLOR_HEX, farApartPair, PickKind, pickPool, sampleOptions, shuffle } from './pickLists';
+import { FaTestAudioKey } from '../assets/faTestAudio.generated';
+import Balloon from './Balloon';
+import ColorDot from './ColorDot';
+import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 import { Story } from './stories';
 import WordArt from './WordArt';
 
@@ -34,10 +39,10 @@ const CARS: Record<BuddyId, ImageSourcePropType> = {
   roboBoombo: require('../../assets/neli-world/quest/car-roboBoombo.png'),
 };
 
-// Long horizontal world: about 7 screen widths. All drive positions are
+// Long horizontal world: about 5 screen widths. All drive positions are
 // world X coordinates (right → left). The camera follows the car, so only
 // the part around the car is ever visible.
-const WORLD_SCREENS = 7;
+const WORLD_SCREENS = 5;
 const DRIVE_MS = 1500;
 
 // Background copies overlap by this much so no hairline shows where two
@@ -56,6 +61,20 @@ const SCENERY_SRC: ImageSourcePropType[] = [
 ];
 
 export type DriveRound = { kind: PickKind; answer: DisplayWord };
+
+// Counting sizes: the number buttons run at half scale, the fruits keep
+// their size, and the whole column is shrunk only if it would overflow the
+// space above the parked car (short phones).
+function countingSizes(optSize: number, gw: number, carTop: number, count: number) {
+  const fruit = Math.min(optSize * 0.45, (gw * 0.92 - (count - 1) * 8) / Math.max(1, count));
+  const num = optSize * 0.5;
+  const natural = 28 + 7 + fruit + 8 + num * 1.05;
+  const k = Math.min(1, (carTop - 16) / natural);
+  return { fruitSize: fruit * k, numSize: num * k };
+}
+
+// Persian digits for the counting buttons.
+const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵'];
 
 function playPop() {
   if (isQuestMuted()) return;
@@ -121,14 +140,7 @@ function SparkBurst({ x, y, size }: { x: number; y: number; size: number }) {
 
 function OptionArt({ word, kind, size }: { word: DisplayWord; kind: PickKind; size: number }) {
   if (kind === 'color') {
-    return (
-      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-        <View
-          style={{ width: size * 0.92, height: size * 0.92, borderRadius: size * 0.46, backgroundColor: COLOR_HEX[word.id] ?? '#CCCCCC' }}
-          accessibilityLabel={word.fa}
-        />
-      </View>
-    );
+    return <ColorDot id={word.id} size={size * 0.92} />;
   }
   // Every picture gets the exact same square box (contain), so herbs and
   // peppers render equally big regardless of their art's aspect ratio.
@@ -155,9 +167,9 @@ function QuestionView({
   const { lang } = useContext(AppContext);
   const isFa = lang === 'fa' || lang === 'ar';
   const [tries, setTries] = useState(0);
-  const [faded, setFaded] = useState<string[]>([]);
   const [done, setDone] = useState(false);
-  const shake = useRef(new Animated.Value(0)).current;
+
+  const showHandQ = useIdleHint(!done, IDLE_HAND_DELAY, tries);
 
   const tap = (word: DisplayWord) => {
     if (done) return;
@@ -168,17 +180,11 @@ function QuestionView({
       onCorrect(firstTry);
       return;
     }
+    // A wrong tap changes nothing on screen: only the try-again voice
+    // plays, and the hand points at the right option.
     setTries(t => t + 1);
-    setFaded(f => (f.includes(word.id) ? f : [...f, word.id]));
-    Animated.sequence([
-      Animated.timing(shake, { toValue: 1, duration: 120, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: -1, duration: 120, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 0, duration: 120, useNativeDriver: true }),
-    ]).start();
-    void questPlay(round.answer.audioKey);
+    void questPlay('feedback/try-again' as FaTestAudioKey);
   };
-
-  const shakeX = shake.interpolate({ inputRange: [-1, 1], outputRange: [-8, 8] });
 
   return (
     <View style={[styles.question, { paddingBottom: lift }]} pointerEvents="box-none">
@@ -201,8 +207,8 @@ function QuestionView({
       <View style={[styles.qRow, isFa && { flexDirection: 'row-reverse' }]}>
         {choices.map(word => {
           const isTarget = word.id === round.answer.id;
-          const showGlow = isTarget && tries >= 2 && !done;
-          const dimmed = faded.includes(word.id);
+          // No border on wrong answers: the hand alone guides to the right one.
+          const showGlow = false;
           return (
             <TouchableOpacity
               key={word.id}
@@ -217,12 +223,201 @@ function QuestionView({
                   height: optSize * 1.15,
                   borderRadius: optSize * 0.2,
                   borderWidth: showGlow || (done && isTarget) ? Math.max(4, optSize * 0.05) : 0,
-                  opacity: dimmed ? 0.35 : 1,
                 },
               ]}
             >
-              <Animated.View style={dimmed && !isTarget ? { transform: [{ translateX: shakeX }] } : undefined}>
-                <OptionArt word={word} kind={round.kind} size={optSize * 0.85} />
+              {showHandQ && isTarget && (
+                <View pointerEvents="none" style={styles.handOver}>
+                  <IdleHand size={optSize} />
+                </View>
+              )}
+              <OptionArt word={word} kind={round.kind} size={optSize * 0.85} />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function CountingView({
+  fruit,
+  count,
+  options,
+  fruitSize,
+  numSize,
+  lift,
+  onCorrect,
+}: {
+  fruit: DisplayWord;
+  count: number;
+  options: number[];
+  fruitSize: number;
+  numSize: number;
+  lift: number;
+  onCorrect: (firstTry: boolean) => void;
+}) {
+  const { lang } = useContext(AppContext);
+  const isFa = lang === 'fa' || lang === 'ar';
+  const [tries, setTries] = useState(0);
+  const [done, setDone] = useState(false);
+  const showHand = useIdleHint(!done, IDLE_HAND_DELAY, tries);
+
+  const tap = (n: number) => {
+    if (done) return;
+    if (n === count) {
+      setDone(true);
+      const firstTry = tries === 0;
+      recordQuestAnswer(fruit.id, firstTry);
+      void questPlay(`counting/number/${count}` as FaTestAudioKey);
+      onCorrect(firstTry);
+      return;
+    }
+    // A wrong tap changes nothing on screen: only the try-again voice plays.
+    setTries(t => t + 1);
+    void questPlay('feedback/try-again' as FaTestAudioKey);
+  };
+
+  return (
+    <View style={[styles.question, { paddingBottom: lift }]} pointerEvents="box-none">
+      <Text
+        style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize: Math.max(16, numSize * 0.22) }, dir(lang)]}
+      >
+        {isFa ? 'چندتا میبینی' : 'How many do you see?'}
+      </Text>
+      <View style={[styles.fruitRow, { gap: 8, marginTop: 7 }]}>
+        {Array.from({ length: count }).map((_, i) => (
+          <WordArt key={i} word={fruit} size={fruitSize} />
+        ))}
+      </View>
+      <View style={[styles.qRow, isFa && { flexDirection: 'row-reverse' }, { marginTop: 8 }]}>
+        {options.map(n => {
+          // No border on wrong answers: the hand alone guides to the right one.
+          const showGlow = false;
+          const isTarget = n === count;
+          return (
+            <TouchableOpacity
+              key={n}
+              onPress={() => tap(n)}
+              activeOpacity={0.85}
+              accessibilityLabel={FA_DIGITS[n]}
+              accessibilityRole="button"
+              style={[
+                styles.numOption,
+                {
+                  width: numSize * 1.05,
+                  height: numSize * 1.05,
+                  borderRadius: numSize * 0.28,
+                  borderWidth: showGlow || (done && isTarget) ? Math.max(4, numSize * 0.05) : 0,
+                },
+              ]}
+            >
+              {showHand && isTarget && (
+                <View pointerEvents="none" style={styles.handOver}>
+                  <IdleHand size={numSize * 1.05} />
+                </View>
+              )}
+              <Text style={[styles.numText, { fontFamily: ff(lang, 'black'), fontSize: numSize * 0.55 }]}>
+                {FA_DIGITS[n]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function BalloonView({
+  round,
+  choices,
+  optSize,
+  lift,
+  riseDist,
+  onCorrect,
+}: {
+  round: DriveRound;
+  choices: DisplayWord[];
+  optSize: number;
+  lift: number;
+  riseDist: number;
+  onCorrect: (firstTry: boolean) => void;
+}) {
+  const { lang } = useContext(AppContext);
+  const isFa = lang === 'fa' || lang === 'ar';
+  const [tries, setTries] = useState(0);
+  const [done, setDone] = useState(false);
+  const [rising, setRising] = useState<string | null>(null);
+  const rise = useRef(new Animated.Value(0)).current;
+  const showHand = useIdleHint(!done, IDLE_HAND_DELAY, tries);
+
+  const tap = (word: DisplayWord) => {
+    if (done) return;
+    if (word.id === round.answer.id) {
+      setDone(true);
+      const firstTry = tries === 0;
+      recordQuestAnswer(round.answer.id, firstTry);
+      // The right balloon floats up before flying to the car.
+      setRising(word.id);
+      Animated.timing(rise, { toValue: 1, duration: 500, useNativeDriver: true }).start(() =>
+        onCorrect(firstTry),
+      );
+      return;
+    }
+    // A wrong tap changes nothing on screen: only the try-again voice plays.
+    setTries(t => t + 1);
+    void questPlay('feedback/try-again' as FaTestAudioKey);
+  };
+
+  const riseY = rise.interpolate({ inputRange: [0, 1], outputRange: [0, -riseDist] });
+
+  return (
+    <View style={[styles.question, { paddingBottom: lift }]} pointerEvents="box-none">
+      <View style={styles.promptRow}>
+        <Text style={{ fontSize: optSize * 0.32 }}>👉</Text>
+        <Text
+          style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize: Math.max(16, optSize * 0.24) }, dir(lang)]}
+        >
+          {isFa ? `${round.answer.fa} کدومه؟` : `Which one is ${round.answer.fa}?`}
+        </Text>
+        <TouchableOpacity
+          onPress={() => questPlay(round.answer.audioKey)}
+          activeOpacity={0.8}
+          accessibilityLabel={isFa ? 'دوباره بشنو' : 'Hear it again'}
+          accessibilityRole="button"
+        >
+          <Text style={{ fontSize: optSize * 0.32 }}>👂</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={[styles.qRow, isFa && { flexDirection: 'row-reverse' }]}>
+        {choices.map(word => {
+          const isTarget = word.id === round.answer.id;
+          // No border on wrong answers: the hand alone guides to the right one.
+          const showGlow = false;
+          const isRising = rising === word.id;
+          return (
+            <TouchableOpacity
+              key={word.id}
+              onPress={() => tap(word)}
+              activeOpacity={0.85}
+              accessibilityLabel={word.fa}
+              accessibilityRole="button"
+              style={[
+                styles.balloonOption,
+                {
+                  width: optSize * 1.05,
+                  borderRadius: optSize * 0.2,
+                  borderWidth: showGlow || (done && isTarget) ? Math.max(4, optSize * 0.05) : 0,
+                },
+              ]}
+            >
+              {showHand && isTarget && (
+                <View pointerEvents="none" style={styles.handOver}>
+                  <IdleHand size={optSize} />
+                </View>
+              )}
+              <Animated.View style={isRising ? { transform: [{ translateY: riseY }] } : undefined}>
+                <Balloon color={COLOR_HEX[word.id] ?? '#CCCCCC'} size={optSize * 0.85} />
               </Animated.View>
             </TouchableOpacity>
           );
@@ -275,14 +470,27 @@ export default function DriveGame({
   // screen bottom on short phones.
   const roadPad = Math.max(4, gh * 0.02);
   const roadTop = gh - roadH - roadPad;
-  const boxY = roadTop + roadH * 0.45;
-  // Collected items ride on the roof rack: each one is ~35% of the car height.
-  const miniSize = Math.max(24, carH * 0.35);
-  const carTop = roadTop + roadH - carH - miniSize - roadH * 0.08;
+  // Two lanes: the car drives the upper (far) lane, wheels at 40% of the
+  // road height. Each mystery box waits in that same lane, right in front
+  // of the car.
+  const carWheelsY = roadTop + roadH * 0.4;
+  // The box waits in the car's own lane, a touch below the car body's
+  // center, so it reads as right in front of the car at every stop.
+  const boxY = carWheelsY - carH * 0.42;
+  // Collected items ride in the rear side window (the window right of the
+  // buddy), smaller, seen through the glass.
+  const winCx = carW * 0.71;
+  const winCy = carH * 0.41;
+  // Window minis run 40% bigger than before; the stack cap below grows
+  // by the same factor so all three still fit.
+  const winMini = carH * 0.16 * 1.4;
+  const carTop = carWheelsY - carH - 2;
   // The question must sit fully above the car + roof rack, never over it.
   const questionLift = Math.max(0, gh - carTop) + 8;
-  const rackBarH = Math.max(5, carH * 0.055);
-  const rackBarW = carW * 0.72;
+  // Question content is scaled to the measured space above the parked car,
+  // so it is never cut off — even on a 360pt-tall phone with the car up in
+  // the far lane. Each game passes its own height in optSize units.
+  const fitFor = (units: number) => Math.min(1, Math.max(0.2, (carTop - 40) / (optSize * units)));
   const optSize = Math.max(48, Math.min(gw * 0.13, gh * 0.26));
   // Landmarks stand on the grass behind the road, never taller than the car.
   const landmarkH = carH * 0.95;
@@ -324,6 +532,9 @@ export default function DriveGame({
   const [choices, setChoices] = useState<DisplayWord[]>([]);
   const [collected, setCollected] = useState<DisplayWord[]>([]);
   const [flying, setFlying] = useState<DisplayWord | null>(null);
+  const [countQ, setCountQ] = useState<{ count: number; options: number[] } | null>(null);
+  const [bubble, setBubble] = useState(false);
+  const boxIdle = useIdleHint(phase === 'atBox', IDLE_HAND_DELAY, 0);
 
   const carX = useRef(new Animated.Value(WORLD_SCREENS * W + 80)).current;
   const cameraX = useRef(new Animated.Value(Math.max(WORLD_SCREENS * W - W, 0))).current;
@@ -339,6 +550,9 @@ export default function DriveGame({
   const grandmaWave = useRef(new Animated.Value(0)).current;
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const collectedRef = useRef<DisplayWord[]>([]);
+  // Balloon color ids for the color round (child's first), saved into the
+  // collected word so the picnic ties up the same balloons.
+  const paletteRef = useRef<string[]>([]);
   const firstTriesRef = useRef<boolean[]>([]);
   const phaseRef = useRef<DrivePhase>('driving');
   phaseRef.current = phase;
@@ -362,26 +576,16 @@ export default function DriveGame({
     [],
   );
 
-  const startBounce = () => {
-    bounceLoop.current?.stop();
-    bounceLoop.current = Animated.loop(
-      Animated.sequence([
-        Animated.timing(carBounce, { toValue: -7, duration: 250, useNativeDriver: true }),
-        Animated.timing(carBounce, { toValue: 0, duration: 250, useNativeDriver: true }),
-      ]),
-    );
-    bounceLoop.current.start();
-  };
-
   const stopBounce = () => {
     bounceLoop.current?.stop();
     bounceLoop.current = null;
     carBounce.setValue(0);
   };
 
+  // No bounce while driving: the ±7pt shake read as vibration on tablet.
+  // The car glides still; stopBounce on arrival keeps it settled.
   const driveTo = (worldX: number, then?: () => void) => {
     setPhase('driving');
-    startBounce();
     driveAnim.current?.stop();
     const anim = Animated.parallel([
       Animated.timing(carX, {
@@ -483,6 +687,8 @@ export default function DriveGame({
       // the open art with sparkles, as the scene gently dims.
       setSpark(true);
       setBoxOpen(true);
+      setBubble(true);
+      later(1600, () => setBubble(false));
       playPop();
       later(800, () => setSpark(false));
       Animated.parallel([
@@ -490,10 +696,24 @@ export default function DriveGame({
         Animated.timing(dimAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
       ]).start(() => {
         const round = rounds[legIndex]!;
-        const distract = sampleOptions(pickPool(round.kind), 2, new Set([round.answer.id]));
-        setChoices(shuffle([round.answer, ...distract]));
+        if (round.kind === 'fruit') {
+          // Counting: N copies of the fruit, N random 1-5, asked in the
+          // counting voice. The prompt itself stays text-only (no recording
+          // of it exists yet, and no TTS).
+          const count = 1 + Math.floor(Math.random() * 5);
+          const others = shuffle([1, 2, 3, 4, 5].filter(n => n !== count)).slice(0, 2);
+          setCountQ({ count, options: shuffle([count, ...others]) });
+          void questPlay('counting/number/info' as FaTestAudioKey);
+        } else {
+          const distract =
+            round.kind === 'color'
+              ? farApartPair(pickPool('color'), round.answer.id)
+              : sampleOptions(pickPool(round.kind), 2, new Set([round.answer.id]));
+          if (round.kind === 'color') paletteRef.current = [round.answer.id, ...distract.map(d => d.id)];
+          setChoices(shuffle([round.answer, ...distract]));
+          void questPlay(round.answer.audioKey);
+        }
         setPhase('question');
-        void questPlay(round.answer.audioKey);
         // Calm beat 3: the question grows out of the open box into the
         // center while the opened box fades away behind it.
         Animated.timing(qAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
@@ -505,7 +725,8 @@ export default function DriveGame({
     const round = rounds[legIndex]!;
     firstTriesRef.current.push(firstTry);
     setPhase('flying');
-    void questPlay(round.answer.audioKey);
+    // The counting round already played its number clip; nothing else plays.
+    if (round.kind !== 'fruit') void questPlay(round.answer.audioKey);
     // The open box is already faded (the question covers it); remove it so
     // the reverse never flashes it back.
     setBoxGone(true);
@@ -521,7 +742,13 @@ export default function DriveGame({
       Animated.timing(dimAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => {
       setFlying(null);
-      const next = [...collectedRef.current, round.answer];
+      const item: DisplayWord =
+        round.kind === 'fruit' && countQ
+          ? { ...round.answer, count: countQ.count }
+          : round.kind === 'color'
+            ? { ...round.answer, balloonIds: paletteRef.current }
+            : round.answer;
+      const next = [...collectedRef.current, item];
       collectedRef.current = next;
       setCollected(next);
       setBoxGone(false);
@@ -552,10 +779,10 @@ export default function DriveGame({
   // How far the active box must travel to reach the screen center.
   const boxDX = gw / 2 - (boxWorldX(leg) - legCam);
   const boxDY = gh / 2 - boxY;
-  // The answered item flies from the screen center into the car roof.
+  // The answered item flies from the screen center into the back window.
   const flyStartY = gh * 0.48;
   const flyDX = legStopX - legCam - gw / 2;
-  const flyDY = carTop + miniSize * 0.4 - flyStartY;
+  const flyDY = carTop + winCy - flyStartY;
 
   return (
     <View style={styles.root} onLayout={onGameLayout}>
@@ -605,9 +832,9 @@ export default function DriveGame({
           <Rect x={0} y={0} width={worldW} height={Math.max(4, roadH * 0.06)} fill="#EAD3A8" />
           <Line
             x1={0}
-            y1={roadH * 0.55}
+            y1={roadH * 0.5}
             x2={worldW}
-            y2={roadH * 0.55}
+            y2={roadH * 0.5}
             stroke="#FFFFFF"
             strokeWidth={Math.max(3, roadH * 0.035)}
             strokeDasharray="16,20"
@@ -647,7 +874,7 @@ export default function DriveGame({
         </Animated.View>
 
         {/* One landmark in each gap between stops, feet on the grass behind the road. */}
-        {SCENERY_SRC.map((src, i) => (
+        {SCENERY_SRC.slice(0, rounds.length + 1).map((src, i) => (
           <Image
             key={i}
             source={src}
@@ -671,18 +898,6 @@ export default function DriveGame({
             return (
               <View key={i} style={{ position: 'absolute', left: worldX - boxW / 2, top: boxY - boxH / 2, zIndex: 2 }}>
                 <Image source={BOX_CLOSED} style={{ width: boxW, height: boxH }} resizeMode="contain" />
-                <View
-                  style={[
-                    styles.qBadge,
-                    {
-                      width: boxW * 0.42,
-                      height: boxW * 0.42,
-                      borderRadius: boxW * 0.21,
-                    },
-                  ]}
-                >
-                  <Text style={{ fontSize: boxW * 0.26, color: '#6C4EFF', fontWeight: 'bold' }}>؟</Text>
-                </View>
               </View>
             );
           }
@@ -697,6 +912,26 @@ export default function DriveGame({
               accessibilityRole="button"
               style={{ position: 'absolute', left: worldX - boxW / 2, top: boxY - boxH / 2, zIndex: 5 }}
             >
+              {boxIdle && (
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    left: boxW / 2 - boxH * 0.39,
+                    top: boxH / 2 - boxH * 0.39,
+                    zIndex: 6,
+                  }}
+                >
+                  <IdleHand size={boxH * 0.78} />
+                </View>
+              )}
+              {bubble && (
+                <View pointerEvents="none" style={[styles.bubble, { left: -14, top: -56 }]}>
+                  <Text style={[styles.bubbleText, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
+                    {isFa ? 'بازش کن!' : 'Open it!'}
+                  </Text>
+                </View>
+              )}
               <Animated.View
                 style={{
                   width: boxW,
@@ -717,29 +952,15 @@ export default function DriveGame({
                   style={{ position: 'absolute', left: 0, top: 0, width: boxW, height: boxH }}
                   resizeMode="contain"
                 />
-                {!boxOpen && (
-                  <View
-                    style={[
-                      styles.qBadge,
-                      {
-                        width: boxW * 0.42,
-                        height: boxW * 0.42,
-                        borderRadius: boxW * 0.21,
-                      },
-                    ]}
-                  >
-                    <Text style={{ fontSize: boxW * 0.26, color: '#6C4EFF', fontWeight: 'bold' }}>؟</Text>
-                  </View>
-                )}
                 {spark && <SparkBurst x={boxW / 2} y={-boxH * 0.2} size={boxW} />}
               </Animated.View>
             </TouchableOpacity>
           );
         })}
 
-        {/* The car with the collected items on its roof. It never takes
-            touches (pointerEvents none) and paints below the box, so the
-            stopped car can never cover or steal taps from the box. */}
+        {/* The car with the collected picks visible in its back window. It
+            never takes touches (pointerEvents none) and paints below the
+            box, so the stopped car can never cover or steal taps. */}
         <Animated.View
           pointerEvents="none"
           style={{
@@ -747,45 +968,11 @@ export default function DriveGame({
             left: 0,
             top: carTop,
             width: carW,
-            height: carH + miniSize,
+            height: carH,
             zIndex: 1,
             transform: [{ translateX: Animated.subtract(carX, carW / 2) }],
           }}
         >
-          <View style={[styles.roof, { minHeight: miniSize + rackBarH }]}>
-            <View style={styles.roofItems}>
-              {collected.map(w =>
-                w.id.startsWith('painting/color/') ? (
-                  <View
-                    key={w.id}
-                    style={{ width: miniSize, height: miniSize, alignItems: 'center', justifyContent: 'flex-end' }}
-                    accessibilityLabel={w.fa}
-                  >
-                    <View
-                      style={{
-                        width: miniSize * 0.85,
-                        height: miniSize * 0.85,
-                        borderRadius: miniSize * 0.425,
-                        backgroundColor: COLOR_HEX[w.id] ?? '#CCCCCC',
-                      }}
-                    />
-                  </View>
-                ) : (
-                  <View key={w.id} style={{ width: miniSize, height: miniSize, alignItems: 'center', justifyContent: 'flex-end' }}>
-                    <WordArt word={w} size={miniSize * 0.9} />
-                  </View>
-                ),
-              )}
-            </View>
-            <View
-              style={{
-                width: rackBarW,
-                height: rackBarH,
-                borderRadius: rackBarH / 2,
-                backgroundColor: '#7C4A21',
-              }}
-            />
-          </View>
           <Animated.View style={{ transform: [{ translateY: carBounce }] }}>
             <Image
               source={CARS[buddy] ?? CARS.neli}
@@ -794,6 +981,37 @@ export default function DriveGame({
               accessibilityLabel={buddy}
             />
           </Animated.View>
+          {/* Collected picks ride in the back window, smaller, stacked
+              vertically and centered on the rear side window, over the
+              glass. The color rides as a mini balloon with its string.
+              Minis shrink as more are collected so all three fit. */}
+          {collected.length > 0 && (() => {
+            const n = collected.length;
+            const m = Math.min(winMini, (carH * 0.34 * 1.4) / (n + (n - 1) * 0.25));
+            const gap = m * 0.25;
+            const colH = n * m + (n - 1) * gap;
+            return (
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left: winCx - m / 2,
+                  top: winCy - colH / 2,
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap,
+                }}
+              >
+                {collected.map(w =>
+                  w.id.startsWith('painting/color/') ? (
+                    <Balloon key={w.id} color={COLOR_HEX[w.id] ?? '#CCCCCC'} size={m * 0.75} />
+                  ) : (
+                    <WordArt key={w.id} word={w} size={m} />
+                  ),
+                )}
+              </View>
+            );
+          })()}
         </Animated.View>
       </Animated.View>
 
@@ -828,13 +1046,18 @@ export default function DriveGame({
           }}
           pointerEvents="none"
         >
-          <OptionArt word={flying} kind={rounds[leg]!.kind} size={optSize * 0.8} />
+          {rounds[leg]!.kind === 'color' ? (
+            <Balloon color={COLOR_HEX[flying.id] ?? '#CCCCCC'} size={optSize * 0.8} />
+          ) : (
+            <OptionArt word={flying} kind={rounds[leg]!.kind} size={optSize * 0.8} />
+          )}
         </Animated.View>
       )}
 
       {/* The question grows out of the open box into the center, and
           shrinks away again after the answer. */}
-      {(phase === 'question' || phase === 'flying') && choices.length === 3 && (
+      {(phase === 'question' || phase === 'flying') &&
+        ((rounds[leg]!.kind === 'fruit' && countQ !== null) || choices.length === 3) && (
         <Animated.View
           style={{
             position: 'absolute',
@@ -848,14 +1071,37 @@ export default function DriveGame({
           }}
           pointerEvents={phase === 'question' ? 'box-none' : 'none'}
         >
-          <QuestionView
-            key={legIndex}
-            round={rounds[legIndex]!}
-            choices={choices}
-            optSize={optSize}
-            lift={questionLift}
-            onCorrect={answerCorrect}
-          />
+          {rounds[leg]!.kind === 'fruit' && countQ ? (
+            <CountingView
+              key={legIndex}
+              fruit={rounds[legIndex]!.answer}
+              count={countQ.count}
+              options={countQ.options}
+              fruitSize={countingSizes(optSize, gw, carTop, countQ.count).fruitSize}
+              numSize={countingSizes(optSize, gw, carTop, countQ.count).numSize}
+              lift={questionLift}
+              onCorrect={answerCorrect}
+            />
+          ) : rounds[leg]!.kind === 'color' ? (
+            <BalloonView
+              key={legIndex}
+              round={rounds[legIndex]!}
+              choices={choices}
+              optSize={optSize * fitFor(1.55)}
+              lift={questionLift}
+              riseDist={gh * 0.25}
+              onCorrect={answerCorrect}
+            />
+          ) : (
+            <QuestionView
+              key={legIndex}
+              round={rounds[legIndex]!}
+              choices={choices}
+              optSize={optSize * fitFor(1.6)}
+              lift={questionLift}
+              onCorrect={answerCorrect}
+            />
+          )}
         </Animated.View>
       )}
     </View>
@@ -865,14 +1111,6 @@ export default function DriveGame({
 const styles = StyleSheet.create({
   root: { flex: 1, overflow: 'hidden' },
   bgRow: { position: 'absolute', left: 0, top: 0 },
-  qBadge: {
-    position: 'absolute',
-    left: '29%',
-    top: '34%',
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   question: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
   promptRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   prompt: {
@@ -890,6 +1128,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  fruitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  numOption: {
+    backgroundColor: '#FFFDF5',
+    borderColor: '#FACC15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  numText: { color: '#3A2A6B', textAlign: 'center', includeFontPadding: false },
+  balloonOption: {
+    borderColor: '#FACC15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+  },
+  handOver: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
+  },
+  bubble: {
+    position: 'absolute',
+    backgroundColor: '#FFFDF5',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    zIndex: 6,
+    elevation: 3,
+  },
+  bubbleText: { color: '#3A2A6B', fontSize: 15, includeFontPadding: false },
   roof: { flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 2 },
   roofItems: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 4 },
 });

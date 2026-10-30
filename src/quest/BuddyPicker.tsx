@@ -53,11 +53,23 @@ function BuddyButton({
       ]}
     >
       <Animated.View style={{ transform: [{ scale: bounce }], alignItems: 'center' }}>
-        <Image
-          source={buddyPose(id, 'waving')}
-          style={{ width: size * 0.78, height: size * 0.78 }}
-          resizeMode="contain"
-        />
+        {id === 'roboBoombo' ? (
+          // The waving art has a stray arm baked in at the left edge,
+          // cropped out here (shared art untouched).
+          <View style={{ width: size * 0.88, height: size * 0.88, overflow: 'hidden' }}>
+            <Image
+              source={buddyPose(id, 'waving')}
+              style={{ width: size, height: size, marginLeft: -size * 0.14 }}
+              resizeMode="contain"
+            />
+          </View>
+        ) : (
+          <Image
+            source={buddyPose(id, 'waving')}
+            style={{ width: size * 0.88, height: size * 0.88 }}
+            resizeMode="contain"
+          />
+        )}
       </Animated.View>
       <Text
         style={[styles.name, { fontFamily: ff(lang, 'black'), fontSize: size * 0.14 }, dir(lang)]}
@@ -84,7 +96,7 @@ export default function BuddyPicker({
 
   const bodyH = height - topBarHeight(height, insets.top, {}) - insets.bottom;
   const gap = Math.max(8, width * 0.012);
-  const cardSize = Math.min((width * 0.92 - gap * (BUDDIES.length - 1)) / BUDDIES.length, bodyH * 0.62);
+  const cardSize = Math.min((width * 0.92 - gap * (BUDDIES.length - 1)) / BUDDIES.length, bodyH * 0.66);
 
   const choose = (id: BuddyId) => {
     setPicked(id);
@@ -94,9 +106,9 @@ export default function BuddyPicker({
   return (
     <View style={styles.root}>
       <Text
-        style={[styles.title, { fontFamily: ff(lang, 'black'), fontSize: Math.max(18, bodyH * 0.075) }, dir(lang)]}
+        style={[styles.title, { fontFamily: ff(lang, 'black'), fontSize: Math.max(11, bodyH * 0.038) }, dir(lang)]}
       >
-        {isFa ? 'دوستت را انتخاب کن' : 'Pick your buddy'}
+        {isFa ? 'امروز می‌خوای کدوم دوست باشی؟' : 'Which character do you want to be today?'}
       </Text>
       <View style={[styles.row, isFa && { flexDirection: 'row-reverse' }, { gap }]}>
         {BUDDIES.map(b => (
@@ -120,15 +132,16 @@ const styles = StyleSheet.create({
   title: { color: '#FFFFFF', marginBottom: 14, textAlign: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   card: {
-    backgroundColor: '#FFFDF5',
+    backgroundColor: 'transparent',
     borderColor: '#FACC15',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#170736',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 6,
   },
-  name: { color: '#3A2A6B', marginTop: 4 },
+  name: {
+    color: '#FFFFFF',
+    marginTop: 4,
+    textShadowColor: 'rgba(23,7,54,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
 });

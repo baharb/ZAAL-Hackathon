@@ -23,6 +23,10 @@ export type DisplayWord = {
   art: QuestWord['art'] | null;
   digit?: string;
   firstLetterId: string;
+  /** Counting round: how many copies of this fruit the child counted. */
+  count?: number;
+  /** Balloon round: the 3 balloon color ids shown (child's first). */
+  balloonIds?: string[];
 };
 
 export type ChildCategoryInfo = {

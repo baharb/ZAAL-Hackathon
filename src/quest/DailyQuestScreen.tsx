@@ -11,7 +11,6 @@ import { AppContext } from '../store/AppContext';
 import { useNav } from '../store/NavContext';
 import { dir, ff } from '../theme/fonts';
 import { stopFaAudio } from '../utils/faAudio';
-import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { recordQuestResult } from '../store/questLevel';
 import { BuddyId, loadBuddy, saveBuddy } from './buddyStore';
 import { DisplayWord } from './questGroups';
@@ -24,9 +23,9 @@ import DriveGame, { DriveRound } from './DriveGame';
 import Finale from './Finale';
 import MyDaysScreen from './MyDaysScreen';
 
-// The five picks, in order: fruit, ingredient, color, ingredient (new ones),
-// food. None of the options shown earlier may appear again in the same quest.
-const PICK_STEPS: PickKind[] = ['fruit', 'ingredient', 'color', 'ingredient', 'dish'];
+// The three picks, in order: fruit, color, food. None of the options shown
+// earlier may appear again in the same quest.
+const PICK_STEPS: PickKind[] = ['fruit', 'color', 'dish'];
 
 type Phase = 'loading' | 'buddy' | 'picks' | 'drive' | 'arrived' | 'album';
 
@@ -55,12 +54,10 @@ export default function DailyQuestScreen() {
     let alive = true;
     void loadBuddy().then(saved => {
       if (!alive) return;
-      if (saved) {
-        setBuddy(saved);
-        startPicks();
-      } else {
-        setPhase('buddy');
-      }
+      // Always ask first: the child picks their character every day, with
+      // the saved one pre-selected.
+      if (saved) setBuddy(saved);
+      setPhase('buddy');
     });
     return () => {
       alive = false;
@@ -107,48 +104,22 @@ export default function DailyQuestScreen() {
 
   const buddyFace = Math.max(40, height * 0.07);
 
-  // The drive and the picnic are full screen: no purple title bar, just a
-  // floating close button. The buddy picker and the picks keep the bar.
-  const fullScreen =
-    phase === 'drive' ||
-    phase === 'arrived' ||
-    (phase === 'album' && albumReturn === 'arrived');
-  const closeSize = Math.max(44, Math.min(height * 0.12, 64));
-
   return (
     <View style={styles.root}>
-      {!fullScreen && (
-        <TopBar
-          title="My Daily Quest"
-          titleFa="بازی امروز من"
-          dark
-          showClose
-          onBack={goBack}
-        />
-      )}
-      {fullScreen && (
-        <TouchableOpacity
-          onPress={goBack}
-          activeOpacity={0.8}
-          accessibilityLabel={isFa ? 'بستن' : 'Close'}
-          accessibilityRole="button"
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          style={[styles.closeFloat, { top: insets.top + 8, width: closeSize, height: closeSize }]}
-        >
-          <Image
-            source={neliWorldAssets.ui.close}
-            style={{ width: closeSize * 0.62, height: closeSize * 0.62 }}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      )}
+      <TopBar
+        title="My Daily Quest"
+        titleFa="بازی امروز من"
+        dark
+        showClose
+        onBack={goBack}
+      />
       {(phase === 'picks' || phase === 'drive' || phase === 'arrived') && (
         <TouchableOpacity
           onPress={() => setPhase('buddy')}
           activeOpacity={0.8}
           accessibilityLabel={isFa ? 'تغییر دوست' : 'Change buddy'}
           accessibilityRole="button"
-          style={[styles.buddyChip, { top: fullScreen ? insets.top + 8 : topBarHeight(height, insets.top, {}) + 4 }]}
+          style={[styles.buddyChip, { top: topBarHeight(height, insets.top, {}) + 4 }]}
         >
           <Image source={buddyPose(buddy, 'base')} style={{ width: buddyFace, height: buddyFace }} resizeMode="contain" />
         </TouchableOpacity>
@@ -211,7 +182,6 @@ export default function DailyQuestScreen() {
             leveledUp={leveledUp}
             level={finalLevel}
             onDone={goBack}
-            onOpenAlbum={() => { setAlbumReturn('arrived'); setPhase('album'); }}
           />
         )}
         {/* Rendered last so it always sits on top of the finale. */}
@@ -245,16 +215,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#2D1B69',
     zIndex: 50,
     elevation: 50,
-  },
-  closeFloat: {
-    position: 'absolute',
-    left: 12,
-    zIndex: 60,
-    elevation: 60,
-    backgroundColor: 'rgba(45,27,105,0.55)',
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   buddyChip: {
     position: 'absolute',
