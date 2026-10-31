@@ -293,3 +293,88 @@ export const PLACE_ART: Record<string, any> = {
   garden: ALPHABET('tree'),
   sea: ALPHABET('boat'),
 };
+
+/** Floating navy close button (top-left), same as the quest drive. */
+export function NavyClose({ top, left, size }: { top: number; left: number; size: number }) {
+  const { reset } = useNav();
+  return (
+    <TouchableOpacity
+      onPress={() => reset({ name: 'Main', tab: 'Games' })}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      style={{
+        position: 'absolute',
+        top,
+        left,
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: '#1E2A5A',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 40,
+        elevation: 40,
+      }}
+    >
+      <Image
+        source={neliWorldAssets.ui.close}
+        style={{ width: size * 0.55, height: size * 0.55 }}
+        resizeMode="contain"
+      />
+    </TouchableOpacity>
+  );
+}
+
+/** Chunky square button (next arrow / camera): colored face, darker
+ * bottom edge, squash on press. */
+export function SquareButton({
+  color,
+  edge,
+  onPress,
+  disabled,
+  size,
+  children,
+}: {
+  color: string;
+  edge: string;
+  onPress: () => void;
+  disabled?: boolean;
+  size: number;
+  children: React.ReactNode;
+}) {
+  const { scale, pressIn, pressOut } = useTapScale();
+  const edgeH = Math.max(4, size * 0.09);
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      onPressIn={pressIn}
+      onPressOut={pressOut}
+      activeOpacity={1}
+      accessibilityRole="button"
+    >
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <View
+          style={{
+            backgroundColor: disabled ? '#B9C4D6' : color,
+            borderRadius: size * 0.22,
+            width: size,
+            height: size,
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+            opacity: disabled ? 0.7 : 1,
+            shadowColor: 'rgba(45,27,105,0.35)',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 1,
+            shadowRadius: 6,
+            elevation: 5,
+          }}
+        >
+          {children}
+          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: edgeH, backgroundColor: disabled ? '#9AA7BD' : edge }} />
+        </View>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}

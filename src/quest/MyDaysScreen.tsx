@@ -13,6 +13,7 @@ import { STORIES } from './stories';
 import { COLOR_HEX } from './pickLists';
 import { buddyPose } from './questTheme';
 import WordArt from './WordArt';
+import { WordArt as PlayWordArt, WORD_ART } from '../ui/playKit';
 import Balloon from './Balloon';
 import { displayWordById } from './questGroups';
 
@@ -32,6 +33,30 @@ function DayCard({ entry, cardW }: { entry: MyDayEntry; cardW: number }) {
   const fruitCount = Math.min(Math.max(fruitPick?.count ?? 1, 1), 5);
   const balloonIds = (entry.balloonIds ?? []).slice(0, 3);
   const castH = photoH * 0.52;
+  // Game recap entries (Listen & Find, First Letter): a little paper note
+  // with the found words' pictures.
+  if (entry.game) {
+    return (
+      <View style={[styles.card, { width: cardW, borderRadius: cardW * 0.05 }]}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, paddingVertical: 6 }}>
+          {entry.game.words.map(w => (
+            <View key={w.id} style={{ alignItems: 'center', width: cardW * 0.26 }}>
+              <PlayWordArt art={WORD_ART[w.id] ?? null} emoji={w.emoji} size={cardW * 0.2} />
+              <Text style={{ fontFamily: ff(lang, 'black'), fontSize: Math.max(11, cardW * 0.05), color: '#3A2A6B' }} numberOfLines={1}>
+                {w.fa}
+              </Text>
+            </View>
+          ))}
+        </View>
+        <Text
+          style={[styles.caption, { fontFamily: ff(lang, 'black'), fontSize: Math.max(13, cardW * 0.055) }, dir(lang)]}
+          numberOfLines={2}
+        >
+          {(isFa ? entry.game.fa : entry.game.en) + ` 📸 ${entry.dateISO}`}
+        </Text>
+      </View>
+    );
+  }
   return (
     <View style={[styles.card, { width: cardW, borderRadius: cardW * 0.05 }]}>
       <View

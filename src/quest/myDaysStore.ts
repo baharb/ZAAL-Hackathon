@@ -7,6 +7,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BuddyId, isBuddyId } from './buddyStore';
 import { StoryId } from './stories';
 
+/** Game recap entries (Listen & Find, First Letter) saved from the recap card. */
+export type GameStoryId = 'game_listenfind' | 'game_firstletter';
+
 const STORAGE_KEY = 'quest_my_days_v1';
 
 export type MyDayPick = {
@@ -22,7 +25,13 @@ export type MyDayEntry = {
   /** ISO date string, e.g. '2026-10-29'. */
   dateISO: string;
   buddy: BuddyId;
-  storyId: StoryId;
+  storyId: StoryId | GameStoryId;
+  /** Present only on game recap entries: what the child found. */
+  game?: {
+    fa: string;
+    en: string;
+    words: { id: string; fa: string; emoji: string }[];
+  };
   /** The 3 picks in quest order: fruit, color, dish. */
   picks: MyDayPick[];
   /** The child's chosen blanket color (hex), for the polaroid frame. */
@@ -36,7 +45,21 @@ function isMyDayEntry(value: unknown): value is MyDayEntry {
   const v = value as Record<string, unknown>;
   if (typeof v.id !== 'string' || typeof v.dateISO !== 'string') return false;
   if (!isBuddyId(typeof v.buddy === 'string' ? v.buddy : null)) return false;
-  if (v.storyId !== 'picnic_grandma') return false;
+  const isGameEntry = v.storyId === 'game_listenfind' || v.storyId === 'game_firstletter';
+  if (v.storyId !== 'picnic_grandma' && !isGameEntry) return false;
+  if (isGameEntry) {
+    const g = v.game as { fa?: unknown; en?: unknown; words?: unknown } | undefined;
+    if (!g || typeof g.fa !== 'string' || typeof g.en !== 'string') return false;
+    if (!Array.isArray(g.words) || g.words.length < 1 || g.words.length > 8) return false;
+    return g.words.every(
+      w =>
+        !!w &&
+        typeof w === 'object' &&
+        typeof (w as { id?: unknown }).id === 'string' &&
+        typeof (w as { fa?: unknown }).fa === 'string' &&
+        typeof (w as { emoji?: unknown }).emoji === 'string',
+    );
+  }
   if (!Array.isArray(v.picks)) return false;
   if (typeof v.colorHex !== 'string') return false;
   if (v.balloonIds !== undefined && (!Array.isArray(v.balloonIds) || !v.balloonIds.every(b => typeof b === 'string'))) return false;
