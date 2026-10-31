@@ -77,10 +77,9 @@ function GroundShadow({ width }: { width: number }) {
       pointerEvents="none"
       style={{
         width,
-        height: Math.max(8, width * 0.12),
+        height: Math.max(6, width * 0.09),
         borderRadius: 999,
-        backgroundColor: 'rgba(30,20,60,0.18)',
-        marginTop: -width * 0.04,
+        backgroundColor: 'rgba(30,20,60,0.14)',
       }}
     />
   );
@@ -119,9 +118,31 @@ function ChoiceFigure({
         ) : (
           children
         )}
-        <GroundShadow width={size * 0.8} />
+
       </Animated.View>
     </TouchableOpacity>
+  );
+}
+
+/** The monkey hero hangs from above (its art is a hanging pose) with a
+ * gentle sway — never floating in mid-air, and no ground shadow. */
+function MonkeyHang({ size, art, emoji }: { size: number; art: any; emoji: string }) {
+  const sway = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(sway, { toValue: 1, duration: 1400, useNativeDriver: true }),
+        Animated.timing(sway, { toValue: -1, duration: 1400, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [sway]);
+  const rotate = sway.interpolate({ inputRange: [-1, 1], outputRange: ['-4deg', '4deg'] });
+  return (
+    <Animated.View style={{ transform: [{ rotate }] }}>
+      <WordArt art={art} emoji={emoji} size={size} />
+    </Animated.View>
   );
 }
 
@@ -228,11 +249,11 @@ export default function MagicStoryGame() {
   const place = STORY_PLACES.find(p => p.id === placeId) ?? STORY_PLACES[0]!;
   const mood: BuddyMood = asking ? 'thinking' : lines ? 'happy' : 'idle';
   const showingNote = asking || lines !== null;
-  const buddyH = Math.min(H * 0.56, W * 0.24);
-  const heroH = Math.min(H * 0.42, W * 0.18);
+  const buddyH = Math.min(H * 0.5, W * 0.2);
+  const heroH = Math.min(H * 0.36, W * 0.15);
   const choiceH = H * 0.2;
   const windowD = H * 0.19;
-  const wandH = Math.max(64, 72 * k);
+  const wandH = Math.max(72, 80 * k);
   const closeS = Math.max(48, 52 * k);
   const s = styles(k);
 
@@ -284,17 +305,26 @@ export default function MagicStoryGame() {
         ))}
       </View>
 
-      {/* Center: big buddy + chosen hero beside them (hidden while the note shows). */}
+      {/* Center-left: big buddy + chosen hero beside them (hidden while the note shows). */}
       {!showingNote ? (
         <View style={[s.duo, { bottom: H * 0.04 }]} pointerEvents="box-none">
           <View style={s.duoFigure}>
             <BuddyGuide mood={mood} size={buddyH} />
             <GroundShadow width={buddyH * 0.55} />
           </View>
-          <View style={s.duoFigure}>
-            <WordArt art={HERO_ART[hero.id]} emoji={hero.emoji} size={heroH} />
-            <GroundShadow width={heroH * 0.55} />
-          </View>
+          {hero.id !== 'monkey' ? (
+            <View style={s.duoFigure}>
+              <WordArt art={HERO_ART[hero.id]} emoji={hero.emoji} size={heroH} />
+              <GroundShadow width={heroH * 0.55} />
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* Monkey hero hangs from above instead of standing. */}
+      {!showingNote && hero.id === 'monkey' ? (
+        <View style={{ position: 'absolute', top: H * 0.1, left: '38%', zIndex: 4 }} pointerEvents="none">
+          <MonkeyHang size={heroH * 1.1} art={HERO_ART.monkey} emoji={hero.emoji} />
         </View>
       ) : null}
 
@@ -309,8 +339,8 @@ export default function MagicStoryGame() {
         ))}
       </View>
 
-      {/* Wand: the one big button, bottom-right above everything. */}
-      <View style={[s.wandWrap, { right: 14, bottom: H * 0.05, zIndex: 30, elevation: 30 }]}>
+      {/* Wand: the one big button, bottom-center above everything. */}
+      <View style={[s.wandWrap, { left: '50%', marginLeft: -(wandH * 1.25) / 2, bottom: H * 0.03, zIndex: 30, elevation: 30 }]}>
         <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={tellStory} disabled={asking} height={wandH}>
           <Image source={neliWorldAssets.ui.sparkle} style={{ width: wandH * 0.45, height: wandH * 0.45 }} resizeMode="contain" />
         </CandyButton>
@@ -374,11 +404,11 @@ const styles = (k: number) =>
     heroRail: { position: 'absolute', justifyContent: 'space-evenly', zIndex: 5 },
     duo: {
       position: 'absolute',
-      left: '24%',
-      right: '30%',
+      left: '11%',
+      right: '45%',
       flexDirection: 'row',
       alignItems: 'flex-end',
-      justifyContent: 'center',
+      justifyContent: 'flex-start',
       columnGap: 12 * k,
       zIndex: 4,
     },
