@@ -28,6 +28,7 @@ import { buddyPose } from './questTheme';
 import { saveMyDay } from './myDaysStore';
 import WordArt from './WordArt';
 import { SoftShadow } from '../ui/playKit';
+import PicnicPhoto from './PicnicPhoto';
 import Balloon from './Balloon';
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 
@@ -153,31 +154,43 @@ export default function Finale({
   };
 
   // Open the album instead of leaving: stop every pending timer first so
-  // the auto-exit can never fire from behind the album overlay, and park
-  // the polaroid on its full card so the return shows the photo, not a
-  // half-flown frame.
+  // the auto-exit can never fire from behind the album overlay. The photo
+  // sequence keeps its state — a card or flight interrupted here finishes
+  // on return, so the picnic comes back clean with تمام! and no overlay.
   const openAlbum = () => {
     if (exitTimer.current) clearTimeout(exitTimer.current);
     if (photoTimer.current) clearTimeout(photoTimer.current);
-    cardAnim.setValue(1);
-    setPhotoPhase('card');
     onAlbum();
   };
 
-  // After the album closes, the quest must still end: without the cleared
-  // timers the child would be trapped at the picnic (the title bar stays
-  // hidden here). Give them one last 4-second look, then exit.
+  // After the album closes: an interrupted photo finishes now (clean
+  // picnic plus تمام!), an already-finished one simply waits. Either way
+  // the child is never trapped at the picnic.
   const albumWasActive = useRef(false);
   useEffect(() => {
     if (albumActive) {
       albumWasActive.current = true;
       return;
     }
-    // Back from the album: the picnic (and تمام!) simply waits.
     if (albumWasActive.current && photoTaken.current && !exitedRef.current) {
       albumWasActive.current = false;
+      if (voicePending.current) {
+        voicePending.current = false;
+        void (async () => {
+          await questPlay('quest/saved' as FaTestAudioKey, { awaitFinish: true });
+          if (exitedRef.current) return;
+          setShowTamam(true);
+          armExit();
+        })();
+      } else if (photoPhaseRef.current !== 'saved') {
+        finalizePhoto();
+      } else {
+        setShowTamam(true);
+        if (!exitTimer.current) armExit();
+      }
+    } else {
+      albumWasActive.current = false;
     }
-    albumWasActive.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [albumActive]);
 
@@ -219,6 +232,39 @@ export default function Finale({
   // blanket — never on top of the food.
   const camS = Math.min(gh * 0.2, 110);
   const [showTamam, setShowTamam] = useState(false);
+  // Finishing the photo exactly once: the saved voice plays unless the
+  // album is covering the screen (then it replays on return), تمام!
+  // shows, and the safety exit timer never arms behind the album.
+  const savedSpoken = useRef(false);
+  const voicePending = useRef(false);
+  const albumActiveRef = useRef(albumActive);
+  albumActiveRef.current = albumActive;
+  const photoPhaseRef = useRef(photoPhase);
+  photoPhaseRef.current = photoPhase;
+  const armExit = () => {
+    if (exitTimer.current) clearTimeout(exitTimer.current);
+    exitTimer.current = setTimeout(() => void finishQuest(), 60000);
+  };
+  const finalizePhoto = () => {
+    setPhotoPhase('saved');
+    if (!savedSpoken.current) {
+      savedSpoken.current = true;
+      if (!albumActiveRef.current) {
+        void (async () => {
+          await questPlay('quest/saved' as FaTestAudioKey, { awaitFinish: true });
+          if (exitedRef.current) return;
+          setShowTamam(true);
+          if (!albumActiveRef.current) armExit();
+        })();
+      } else {
+        voicePending.current = true;
+        setShowTamam(true);
+      }
+    } else {
+      setShowTamam(true);
+      if (!albumActiveRef.current && !exitTimer.current) armExit();
+    }
+  };
 
   // Blanket on the grass, lifted above the camera strip, in the child's
   // chosen color — the whole picnic fits even a 360pt-tall phone.
@@ -365,13 +411,11 @@ export default function Finale({
         photoTimer.current = setTimeout(() => {
           setPhotoPhase('flying');
           cardAnim.setValue(0);
-          Animated.timing(cardAnim, { toValue: 1, duration: 650, useNativeDriver: true }).start(async () => {
-            setPhotoPhase('saved');
-            await questPlay('quest/saved' as FaTestAudioKey, { awaitFinish: true });
-            if (exitedRef.current) return;
-            setShowTamam(true);
-            // A child who never taps still leaves after a minute.
-            exitTimer.current = setTimeout(() => void finishQuest(), 60000);
+          Animated.timing(cardAnim, { toValue: 1, duration: 650, useNativeDriver: true }).start(() => {
+            // The album may have opened mid-flight: finalizePhoto skips the
+            // voice and the exit timer behind the overlay; the return path
+            // above replays the voice and arms the timer.
+            finalizePhoto();
           });
         }, 4000);
       });
@@ -640,39 +684,19 @@ export default function Finale({
             },
           ]}
         >
-          <View style={[styles.polaroidPhoto, { height: cardPhotoH, backgroundColor: blanketColor, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' }]}>
-            <Image
-              source={story.grandma}
-              style={{ flex: 1, height: '100%' }}
-              resizeMode="contain"
-              accessibilityLabel={isFa ? 'مادربزرگ' : 'Grandma'}
-            />
-            <View style={{ flex: 1.1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 4 }}>
-              <View style={[styles.items, { gap: 3 }]}>
-                {fruitWord && <WordArt word={fruitWord} size={cardPhotoH * 0.3} />}
-                {dishWord && <WordArt word={dishWord} size={cardPhotoH * 0.4} />}
-              </View>
-              {balloonIds.length > 0 && (
-                <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
-                  {balloonIds.map(id => (
-                    <View
-                      key={id}
-                      style={{
-                        width: cardW * 0.05,
-                        height: cardW * 0.05,
-                        borderRadius: cardW * 0.025,
-                        backgroundColor: COLOR_HEX[id] ?? '#CCCCCC',
-                      }}
-                    />
-                  ))}
-                </View>
-              )}
-            </View>
-            <Image
-              source={buddyPose(buddy, 'celebration')}
-              style={{ flex: 1, height: '100%' }}
-              resizeMode="contain"
-              accessibilityLabel={buddy}
+          <View style={[styles.polaroidPhoto, { height: cardPhotoH }]}>
+            <PicnicPhoto
+              background={story.background}
+              grandma={story.grandma}
+              buddy={buddy}
+              fruitWord={fruitWord ?? null}
+              fruitCount={fruitCount}
+              dishWord={dishWord ?? null}
+              balloonIds={balloonIds}
+              colorHex={blanketColor}
+              w={cardW - cardW * 0.08}
+              h={cardPhotoH}
+              radius={cardW * 0.02}
             />
           </View>
           <Text

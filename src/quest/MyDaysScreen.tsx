@@ -10,12 +10,10 @@ import { dir, ff } from '../theme/fonts';
 import { BUDDIES } from './buddyStore';
 import { MyDayEntry, loadMyDays } from './myDaysStore';
 import { STORIES } from './stories';
-import { COLOR_HEX } from './pickLists';
-import { buddyPose } from './questTheme';
 import WordArt from './WordArt';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { WordArt as PlayWordArt, WORD_ART } from '../ui/playKit';
-import Balloon from './Balloon';
+import PicnicPhoto from './PicnicPhoto';
 import { displayWordById } from './questGroups';
 
 // The album card shows the same picnic scene at a small size: garden
@@ -33,7 +31,6 @@ function DayCard({ entry, cardW }: { entry: MyDayEntry; cardW: number }) {
   const dishWord = dishPick ? displayWordById(dishPick.id) : null;
   const fruitCount = Math.min(Math.max(fruitPick?.count ?? 1, 1), 5);
   const balloonIds = (entry.balloonIds ?? []).slice(0, 3);
-  const castH = photoH * 0.52;
   // Game recap entries (Listen & Find, First Letter): a little paper note
   // with the found words' pictures.
   if (entry.game) {
@@ -60,76 +57,19 @@ function DayCard({ entry, cardW }: { entry: MyDayEntry; cardW: number }) {
   }
   return (
     <View style={[styles.card, { width: cardW, borderRadius: cardW * 0.05 }]}>
-      <View
-        style={[
-          styles.photo,
-          {
-            height: photoH,
-            borderRadius: cardW * 0.03,
-          },
-        ]}
-      >
-        {story && (
-          <Image
-            source={story.background}
-            style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
-        )}
-        {balloonIds.length > 0 && (
-          <View style={{ position: 'absolute', top: 2, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 2 }}>
-            {balloonIds.map(id => (
-              <Balloon key={id} color={COLOR_HEX[id] ?? '#CCCCCC'} size={photoH * 0.16} />
-            ))}
-          </View>
-        )}
-        {story && (
-          <Image
-            source={story.grandma}
-            style={{ position: 'absolute', left: 4, bottom: 2, width: castH * 0.85, height: castH }}
-            resizeMode="contain"
-          />
-        )}
-        <Image
-          source={buddyPose(entry.buddy, 'celebration')}
-          style={{ position: 'absolute', right: 4, bottom: 2, width: castH * 0.85, height: castH }}
-          resizeMode="contain"
-        />
-        <View
-          style={{
-            position: 'absolute',
-            left: castH * 0.7,
-            right: castH * 0.7,
-            bottom: 2,
-            height: photoH * 0.36,
-            borderRadius: 6,
-            overflow: 'hidden',
-            backgroundColor: entry.colorHex,
-            borderWidth: 1.5,
-            borderColor: '#FFFFFF',
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-          }}
-        >
-          {Array.from({ length: 16 }).map((_, i) => (
-            <View
-              key={i}
-              style={{
-                width: '12.5%',
-                height: '50%',
-                backgroundColor: (Math.floor(i / 8) + i) % 2 === 0 ? entry.colorHex : 'rgba(255,255,255,0.88)',
-              }}
-            />
-          ))}
-          <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-            {fruitWord &&
-              Array.from({ length: fruitCount }).map((_, i) => (
-                <WordArt key={i} word={fruitWord} size={photoH * 0.15} />
-              ))}
-            {dishWord && <WordArt word={dishWord} size={photoH * 0.24} />}
-          </View>
-        </View>
-      </View>
+      <PicnicPhoto
+        background={story?.background}
+        grandma={story?.grandma}
+        buddy={entry.buddy}
+        fruitWord={fruitWord}
+        fruitCount={fruitCount}
+        dishWord={dishWord}
+        balloonIds={balloonIds}
+        colorHex={entry.colorHex}
+        w={cardW}
+        h={photoH}
+        radius={cardW * 0.03}
+      />
       <Text
         style={[styles.caption, { fontFamily: ff(lang, 'black'), fontSize: Math.max(13, cardW * 0.055) }, dir(lang)]}
         numberOfLines={2}
