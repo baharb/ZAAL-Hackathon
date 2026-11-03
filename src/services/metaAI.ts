@@ -20,6 +20,17 @@ export type MetaRequest = {
 
 export type MetaResult = { text: string } | { error: string };
 
+export type CartoonRequest = {
+  /** Base64 PNG or JPEG (no "data:" prefix). Drawings export at ~384px. */
+  imageBase64: string;
+  /** Same cartoon model repaints both; the prompt differs slightly. */
+  kind: 'drawing' | 'photo';
+};
+
+export type CartoonResult = { base64: string } | { error: string };
+
+const BASE64_RE = /^[A-Za-z0-9+/=\s]+$/;
+
 export async function askMeta(req: MetaRequest, retries = 1): Promise<MetaResult> {
   if (!supabaseConfigured) {
     return { error: 'Supabase is not configured (.env is missing EXPO_PUBLIC_SUPABASE_URL / ANON_KEY).' };
@@ -45,6 +56,58 @@ export async function askMeta(req: MetaRequest, retries = 1): Promise<MetaResult
       }
       return { text };
     } catch (e: any) {
+      last = { error: e?.message ?? 'Network error' };
+    }
+  }
+  return last;
+}
+
+/** Drawing/photo -> cartoon sticker, via the Supabase Edge Function
+ * `cartoon` (supabase/functions/cartoon). Same key rules as askMeta: the
+ * app never sees MODEL_API_KEY. Photos are processed and discarded. */
+export async function askCartoon(req: CartoonRequest, retries = 1): Promise<CartoonResult> {
+  if (!supabaseConfigured) {
+    return { error: 'Supabase is not configured (.env is missing EXPO_PUBLIC_SUPABASE_URL / ANON_KEY).' };
+  }
+  const clean = (req.imageBase64 ?? '').replace(/\s/g, '');
+  if (!clean || !BASE64_RE.test(req.imageBase64)) {
+    return { error: 'Bad image' };
+  }
+  let last: CartoonResult = { error: 'Request failed' };
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const { data, error } = await supabase.functions.invoke('cartoon', {
+        body: { imageBase64: clean, kind: req.kind },
+      });
+      if (error) {
+        // Visible only in the dev terminal (never to the child): the real
+        // reason the cartoon failed — function missing, Meta error, etc.
+        if (typeof __DEV__ !== 'undefined' && __DEV__) {
+          console.warn('[cartoon] invoke failed:', error);
+        }
+        last = { error: error.message ?? 'Request failed' };
+        continue;
+      }
+      if (data?.error) {
+        if (typeof __DEV__ !== 'undefined' && __DEV__) {
+          console.warn('[cartoon] function said:', data.error);
+        }
+        last = { error: String(data.error) };
+        continue;
+      }
+      const out = String(data?.imageBase64 ?? '').replace(/\s/g, '');
+      if (!out || !BASE64_RE.test(out)) {
+        if (typeof __DEV__ !== 'undefined' && __DEV__) {
+          console.warn('[cartoon] reply had no image, keys were:', data ? Object.keys(data) : data);
+        }
+        last = { error: 'Empty reply' };
+        continue;
+      }
+      return { base64: out };
+    } catch (e: any) {
+      if (typeof __DEV__ !== 'undefined' && __DEV__) {
+        console.warn('[cartoon] network threw:', e?.message ?? e);
+      }
       last = { error: e?.message ?? 'Network error' };
     }
   }
