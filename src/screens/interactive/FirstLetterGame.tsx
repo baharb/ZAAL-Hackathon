@@ -6,12 +6,14 @@
 // never synthesized (iPhones have no Persian voice).
 
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useWindowDimensions } from '../../layout/PortraitFallback';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNav } from '../../store/NavContext';
-import TopBar from '../../components/TopBar';
-import QuestBackdrop, { QUEST_SKY } from '../../quest/QuestBackdrop';
+import { BuddyGuide, GameBg, WORD_ART, WordArt } from '../../ui/playKit';
+import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAssets';
+import { IdleHand, useIdleHint } from '../../quest/IdleHand';
 import { dir, ff } from '../../theme/fonts';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../../assets/faTestAudio.generated';
 import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
@@ -42,9 +44,13 @@ function tap() {
 
 type Deal = { word: PhotoFarsiWord; answer: FirstLetter; choices: FirstLetter[] };
 
+const BLOCK_COLORS = ['#E63B3B', '#FFB800', '#2B7FFF'];
+const BLOCK_EDGES = ['#B91C1C', '#D99A00', '#1D4ED8'];
+
 export default function FirstLetterGame() {
-  const { height } = useWindowDimensions();
-  const { reset } = useNav();
+  const { width: W, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { navigate } = useNav();
   const k = height / REFERENCE_H;
   const [round, setRound] = useState(0);
   // One deal per round: the answer is always among the shown letters, and
@@ -65,6 +71,13 @@ export default function FirstLetterGame() {
   const [done, setDone] = useState(false);
   const [wrongId, setWrongId] = useState<string | null>(null);
   const [rightId, setRightId] = useState<string | null>(null);
+  // Skill memory for the whole session: after 5 correct answers the Farsi
+  // name hides at first sight, and only appears when she taps the right
+  // letter. Never reset on restart — earned skill stays earned.
+  const [totalRight, setTotalRight] = useState(0);
+  const [taps, setTaps] = useState(0);
+  const showHand = useIdleHint(!done && !prompting, 7000, round * 1000 + taps);
+  const showName = totalRight < 5 || rightId !== null;
   const alive = useRef(true);
 
   // Recorded clips and TTS must never overlap — silence both on exit.
@@ -104,12 +117,14 @@ export default function FirstLetterGame() {
   const choose = async (letter: FirstLetter) => {
     if (prompting || done) return;
     tap();
+    setTaps(t => t + 1);
     setPrompting(true);
     // Every tap teaches the tapped letter's name first.
     await playFaAudio(letter.audioKey as FaTestAudioKey, { awaitFinish: true });
     if (!alive.current) return;
     if (letter.id === deal.answer.id) {
       setRightId(letter.id);
+      setTotalRight(t => t + 1);
       await playFaAudio('feedback/afarin');
       if (!alive.current) return;
       setStars(s => s + 1);
@@ -125,6 +140,7 @@ export default function FirstLetterGame() {
   const replay = () => {
     if (done) return;
     tap();
+    setTaps(t => t + 1);
     void speakPrompt(deal.word);
   };
 
@@ -140,48 +156,97 @@ export default function FirstLetterGame() {
     void speakPrompt(nextDeal.word);
   };
 
+  // Playground scene: stars on top, the word's real picture big in the
+  // middle on the grass, the buddy big beside it, 3 chunky toy blocks
+  // below (smaller than the picture). No cards, no English, no question
+  // text — the spoken word is the question.
+  const picS = Math.min(height * 0.32, W * 0.22);
+  const blockS = Math.min(height * 0.19, W * 0.1);
+  const buddyS = Math.min(height * 0.46, W * 0.16);
+  const closeS = Math.max(48, 52 * k);
+  const answerIdx = deal.choices.findIndex(c => c.id === deal.answer.id);
   const s = styles(k);
   return (
     <View style={s.root}>
-      <QuestBackdrop />
-      <View style={s.topWrap}>
-        <TopBar title="First Letter" titleFa="حرف اول" showClose dark topInset={10} onBack={() => reset({ name: 'Main', tab: 'Games' })} />
-      </View>
+      <GameBg pick={roomBackgroundPickers.playground} />
+      {/* Floating navy close only — no title bar. */}
+      <TouchableOpacity
+        onPress={() => navigate({ name: 'MagicGames' })}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        style={[s.closeBtn, { top: insets.top + 8, left: 12, width: closeS, height: closeS, borderRadius: closeS / 2 }]}
+      >
+        <Image source={neliWorldAssets.ui.close} style={{ width: closeS * 0.55, height: closeS * 0.55 }} resizeMode="contain" />
+      </TouchableOpacity>
+      {/* Gold progress stars, top-center. */}
+      {!done ? (
+        <View style={[s.starsWrap, { top: insets.top + 12 }]} pointerEvents="none">
+          <View style={{ flexDirection: 'row', gap: 6 * k }}>
+            {Array.from({ length: ROUNDS }).map((_, i) => (
+              <Text
+                key={i}
+                style={{
+                  fontSize: Math.max(22, 26 * k),
+                  color: i < stars ? '#FFB800' : 'rgba(255,255,255,0.45)',
+                  textShadowColor: 'rgba(30,20,60,0.6)',
+                  textShadowOffset: { width: 0, height: 2 },
+                  textShadowRadius: 3,
+                }}
+              >
+                ★
+              </Text>
+            ))}
+          </View>
+        </View>
+      ) : null}
       <View style={s.body}>
         {done ? (
           <View style={s.endCard}>
-            <Text style={s.endEmoji}>🎉</Text>
+            <Image source={neliWorldAssets.ui.star} style={{ width: 56 * k, height: 56 * k }} resizeMode="contain" />
             <Text style={[s.endFa, dir('fa'), { textAlign: 'center' }]}>آفرین! حرف‌ها را بلدی</Text>
-            <Text style={s.endStars}>⭐ {stars}/{ROUNDS}</Text>
+            <Text style={s.endStars}>★ {stars}/{ROUNDS}</Text>
             <TouchableOpacity style={s.againBtn} onPress={restart} activeOpacity={0.85}>
-              <Text style={s.againText}>🔁 Again</Text>
+              <Text style={[s.againText, dir('fa'), { textAlign: 'center' }]}>دوباره</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <>
-            <View style={s.promptCard}>
-              <Text style={s.wordEmoji}>{deal.word.emoji}</Text>
-              <TouchableOpacity style={s.speaker} onPress={replay} disabled={prompting} activeOpacity={0.85}>
-                <Text style={s.speakerText}>🔊</Text>
-              </TouchableOpacity>
-              <Text style={[s.askFa, dir('fa'), { textAlign: 'center' }]}>اولش کدام حرف است؟</Text>
-              <Text style={s.roundText}>Round {round + 1}/{ROUNDS}</Text>
-              <View style={s.starChip}>
-                <Text style={s.starText}>⭐ {stars}</Text>
-              </View>
+            <View style={s.buddyCol}>
+              <BuddyGuide mood={prompting ? 'thinking' : rightId ? 'happy' : 'idle'} size={buddyS} />
             </View>
-            <View style={s.choiceRow}>
-              {deal.choices.map(c => (
-                <TouchableOpacity
-                  key={c.id}
-                  style={[s.card, c.id === wrongId && s.cardWrong, c.id === rightId && s.cardRight]}
-                  onPress={() => void choose(c)}
-                  disabled={prompting}
-                  activeOpacity={0.85}
-                >
-                  <Text style={[s.cardGlyph, dir('fa'), { textAlign: 'center' }]}>{c.glyph}</Text>
-                </TouchableOpacity>
-              ))}
+            <View style={s.midCol}>
+              <TouchableOpacity style={s.speaker} onPress={replay} disabled={prompting} activeOpacity={0.85}>
+                <Image source={neliWorldAssets.ui.voice} style={{ width: 30 * k, height: 30 * k }} resizeMode="contain" />
+              </TouchableOpacity>
+              <WordArt art={WORD_ART[deal.word.id] ?? null} emoji={deal.word.emoji} size={picS} />
+              <View style={s.shadowDot} />
+              {showName ? (
+                <Text style={[s.nameFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{deal.word.fa}</Text>
+              ) : null}
+              <View style={s.choiceRow}>
+                {deal.choices.map((c, i) => (
+                  <View key={c.id} style={s.blockWrap}>
+                    {showHand && i === answerIdx ? (
+                      <View pointerEvents="none" style={[s.hand, { top: -blockS * 0.75 }]}>
+                        <IdleHand size={blockS * 0.8} />
+                      </View>
+                    ) : null}
+                    <TouchableOpacity
+                      style={[
+                        s.card,
+                        { backgroundColor: BLOCK_COLORS[i % BLOCK_COLORS.length], borderBottomColor: BLOCK_EDGES[i % BLOCK_EDGES.length], width: blockS, height: blockS, borderRadius: 18 * k },
+                        c.id === wrongId && s.cardWrong,
+                        c.id === rightId && s.cardRight,
+                      ]}
+                      onPress={() => void choose(c)}
+                      disabled={prompting}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={[s.cardGlyph, dir('fa'), { textAlign: 'center' }]}>{c.glyph}</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
             </View>
           </>
         )}
@@ -200,52 +265,51 @@ const CARD_SHADOW = {
 
 const styles = (k: number) =>
   StyleSheet.create({
-    root: { flex: 1, backgroundColor: QUEST_SKY },
-    topWrap: { position: 'relative', zIndex: 10, elevation: 10 },
-    body: { flex: 1, paddingHorizontal: 16 * k, paddingBottom: 12 * k, rowGap: 10 * k, justifyContent: 'center' },
-    promptCard: {
-      borderRadius: 22 * k,
-      backgroundColor: '#FFFFFF',
-      paddingVertical: 8 * k,
+    root: { flex: 1, backgroundColor: '#7FCDFF' },
+    closeBtn: {
+      position: 'absolute',
+      backgroundColor: 'rgba(20,16,60,0.85)',
       alignItems: 'center',
       justifyContent: 'center',
-      flexDirection: 'row',
-      columnGap: 12 * k,
-      ...CARD_SHADOW,
+      zIndex: 10,
     },
-    wordEmoji: { fontSize: 44 * k },
+    starsWrap: { position: 'absolute', alignSelf: 'center', zIndex: 30, elevation: 30 },
+    body: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 * k, columnGap: 12 * k },
+    buddyCol: { width: '24%', alignItems: 'center', justifyContent: 'flex-end', alignSelf: 'stretch', paddingBottom: 18 * k },
+    midCol: { flex: 1, alignItems: 'center', justifyContent: 'center', rowGap: 6 * k },
     speaker: {
-      width: 60 * k,
-      height: 60 * k,
-      borderRadius: 30 * k,
+      width: 56 * k,
+      height: 56 * k,
+      borderRadius: 28 * k,
       backgroundColor: '#FFB800',
       alignItems: 'center',
       justifyContent: 'center',
+      ...CARD_SHADOW,
     },
-    speakerText: { fontSize: 28 * k },
-    askFa: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 20 * k },
-    roundText: { color: '#6B5CA5', fontSize: 13 * k, fontFamily: ff('en', 'black') },
-    starChip: { position: 'absolute', top: 8 * k, right: 10 * k, backgroundColor: '#FACC15', borderRadius: 10 * k, paddingHorizontal: 8 * k, paddingVertical: 2 * k },
-    starText: { fontSize: 12 * k, fontFamily: ff('en', 'black'), color: '#3A2A6B' },
-    choiceRow: { flexDirection: 'row', columnGap: 10 * k },
+    shadowDot: {
+      width: 120 * k,
+      height: 12 * k,
+      borderRadius: 999,
+      backgroundColor: 'rgba(30,20,60,0.14)',
+    },
+    nameFa: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', fontSize: 22 * k, textShadowColor: 'rgba(30,20,60,0.6)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+    choiceRow: { flexDirection: 'row', columnGap: 12 * k, marginTop: 4 * k },
+    blockWrap: { position: 'relative', alignItems: 'center' },
+    hand: { position: 'absolute', alignSelf: 'center', zIndex: 15, elevation: 15 },
     card: {
-      flex: 1,
-      borderRadius: 22 * k,
-      backgroundColor: '#FFFFFF',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 10 * k,
+      borderBottomWidth: 6 * k,
       borderWidth: 3 * k,
       borderColor: 'transparent',
       ...CARD_SHADOW,
     },
     cardWrong: { borderColor: '#EF4444' },
     cardRight: { borderColor: '#22C55E' },
-    cardGlyph: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 64 * k },
+    cardGlyph: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', fontSize: 40 * k, textShadowColor: 'rgba(30,20,60,0.3)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 },
     endCard: { alignItems: 'center', rowGap: 8 * k, backgroundColor: '#FFFFFF', borderRadius: 26 * k, paddingVertical: 20 * k, marginHorizontal: 60 * k, ...CARD_SHADOW },
-    endEmoji: { fontSize: 56 * k },
     endFa: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 24 * k },
-    endStars: { fontSize: 20 * k, fontFamily: ff('en', 'black'), color: '#3A2A6B' },
+    endStars: { fontSize: 20 * k, fontFamily: ff('en', 'black'), color: '#B45309' },
     againBtn: { backgroundColor: '#22C55E', borderRadius: 14 * k, paddingHorizontal: 22 * k, paddingVertical: 8 * k },
-    againText: { color: '#FFFFFF', fontSize: 16 * k, fontFamily: ff('en', 'black') },
+    againText: { color: '#FFFFFF', fontSize: 18 * k, fontFamily: ff('fa', 'black') },
   });
