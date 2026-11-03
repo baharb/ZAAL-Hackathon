@@ -40,8 +40,13 @@ export function bgCover(
   screenH: number,
   boxW: number,
   boxH: number,
+  forceVariant?: 'phone' | 'universal',
 ): { s: number; imgW: number; imgH: number; offX: number; offYBelow: number } {
-  const v = screenW / screenH >= 1.95 ? DIMS[kind].phone : DIMS[kind].universal;
+  // forceVariant must mirror the exact (w, h) the renderer passes to the
+  // background picker — e.g. ListenFind renders with a fixed (800, 400),
+  // which always selects the phone art, on every screen.
+  const key = forceVariant ?? (screenW / screenH >= 1.95 ? 'phone' : 'universal');
+  const v = DIMS[kind][key];
   const s = Math.max(boxW / v.w, boxH / v.h);
   return {
     s,

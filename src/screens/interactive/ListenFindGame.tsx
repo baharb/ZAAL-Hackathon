@@ -60,18 +60,26 @@ type SceneBg = (typeof SCENES)[number]['bg'];
 const BY_ID: Record<string, PhotoFarsiWord> = Object.fromEntries(VOICED_WORDS.map(w => [w.id, w]));
 
 // Named standing spots as fractions OF THE ARTWORK (fx from the left,
-// fb above the bottom), bottom-anchored to a real drawn surface: kitchen
-// counter + stool + floor, bedroom bed + rug. Artwork fractions survive
-// cover() cropping, so objects sit on furniture at EVERY aspect ratio.
-// Three random slots per round, across the room from the buddy (left).
+// fb above the bottom), bottom-anchored to a real drawn surface: bedroom
+// bed + rug. Artwork fractions survive cover() cropping, so objects sit
+// on furniture at EVERY aspect ratio. Three random slots per round,
+// across the room from the buddy (left).
+// Kitchen slots are generated, not fixed: only the FLAT counter top
+// (never the sink/faucet, utensil cup, pot or stove) plus the floor.
+// The background Image is picked with a fixed (800, 400), which always
+// selects the phone crop (2796x1290) on every screen — so these lines are
+// measured on the phone art: counter top fb 0.27, floor top fb 0.09.
+const KITCHEN_FB = 0.27;
+const KITCHEN_FLOOR_FB = 0.06;
+const KITCHEN_COUNTER_FXS = [0.29, 0.315, 0.34, 0.46, 0.48, 0.575, 0.695];
+const KITCHEN_FLOOR_FXS = [0.22, 0.45, 0.65];
+const KITCHEN_DECOR = [
+  { fx0: 0.355, fx1: 0.445, fb0: 0.27, fb1: 0.49 },
+  { fx0: 0.498, fx1: 0.557, fb0: 0.27, fb1: 0.49 },
+  { fx0: 0.596, fx1: 0.674, fb0: 0.27, fb1: 0.44 },
+];
 const SCENE_SLOTS: Record<SceneBg, { fx: number; fb: number }[]> = {
-  kitchenCheerful: [
-    { fx: 0.38, fb: 0.465 },
-    { fx: 0.55, fb: 0.465 },
-    { fx: 0.7, fb: 0.465 },
-    { fx: 0.135, fb: 0.25 },
-    { fx: 0.25, fb: 0.1 },
-  ],
+  kitchenCheerful: [],
   // Dress-up bedroom (the variant the picker actually serves): open
   // wardrobe 0.05-0.45, window 0.51-0.72, shelf 0.79-0.94, bed
   // 0.50-0.96 with the blanket top at fb 0.44, rug 0.49-0.84 top fb
@@ -200,14 +208,40 @@ export default function ListenFindGame() {
     // visible band are dropped for the round; positions clamp on-screen as
     // a safety net (wide counter/bed, so clamped spots stay on furniture).
     const objS = H * 0.22;
-    const cover = bgCover(scene.bg, W, H, W, H * 1.25);
+    // The background Image is picked with a fixed (800, 400) — always the
+    // phone art — so the math must use the phone fractions too.
+    const cover = bgCover(scene.bg, W, H, W, H * 1.25, 'phone');
     const sizes = choices.map(c => objS * (ART_ZOOM[c.id] ?? 1));
     const maxSize = Math.max(...sizes);
-    const inBand = SCENE_SLOTS[scene.bg].filter(slot => {
+    // Kitchen candidates: flat counter segments plus floor spots. Counter
+    // slots that fall outside the visible band at this aspect are dropped;
+    // floor is always there. Bedroom uses its fixed furniture slots.
+    type Slot = { fx: number; fb: number; counter?: boolean };
+    const rawPool: Slot[] =
+      scene.bg === 'kitchenCheerful'
+        ? [
+            ...KITCHEN_COUNTER_FXS.map(fx => ({ fx, fb: KITCHEN_FB, counter: true })),
+            ...KITCHEN_FLOOR_FXS.map(fx => ({ fx, fb: KITCHEN_FLOOR_FB })),
+          ]
+        : SCENE_SLOTS[scene.bg];
+    const inBand = rawPool.filter(slot => {
       const cx = surfX(slot.fx, cover.imgW, cover.s, cover.offX);
       return cx > maxSize * 0.5 + 8 && cx < W - maxSize * 0.5 - 8;
     });
-    const slotPool = inBand.length >= 3 ? inBand : SCENE_SLOTS[scene.bg];
+    const slotPool = inBand.length >= 3 ? inBand : rawPool;
+    // Kitchen decor exclusion, in artwork fractions (aspect-independent):
+    // a counter object must not touch the sink, cup or pot rects.
+    const artRect = (slot: { fx: number; fb: number }, size: number) => {
+      const wF = size / (cover.imgW * cover.s);
+      const hF = size / (cover.imgH * cover.s);
+      return { fx0: slot.fx - wF / 2, fx1: slot.fx + wF / 2, fb0: slot.fb, fb1: slot.fb + hF };
+    };
+    const decorHit = (r: { fx0: number; fx1: number; fb0: number; fb1: number }) =>
+      KITCHEN_DECOR.some(
+        d =>
+          r.fx0 < d.fx1 - 0.005 && r.fx1 > d.fx0 + 0.005 && r.fb0 < d.fb1 - 0.005 && r.fb1 > d.fb0 + 0.005,
+      );
+    const isKitchenCounter = (slot: Slot) => scene.bg === 'kitchenCheerful' && slot.counter === true;
     const rectOf = (slot: { fx: number; fb: number }, size: number) => {
       const left = surfX(slot.fx, cover.imgW, cover.s, cover.offX) - size / 2;
       const top = surfTop(slot.fb, cover.imgH, cover.s, H, cover.offYBelow) - size;
@@ -231,23 +265,36 @@ export default function ListenFindGame() {
     const buddyHit = (r: { left: number; top: number; right: number; bottom: number }) =>
       r.left < buddyRect.right - TOL && r.right > buddyRect.left + TOL &&
       r.top < buddyRect.bottom - TOL && r.bottom > buddyRect.top + TOL;
-    let slots = shuffle([...slotPool]).slice(0, 3);
+    // Counter-first kitchen: trios purely on the flat counter win; floor
+    // spots only fill in when the decor leaves no room for big objects.
+    const counterOnly = slotPool.filter(isKitchenCounter);
+    const tiers: { fx: number; fb: number }[][] =
+      scene.bg === 'kitchenCheerful' && counterOnly.length >= 3 ? [counterOnly, slotPool] : [slotPool];
+    let slots = shuffle([...tiers[tiers.length - 1]!]).slice(0, 3);
     let settled = false;
-    for (const wantGap of [true, false]) {
-      for (let t = 0; t < 12 && !settled; t++) {
-        const cand = shuffle([...slotPool]).slice(0, 3);
-        const rects = cand.map((s, i) => rectOf(s, sizes[i]!));
-        const pad = wantGap ? Math.min(...sizes) : 0;
-        if (t === 0 && wantGap) slots = cand;
-        if (clearBy(rects, pad) && !rects.some(buddyHit)) {
-          slots = cand;
-          settled = true;
+    for (const tier of tiers) {
+      for (const wantGap of [true, false]) {
+        for (let t = 0; t < 12 && !settled; t++) {
+          const cand = shuffle([...tier]).slice(0, 3);
+          const rects = cand.map((s, i) => rectOf(s, sizes[i]!));
+          const pad = wantGap ? Math.min(...sizes) : 0;
+          const decorClear = !cand.some((s, i) => isKitchenCounter(s) && decorHit(artRect(s, sizes[i]!)));
+          if (t === 0 && tier === tiers[0]! && wantGap) slots = cand;
+          if (decorClear && clearBy(rects, pad) && !rects.some(buddyHit)) {
+            slots = cand;
+            settled = true;
+          }
         }
+        if (settled) break;
       }
       if (settled) break;
     }
     if (__DEV__) {
       const rects = slots.map((s, i) => rectOf(s, sizes[i]!));
+      slots.forEach((s, i) => {
+        if (isKitchenCounter(s) && decorHit(artRect(s, sizes[i]!)))
+          console.warn(`[ListenFind] slot on kitchen decor: #${i}`);
+      });
       rects.forEach((r, i) => {
         rects.slice(i + 1).forEach((o, j) => {
           if (overlaps(r, o)) console.warn(`[ListenFind] overlapping slots: ${scene.bg} #${i} vs #${i + j + 1}`);
