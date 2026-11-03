@@ -33,7 +33,7 @@ import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 const CLICK_SOUND = require('../../assets/audio/key-tap.wav');
 const YAY_SOUND = require('../../assets/audio/yay-kids.wav');
 const TREE_SRC = require('../../assets/neli-world/quest/landmarks/apple-tree.png');
-const CAM_SRC = require('../../assets/neli-world/quest/camera.png');
+
 const PLATE_SRC = require('../../assets/neli-world/kitchen/plate.webp');
 
 // Reference height: a landscape phone is 360-440pt tall. k scales every
@@ -142,6 +142,15 @@ export default function Finale({
     onDone();
   };
 
+  // تمام! says see-you, then closes the quest.
+  const finishQuest = async () => {
+    if (exitedRef.current) return;
+    setShowTamam(false);
+    await questPlay('quest/see-you' as FaTestAudioKey, { awaitFinish: true });
+    if (exitedRef.current) return;
+    safeExit();
+  };
+
   // Open the album instead of leaving: stop every pending timer first so
   // the auto-exit can never fire from behind the album overlay, and park
   // the polaroid on its full card so the return shows the photo, not a
@@ -163,11 +172,9 @@ export default function Finale({
       albumWasActive.current = true;
       return;
     }
+    // Back from the album: the picnic (and تمام!) simply waits.
     if (albumWasActive.current && photoTaken.current && !exitedRef.current) {
       albumWasActive.current = false;
-      void questPlay('quest/see-you' as FaTestAudioKey);
-      const t = setTimeout(safeExit, 4000);
-      return () => clearTimeout(t);
     }
     albumWasActive.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -194,8 +201,9 @@ export default function Finale({
   const colorWord = words.find(w => w.id.startsWith('painting/color/')) ?? words[1];
   const dishWord = words.find(w => w.id.startsWith('cooking/name/')) ?? words[2];
   const fruitCount = fruitWord?.count ?? 1;
-  // The exact balloons from the trip (child's first), for the tree.
-  const balloonIds = (colorWord?.balloonIds ?? (colorWord ? [colorWord.id] : [])).slice(0, 3);
+  // Only the child's chosen color floats over the picnic — never the
+  // mixed box distractors.
+  const balloonIds = colorWord ? [colorWord.id] : [];
   const blanketColor = (colorWord && COLOR_HEX[colorWord.id]) ?? '#E33E54';
 
   // Title uses the chosen buddy's name, never a hard-coded one.
@@ -205,18 +213,20 @@ export default function Finale({
   // Every size and offset below derives from k, so the whole scene fits a
   // 360pt-tall phone as well as a tablet.
   const levelFont = Math.min(15, Math.max(11, 12.5 * k));
-  const buttonH = Math.max(38, Math.min(54, gh * 0.13));
-  // One big camera picture in the middle of the scene, no circle behind
-  // it and no text on it — 1.5x bigger again so little thumbs find it.
-  const camSize = buttonH * 4.8;
 
-  // Blanket on the grass at the bottom, in the child's chosen color.
+  // Yellow square camera, bottom-center on its own strip below the
+  // blanket — never on top of the food.
+  const camS = Math.min(gh * 0.2, 110);
+  const [showTamam, setShowTamam] = useState(false);
+
+  // Blanket on the grass, lifted above the camera strip, in the child's
+  // chosen color — the whole picnic fits even a 360pt-tall phone.
   const blanketW = Math.min(gw * 0.46, gh * 1.12, 430);
   const blanketH = blanketW * 0.6;
   const cols = 8;
   const rows = 4;
   const cell = blanketW / cols;
-  const blanketBottom = Math.max(2, 4 * k);
+  const blanketBottom = camS + 10;
 
   // Served on the blanket: the counted fruit laid out on the real game
   // plate and the dish with no plate under it. The row is shrunk to fit
@@ -349,19 +359,19 @@ export default function Finale({
       cardAnim.setValue(0);
       Animated.timing(cardAnim, { toValue: 1, duration: 450, useNativeDriver: true }).start(() => {
         // Let the child look at the captured photo for 4 seconds, then
-        // fly it into the album: saved, see-you, then close the quest.
+        // fly it into the album. The scene stays put: saved speaks, the
+        // تمام! button waits where the camera was, and only tapping it
+        // says see-you and closes the quest.
         photoTimer.current = setTimeout(() => {
           setPhotoPhase('flying');
           cardAnim.setValue(0);
-          Animated.timing(cardAnim, { toValue: 1, duration: 650, useNativeDriver: true }).start(() => {
+          Animated.timing(cardAnim, { toValue: 1, duration: 650, useNativeDriver: true }).start(async () => {
             setPhotoPhase('saved');
-            void (async () => {
-              await questPlay('quest/saved' as FaTestAudioKey, { awaitFinish: true });
-              if (exitedRef.current) return;
-              await questPlay('quest/see-you' as FaTestAudioKey, { awaitFinish: true });
-              if (exitedRef.current) return;
-              exitTimer.current = setTimeout(safeExit, 300);
-            })();
+            await questPlay('quest/saved' as FaTestAudioKey, { awaitFinish: true });
+            if (exitedRef.current) return;
+            setShowTamam(true);
+            // A child who never taps still leaves after a minute.
+            exitTimer.current = setTimeout(() => void finishQuest(), 60000);
           });
         }, 4000);
       });
@@ -468,16 +478,17 @@ export default function Finale({
           </Text>
         </View>
       )}
-      {/* Album chip, top-LEFT so the buddy avatar (top-right) never covers
-          it. Tappable from the moment the photo shows: it opens the album
-          on top of the picnic (back returns here), it never leaves. */}
+      {/* Album chip below the X (never under it), so the buddy avatar
+          (top-right) never covers it either. Tappable from the moment the
+          photo shows: it opens the album on top of the picnic (back
+          returns here), it never leaves. */}
       {(photoPhase === 'card' || photoPhase === 'flying' || photoPhase === 'saved') && (
         <TouchableOpacity
           onPress={openAlbum}
           activeOpacity={0.85}
           accessibilityLabel={isFa ? 'روزهای من' : 'My Days'}
           accessibilityRole="button"
-          style={[styles.albumChip, { top: Math.max(2, 4 * k), left: 8, paddingHorizontal: Math.max(8, 12 * k) }]}
+          style={[styles.albumChip, { top: insets.top + closeS + 10, left: 12, paddingHorizontal: Math.max(8, 12 * k) }]}
         >
           <View style={{ flexDirection: isFa ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
             <Image source={neliWorldAssets.ui.camera} style={{ width: levelFont, height: levelFont }} resizeMode="contain" />
@@ -670,14 +681,15 @@ export default function Finale({
           </Text>
         </Animated.View>
       )}
-      {/* The camera floats in the middle of the scene until the photo:
-          big emoji, no circle behind it. Tapping shows the picture, and
-          the balloons rise while yay and the celebration play together. */}
+      {/* The yellow square camera sits bottom-center on its own strip
+          below the blanket — never on the food. Tapping shows the picture,
+          and the balloons rise while yay and the celebration play together.
+          After the photo, تمام! takes the same spot. */}
       {camReady && photoPhase === 'none' && (
-        <View pointerEvents="box-none" style={styles.camCenter}>
+        <View pointerEvents="box-none" style={[styles.camBottom, { bottom: 2 }]}>
           {camIdle && (
             <View pointerEvents="none" style={styles.camHint}>
-              <IdleHand size={camSize * 0.5} />
+              <IdleHand size={camS * 0.5} />
             </View>
           )}
           <TouchableOpacity
@@ -685,13 +697,29 @@ export default function Finale({
             activeOpacity={0.85}
             accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
             accessibilityRole="button"
+            style={[styles.camBtn, { width: camS, height: camS, borderRadius: 22 }]}
           >
             <Image
-              source={CAM_SRC}
-              style={{ width: camSize, height: camSize * 0.72 }}
+              source={neliWorldAssets.ui.camera}
+              style={{ width: camS * 0.52, height: camS * 0.52 }}
               resizeMode="contain"
               accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
             />
+          </TouchableOpacity>
+        </View>
+      )}
+      {showTamam && photoPhase === 'saved' && (
+        <View pointerEvents="box-none" style={[styles.camBottom, { bottom: 2 }]}>
+          <TouchableOpacity
+            onPress={finishQuest}
+            activeOpacity={0.85}
+            accessibilityLabel={isFa ? 'تمام!' : 'Done!'}
+            accessibilityRole="button"
+            style={[styles.tamamBtn, { height: camS * 0.72, borderRadius: 18 }]}
+          >
+            <Text style={[styles.tamamText, { fontFamily: ff(lang, 'black'), fontSize: Math.max(18, camS * 0.26) }, dir(lang)]}>
+              {isFa ? 'تمام!' : 'Done!'}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -755,15 +783,37 @@ const styles = StyleSheet.create({
   },
   polaroidPhoto: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   polaroidCaption: { color: '#3A2A6B', marginTop: 6, textAlign: 'center' },
-  camCenter: {
+  camBottom: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 0,
-    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  camBtn: {
+    backgroundColor: '#FFB800',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: 'rgba(45,27,105,0.30)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 5,
   },
+  tamamBtn: {
+    backgroundColor: '#22C55E',
+    borderBottomColor: '#15803D',
+    borderBottomWidth: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 34,
+    shadowColor: 'rgba(45,27,105,0.30)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  tamamText: { color: '#FFFFFF' },
   camHint: {
     position: 'absolute',
     alignItems: 'center',

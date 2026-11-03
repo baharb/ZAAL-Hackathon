@@ -335,7 +335,7 @@ function CountingView({
   };
 
   return (
-    <View style={[styles.question, { paddingBottom: lift }]} pointerEvents="box-none">
+    <View style={[styles.question, { paddingBottom: lift, justifyContent: 'flex-end' }]} pointerEvents="box-none">
       <Text
         style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize: Math.max(16, numSize * 0.2) }, dir(lang)]}
       >
@@ -1189,7 +1189,7 @@ export default function DriveGame({
               key={legIndex}
               round={rounds[legIndex]!}
               choices={choices}
-              optSize={optSize * fitFor(1.5)}
+              optSize={optSize * fitFor(1.15)}
               lift={questionLift}
               onCorrect={answerCorrect}
             />
@@ -1222,8 +1222,10 @@ const styles = StyleSheet.create({
   },
   fruitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   numOption: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFDF5',
     borderColor: '#FACC15',
+    borderBottomColor: '#D99A00',
+    borderBottomWidth: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },

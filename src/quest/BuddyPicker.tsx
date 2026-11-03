@@ -1,8 +1,9 @@
 // Buddy picker (hackathon step 2). The child picks one hero for every
 // quest from ZAAL's existing characters. Saved on the device.
 
-import React, { useContext, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SoftShadow } from '../ui/playKit';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppContext } from '../store/AppContext';
@@ -28,6 +29,22 @@ function BuddyButton({
   const { lang } = useContext(AppContext);
   const isFa = lang === 'fa' || lang === 'ar';
   const bounce = useRef(new Animated.Value(1)).current;
+  const haloPulse = useRef(new Animated.Value(1)).current;
+  // The picked buddy keeps a gentle halo bounce — no box.
+  useEffect(() => {
+    if (!selected) {
+      haloPulse.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(haloPulse, { toValue: 1.07, duration: 550, useNativeDriver: true }),
+        Animated.timing(haloPulse, { toValue: 1, duration: 550, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [selected, haloPulse]);
   const tap = () => {
     Animated.sequence([
       Animated.timing(bounce, { toValue: 1.12, duration: 160, useNativeDriver: true }),
@@ -47,10 +64,24 @@ function BuddyButton({
           width: size,
           height: size * 1.22,
           borderRadius: size * 0.16,
-          borderWidth: selected ? Math.max(3, size * 0.035) : 0,
+          borderWidth: 0,
         },
       ]}
     >
+      {selected ? (
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: size * 0.02,
+            width: size * 1.1,
+            height: size * 1.1,
+            borderRadius: size * 0.55,
+            backgroundColor: 'rgba(250,204,21,0.40)',
+            transform: [{ scale: haloPulse }],
+          }}
+        />
+      ) : null}
       <Animated.View style={{ transform: [{ scale: bounce }], alignItems: 'center' }}>
         {id === 'roboBoombo' ? (
           // The waving art has a stray arm baked in at the left edge,
@@ -70,17 +101,10 @@ function BuddyButton({
           />
         )}
       </Animated.View>
-      {/* Grass shadow: every buddy stands on the lawn. */}
-      <View
-        pointerEvents="none"
-        style={{
-          width: size * 0.7,
-          height: Math.max(6, size * 0.06),
-          borderRadius: 999,
-          backgroundColor: 'rgba(30,20,60,0.16)',
-          marginTop: -size * 0.04,
-        }}
-      />
+      {/* Every buddy stands on the lawn. */}
+      <View style={{ marginTop: -size * 0.04 }}>
+        <SoftShadow width={size * 0.7} />
+      </View>
       <Text
         style={[styles.name, { fontFamily: ff(lang, 'black'), fontSize: size * 0.14 }, dir(lang)]}
         numberOfLines={1}
@@ -156,7 +180,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   card: {
     backgroundColor: 'transparent',
-    borderColor: '#FACC15',
     alignItems: 'center',
     justifyContent: 'center',
   },
