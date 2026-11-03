@@ -846,7 +846,7 @@ export default function MagicStoryGame() {
                 <View style={s.entryHalf}>
                   <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={takeRoomPhoto} disabled={analyzing} height={wandH}>
                     <Image source={neliWorldAssets.ui.camera} style={{ width: wandH * 0.4, height: wandH * 0.4 }} resizeMode="contain" />
-                    <Text style={s.tellText}>عکس بگیر</Text>
+                    <Text style={s.tellText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>عکس بگیر</Text>
                   </CandyButton>
                 </View>
                 <View style={s.entryHalf}>
