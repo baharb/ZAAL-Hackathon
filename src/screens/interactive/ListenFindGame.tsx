@@ -420,7 +420,7 @@ export default function ListenFindGame() {
       {!done ? (
         <View style={[s.buddyWrap, { left: W * 0.03, bottom: H * 0.02 }]}>
           <BuddyReplay size={buddySize} mood={mood} onReplay={replay} playing={prompting} />
-          <SoftShadow width={buddySize * 0.5} />
+          <SoftShadow width={buddySize} />
         </View>
       ) : null}
 
@@ -449,7 +449,7 @@ export default function ListenFindGame() {
                     }}
                   >
                     <WordArt art={WORD_ART[c.id] ?? null} emoji={c.emoji} size={objSize * (ART_ZOOM[c.id] ?? 1)} />
-                    <SoftShadow width={objSize * 0.7} />
+                    <SoftShadow width={objSize * (ART_ZOOM[c.id] ?? 1)} />
                   </Animated.View>
                 </TouchableOpacity>
               </View>

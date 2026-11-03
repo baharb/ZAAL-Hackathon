@@ -302,7 +302,7 @@ export default function PhotoFarsiGame() {
           <TouchableOpacity onPress={speakTakePhoto} activeOpacity={0.85} accessibilityRole="button">
             <BuddyGuide mood={bookOpen ? 'idle' : mood} size={buddyS} />
           </TouchableOpacity>
-          <SoftShadow width={buddyS * 0.7} />
+          <SoftShadow width={buddyS} />
         </View>
 
         {/* Right: polaroid / thinking / answer */}

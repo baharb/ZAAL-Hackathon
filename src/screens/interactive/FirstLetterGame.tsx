@@ -221,7 +221,7 @@ export default function FirstLetterGame() {
           <>
             <View style={s.buddyCol}>
               <BuddyGuide mood={prompting ? 'thinking' : rightId ? 'happy' : 'idle'} size={buddyS} />
-              <SoftShadow width={buddyS * 0.5} />
+              <SoftShadow width={buddyS} />
             </View>
             <View style={s.midCol}>
               {/* The word's picture picnics on a blanket on the grass — tap
@@ -241,7 +241,7 @@ export default function FirstLetterGame() {
                 </TouchableOpacity>
               </View>
               <View style={[s.blanket, { width: blankW, height: blankH, marginTop: -picS * 0.16, borderRadius: 14 * k }]} />
-              <SoftShadow width={blankW * 0.9} />
+              <SoftShadow width={blankW} />
               {showName ? (
                 <View style={s.namePill}>
                   <Text style={[s.nameFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{deal.word.fa}</Text>

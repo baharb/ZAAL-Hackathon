@@ -105,7 +105,7 @@ function BuddyButton({
       </Animated.View>
       {/* Every buddy stands on the lawn. */}
       <View style={{ marginTop: -size * 0.04 }}>
-        <SoftShadow width={size * 0.7} />
+        <SoftShadow width={size * 0.88} />
       </View>
       <Text
         style={[styles.name, { fontFamily: ff(lang, 'black'), fontSize: size * 0.14 }, dir(lang)]}

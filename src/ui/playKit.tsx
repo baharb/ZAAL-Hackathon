@@ -306,29 +306,32 @@ export const PLACE_ART: Record<string, any> = {
   sea: ALPHABET('boat'),
 };
 
-/** ONE shared ground shadow: a dark ellipse at ~25% opacity with a soft
- * halo, ~70% as wide as the thing standing on it, parked exactly under
- * its feet/base. Replaces every hand-rolled grey bar. */
+/** ONE shared ground shadow. Pass the OBJECT's width: the shadow renders
+ * a dark ellipse ~20% opacity (soft pale halo for the blurred edge), 70%
+ * as wide as the object, tucked so it sits exactly under the object's
+ * bottom edge instead of floating below it. Replaces every grey bar. */
 export function SoftShadow({ width }: { width: number }) {
-  const h = Math.max(6, width * 0.16);
+  const w = width * 0.7;
+  const h = Math.max(5, w * 0.18);
   return (
     <View
       pointerEvents="none"
       style={{
-        width: width * 1.28,
-        height: h * 1.7,
+        width: w,
+        height: h * 1.6,
         borderRadius: 999,
         backgroundColor: 'rgba(23,16,53,0.10)',
         alignItems: 'center',
         justifyContent: 'center',
+        marginTop: -h * 0.7,
       }}
     >
       <View
         style={{
-          width,
+          width: w * 0.8,
           height: h,
           borderRadius: 999,
-          backgroundColor: 'rgba(23,16,53,0.22)',
+          backgroundColor: 'rgba(23,16,53,0.20)',
         }}
       />
     </View>
