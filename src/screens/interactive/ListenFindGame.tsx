@@ -43,7 +43,14 @@ const VOICED_WORDS = PHOTO_FARSI_WORDS.filter(w => w.audioKey != null && w.audio
  * food and drink words only — never animals. A new scene (and new
  * spots) every round keeps the game fresh. */
 const SCENES = [
-  { bg: 'kitchenCheerful', words: ['apple', 'orange', 'bread', 'water'] },
+  {
+    bg: 'kitchenCheerful',
+    words: [
+      'apple', 'orange', 'bread', 'water',
+      'watermelon', 'pomegranate', 'strawberry', 'cherries', 'grapes',
+      'pear', 'peach', 'apricot', 'kiwi', 'fig', 'mango',
+    ],
+  },
   { bg: 'bedroom', words: ['book', 'backpack', 'hat', 'shoe'] },
 ] as const;
 type SceneBg = (typeof SCENES)[number]['bg'];
@@ -76,14 +83,25 @@ const SCENE_SLOTS: Record<SceneBg, { left: number; base: number }[]> = {
 // unequal. These zooms were matched by eye against the real files so all
 // three choices read as the same visual size.
 const ART_ZOOM: Record<string, number> = {
-  apple: 1.1,
+  apple: 1.0,
   orange: 1.0,
-  bread: 1.3,
-  water: 1.15,
+  bread: 1.13,
+  water: 1.3,
   book: 1.0,
-  backpack: 1.15,
-  hat: 1.6,
-  shoe: 1.7,
+  backpack: 1.11,
+  hat: 1.55,
+  shoe: 1.55,
+  watermelon: 1.0,
+  pomegranate: 1.0,
+  strawberry: 1.0,
+  cherries: 1.0,
+  grapes: 1.0,
+  pear: 1.0,
+  peach: 1.0,
+  apricot: 1.0,
+  kiwi: 1.0,
+  fig: 1.0,
+  mango: 1.0,
 };
 
 function shuffle<T>(items: T[]): T[] {
@@ -233,9 +251,15 @@ export default function ListenFindGame() {
     if (alive.current) setPrompting(false);
   };
 
-  // Speak the first prompt after mount (user already tapped into the game).
+  // Speak the first prompt after mount (user already tapped into the
+  // game): the instruction first when its recording ships, then the word.
   useEffect(() => {
-    void speakPrompt(cards.answer);
+    void (async () => {
+      if ('listen/listen-find' in FA_TEST_AUDIO) {
+        await playFaAudio('listen/listen-find' as FaTestAudioKey, { awaitFinish: true });
+      }
+      if (alive.current) void speakPrompt(cards.answer);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

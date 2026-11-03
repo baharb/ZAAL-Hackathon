@@ -1,5 +1,5 @@
 // Photo Farsi word list (Meta hackathon: kids-room demo set).
-// 9 entries reuse shipped recordings, so they speak on day one. The other 6
+// 20 entries reuse shipped recordings, so they speak on day one. The other 6
 // have audioKey: null until Bahar records them with the same voice — the
 // screen shows their text but never fakes their audio (see PhotoFarsiGame).
 // Emoji art is placeholder so no copied assets ship with this screen.
@@ -24,6 +24,18 @@ export const PHOTO_FARSI_WORDS: PhotoFarsiWord[] = [
   { id: 'bread', fa: 'نان', en: 'Bread', emoji: '🍞', audioKey: 'conversation/choice/bread' },
   { id: 'fish', fa: 'ماهی', en: 'Fish', emoji: '🐟', audioKey: 'conversation/choice/fish' },
   { id: 'water', fa: 'آب', en: 'Water', emoji: '💧', audioKey: 'conversation/choice/water' },
+  // --- recorded Callirrhoe fruit pack ---
+  { id: 'watermelon', fa: 'هندوانه', en: 'Watermelon', emoji: '🍉', audioKey: 'fruits/watermelon' },
+  { id: 'pomegranate', fa: 'انار', en: 'Pomegranate', emoji: '🔴', audioKey: 'fruits/pomegranate' },
+  { id: 'strawberry', fa: 'توت‌فرنگی', en: 'Strawberry', emoji: '🍓', audioKey: 'fruits/strawberry' },
+  { id: 'cherries', fa: 'گیلاس', en: 'Cherries', emoji: '🍒', audioKey: 'fruits/cherries' },
+  { id: 'grapes', fa: 'انگور', en: 'Grapes', emoji: '🍇', audioKey: 'fruits/grapes' },
+  { id: 'pear', fa: 'گلابی', en: 'Pear', emoji: '🍐', audioKey: 'fruits/pear' },
+  { id: 'peach', fa: 'هلو', en: 'Peach', emoji: '🍑', audioKey: 'fruits/peach' },
+  { id: 'apricot', fa: 'زردآلو', en: 'Apricot', emoji: '🟠', audioKey: 'fruits/apricot' },
+  { id: 'kiwi', fa: 'کیوی', en: 'Kiwi', emoji: '🥝', audioKey: 'fruits/kiwi' },
+  { id: 'fig', fa: 'انجیر', en: 'Fig', emoji: '🟣', audioKey: 'fruits/fig' },
+  { id: 'mango', fa: 'انبه', en: 'Mango', emoji: '🥭', audioKey: 'fruits/mango' },
   // --- record later with the same voice (text-only until then) ---
   { id: 'bed', fa: 'تخت', en: 'Bed', emoji: '🛏️', audioKey: null },
   { id: 'lamp', fa: 'چراغ', en: 'Lamp', emoji: '💡', audioKey: null },

@@ -452,6 +452,22 @@ export default function MagicStoryGame() {
     void stopFaAudio();
   }, []);
 
+  // The entry instruction speaks on open, once its recording ships.
+  useEffect(() => {
+    if ('story/draw-or-photo' in FA_TEST_AUDIO) {
+      void playFaAudio('story/draw-or-photo' as FaTestAudioKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The cast question speaks once the friends are on screen.
+  useEffect(() => {
+    if (cast.length > 0 && !lines && 'story/which-friend' in FA_TEST_AUDIO) {
+      void playFaAudio('story/which-friend' as FaTestAudioKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cast, lines]);
+
   // The guiding hand: appear after 6 quiet seconds on a story page.
   useEffect(() => {
     setIdleHint(false);
@@ -649,6 +665,7 @@ export default function MagicStoryGame() {
     setConjuring(true);
     setError(null);
     setCartoonUri(null);
+    if ('story/make-magic' in FA_TEST_AUDIO) void playFaAudio('story/make-magic' as FaTestAudioKey);
     try {
       const b64 = drawingToPngBase64(dstrokes, 384);
       const res = await askCartoon({ imageBase64: b64, kind: 'drawing' });
@@ -758,8 +775,12 @@ export default function MagicStoryGame() {
       setRecap(filled.recap);
       setLesson(filled.lesson);
       setCelebrate(true);
-      // The one spoken word only — no afarin after it. The story ends
-      // soft, and the recap page says what was learned.
+      // "This is your story" first when its recording ships, then the one
+      // spoken word only — no afarin after it. The story ends soft, and
+      // the recap page says what was learned.
+      if ('story/your-story' in FA_TEST_AUDIO) {
+        await playFaAudio('story/your-story' as FaTestAudioKey, { awaitFinish: true });
+      }
       if (nextFocus.audioKey in FA_TEST_AUDIO) {
         await playFaAudio(nextFocus.audioKey as FaTestAudioKey, { awaitFinish: true });
       }

@@ -10,6 +10,8 @@ import { Animated, Easing, Image, ImageSourcePropType, LayoutChangeEvent, StyleS
 import Svg, { Line, Rect } from 'react-native-svg';
 import { createAudioPlayer } from 'expo-audio';
 import { useWindowDimensions } from '../layout/PortraitFallback';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { NavyClose } from '../ui/playKit';
 import { AppContext } from '../store/AppContext';
 import { dir, ff } from '../theme/fonts';
 import { noteAudioPlayerReleased, playFaAudio, stopFaAudio } from '../utils/faAudio';
@@ -18,7 +20,7 @@ import { isQuestMuted, questPlay } from './questSound';
 import { BuddyId } from './buddyStore';
 import { DisplayWord } from './questGroups';
 import { COLOR_HEX, farApartPair, PickKind, pickPool, sampleOptions, shuffle } from './pickLists';
-import { FaTestAudioKey } from '../assets/faTestAudio.generated';
+import { FA_TEST_AUDIO, FaTestAudioKey } from '../assets/faTestAudio.generated';
 import Balloon from './Balloon';
 import ColorDot from './ColorDot';
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
@@ -68,7 +70,7 @@ export type DriveRound = { kind: PickKind; answer: DisplayWord };
 // overflow the space above the parked car (short phones).
 function countingSizes(optSize: number, gw: number, carTop: number, count: number) {
   const fruit = Math.min(optSize * 0.55, (gw * 0.92 - (count - 1) * 8) / Math.max(1, count));
-  const num = optSize * 0.9;
+  const num = optSize * 0.62;
   const natural = 28 + 7 + fruit + 8 + num * 1.05;
   const k = Math.min(1, (carTop - 16) / natural);
   return { fruitSize: fruit * k, numSize: num * k };
@@ -495,6 +497,7 @@ export default function DriveGame({
 }) {
   const { lang } = useContext(AppContext);
   const { width: W, height: H } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isFa = lang === 'fa' || lang === 'ar';
 
   // The real game area: this view sits below the title bar, so measure it
@@ -696,6 +699,30 @@ export default function DriveGame({
     });
   };
 
+  // Balloon-box speech: the color round asks for its balloon by color
+  // name (quest/balloon-red …), falling back to the plain word clip.
+  const questionClip = (round: DriveRound): FaTestAudioKey => {
+    if (round.kind !== 'color') return round.answer.audioKey;
+    const colorId = round.answer.id.split('/').pop() ?? '';
+    const key = `quest/balloon-${colorId}`;
+    return (key in FA_TEST_AUDIO ? key : round.answer.audioKey) as FaTestAudioKey;
+  };
+
+  // Tap-a-box: spoken every time the car stops at a box, and again if the
+  // child waits ~6s without tapping.
+  useEffect(() => {
+    if (phase !== 'atBox') return;
+    let live = true;
+    void questPlay('quest/tap-box' as FaTestAudioKey);
+    const again = setTimeout(() => {
+      if (live && phaseRef.current === 'atBox') void questPlay('quest/tap-box' as FaTestAudioKey);
+    }, 6000);
+    return () => {
+      live = false;
+      clearTimeout(again);
+    };
+  }, [phase, legIndex]);
+
   // The drive starts by itself after the picks, once the game area is
   // measured: the car enters from the right and drives left to the first
   // box, stopping before it.
@@ -704,6 +731,7 @@ export default function DriveGame({
     startedRef.current = true;
     carX.setValue(worldW + 80);
     cameraX.setValue(Math.max(worldW - gw, 0));
+    void questPlay('quest/lets-go' as FaTestAudioKey);
     driveToBox(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameSize]);
@@ -752,12 +780,11 @@ export default function DriveGame({
         const round = rounds[legIndex]!;
         if (round.kind === 'fruit') {
           // Counting: N copies of the fruit, N random 1-5, asked in the
-          // counting voice. The prompt itself stays text-only (no recording
-          // of it exists yet, and no TTS).
+          // counting voice.
           const count = 1 + Math.floor(Math.random() * 5);
           const others = shuffle([1, 2, 3, 4, 5].filter(n => n !== count)).slice(0, 2);
           setCountQ({ count, options: shuffle([count, ...others]) });
-          void questPlay('counting/number/info' as FaTestAudioKey);
+          void questPlay('quest/how-many' as FaTestAudioKey);
         } else {
           const distract =
             round.kind === 'color'
@@ -765,7 +792,7 @@ export default function DriveGame({
               : sampleOptions(pickPool(round.kind), 2, new Set([round.answer.id]));
           if (round.kind === 'color') paletteRef.current = [round.answer.id, ...distract.map(d => d.id)];
           setChoices(shuffle([round.answer, ...distract]));
-          void questPlay(round.answer.audioKey);
+          void questPlay(questionClip(round));
         }
         setPhase('question');
         // Calm beat 3: the question grows out of the open box into the
@@ -780,7 +807,7 @@ export default function DriveGame({
     firstTriesRef.current.push(firstTry);
     setPhase('flying');
     // The counting round already played its number clip; nothing else plays.
-    if (round.kind !== 'fruit') void questPlay(round.answer.audioKey);
+    if (round.kind !== 'fruit') void questPlay(questionClip(round));
     // The open box is already faded (the question covers it); remove it so
     // the reverse never flashes it back.
     setBoxGone(true);
@@ -840,6 +867,8 @@ export default function DriveGame({
 
   return (
     <View style={styles.root} onLayout={onGameLayout}>
+      {/* Every game gets the same navy X home (unmount stops the engine). */}
+      <NavyClose top={insets.top + 8} left={12} size={Math.max(48, Math.min(gh * 0.13, 56))} />
       {/* Camera: the long world slides past; only the part around the car shows. */}
       <Animated.View
         style={{
@@ -1192,7 +1221,7 @@ const styles = StyleSheet.create({
   },
   fruitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   numOption: {
-    backgroundColor: '#FFFDF5',
+    backgroundColor: 'transparent',
     borderColor: '#FACC15',
     alignItems: 'center',
     justifyContent: 'center',

@@ -20,7 +20,8 @@ export type QuestWordCategory =
   | 'feed-animals/food'
   | 'cooking/name'
   | 'alphabet/example'
-  | 'solar-system';
+  | 'solar-system'
+  | 'fruits';
 
 export type QuestWord = {
   // Full audio key, e.g. 'ingredients/apple'. The quest validator (step 3)
@@ -75,6 +76,18 @@ export const QUEST_WORDS: QuestWord[] = [
   { id: 'ingredients/zereshk', category: 'ingredients', fa: 'زرشک', art: neliWorldAssets.foods.zereshk, audioKey: 'ingredients/zereshk', firstLetterId: 'ze' },
   { id: 'ingredients/saffron', category: 'ingredients', fa: 'زعفران', art: neliWorldAssets.foods.saffron, audioKey: 'ingredients/saffron', firstLetterId: 'ze' },
   { id: 'ingredients/bread', category: 'ingredients', fa: 'نان', art: neliWorldAssets.foods.bread, audioKey: 'ingredients/bread', firstLetterId: 'nun' },
+  // --- fruits (recorded Callirrhoe pack; art from neli-world/fruits) ---
+  { id: 'fruits/watermelon', category: 'fruits', fa: 'هندوانه', art: neliWorldAssets.foods.watermelon, audioKey: 'fruits/watermelon', firstLetterId: 'heh' },
+  { id: 'fruits/pomegranate', category: 'fruits', fa: 'انار', art: neliWorldAssets.foods.pomegranate, audioKey: 'fruits/pomegranate', firstLetterId: 'alef' },
+  { id: 'fruits/strawberry', category: 'fruits', fa: 'توت‌فرنگی', art: neliWorldAssets.foods.strawberry, audioKey: 'fruits/strawberry', firstLetterId: 'te' },
+  { id: 'fruits/cherries', category: 'fruits', fa: 'گیلاس', art: neliWorldAssets.foods.cherries, audioKey: 'fruits/cherries', firstLetterId: 'gaf' },
+  { id: 'fruits/grapes', category: 'fruits', fa: 'انگور', art: neliWorldAssets.foods.grapes, audioKey: 'fruits/grapes', firstLetterId: 'alef' },
+  { id: 'fruits/pear', category: 'fruits', fa: 'گلابی', art: neliWorldAssets.foods.pear, audioKey: 'fruits/pear', firstLetterId: 'gaf' },
+  { id: 'fruits/peach', category: 'fruits', fa: 'هلو', art: neliWorldAssets.foods.peach, audioKey: 'fruits/peach', firstLetterId: 'heh' },
+  { id: 'fruits/apricot', category: 'fruits', fa: 'زردآلو', art: neliWorldAssets.foods.apricot, audioKey: 'fruits/apricot', firstLetterId: 'ze' },
+  { id: 'fruits/kiwi', category: 'fruits', fa: 'کیوی', art: neliWorldAssets.foods.kiwi, audioKey: 'fruits/kiwi', firstLetterId: 'kaf' },
+  { id: 'fruits/fig', category: 'fruits', fa: 'انجیر', art: neliWorldAssets.foods.fig, audioKey: 'fruits/fig', firstLetterId: 'alef' },
+  { id: 'fruits/mango', category: 'fruits', fa: 'انبه', art: neliWorldAssets.foods.mango, audioKey: 'fruits/mango', firstLetterId: 'alef' },
   // --- clothes (Farsi from DressUpGame) ---
   // clothes/coat and clothes/tshirt have recordings but no art: skipped.
   { id: 'clothes/backpack', category: 'clothes', fa: 'کوله‌پشتی', art: neliWorldAssets.clothes.backpack, audioKey: 'clothes/backpack', firstLetterId: 'kaf' },

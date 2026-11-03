@@ -158,6 +158,23 @@ export default function PhotoFarsiGame() {
     void stopFaAudio();
   }, []);
 
+  // Neli asks for a photo as the screen opens, and again when tapped.
+  useEffect(() => {
+    if ('photo/take-photo' in FA_TEST_AUDIO) void playFaAudio('photo/take-photo');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const speakTakePhoto = () => {
+    tap();
+    if ('photo/take-photo' in FA_TEST_AUDIO) void playFaAudio('photo/take-photo');
+  };
+
+  const openBook = () => {
+    tap();
+    setBookOpen(true);
+    if ('photo/my-words' in FA_TEST_AUDIO) void playFaAudio('photo/my-words');
+  };
+
   const markHeard = (id: string) => {
     setHeard(prev => (prev.includes(id) ? prev : [...prev, id]));
   };
@@ -280,7 +297,9 @@ export default function PhotoFarsiGame() {
               <View style={s.bubbleTail} />
             </View>
           ) : null}
-          <BuddyGuide mood={bookOpen ? 'idle' : mood} size={buddyS} />
+          <TouchableOpacity onPress={speakTakePhoto} activeOpacity={0.85} accessibilityRole="button">
+            <BuddyGuide mood={bookOpen ? 'idle' : mood} size={buddyS} />
+          </TouchableOpacity>
           <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]}>عکس‌ها از دستگاه بیرون نمی‌رود</Text>
         </View>
 
@@ -360,13 +379,13 @@ export default function PhotoFarsiGame() {
         )}
         <TouchableOpacity
           style={[s.smallBtn, { width: miniS, height: miniS, borderRadius: 18 * k }]}
-          onPress={() => { tap(); setBookOpen(true); }}
+          onPress={openBook}
           activeOpacity={0.85}
           accessibilityRole="button"
         >
           <OpenBookIcon size={40 * k} />
           <View style={s.heardBadge}>
-            <Text style={s.heardText}>⭐ {heard.length}/15</Text>
+            <Text style={s.heardText}>⭐ {heard.length}/{PHOTO_FARSI_WORDS.length}</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -377,7 +396,7 @@ export default function PhotoFarsiGame() {
           <GameCard radius={22 * k} style={s.bookCard}>
             <View style={s.bookHead}>
               <Text style={[s.bookTitle, dir('fa')]}>کلمات من</Text>
-              <Text style={s.bookCount}>⭐ {heard.length}/15</Text>
+              <Text style={s.bookCount}>⭐ {heard.length}/{PHOTO_FARSI_WORDS.length}</Text>
               <TouchableOpacity style={s.bookClose} onPress={() => { tap(); setBookOpen(false); }} activeOpacity={0.85}>
                 <Image source={neliWorldAssets.ui.close} style={{ width: 30 * k, height: 30 * k }} resizeMode="contain" />
               </TouchableOpacity>

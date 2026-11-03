@@ -1,6 +1,6 @@
 // Quest v2 picks (section 2). One screen per pick: 3 options, no Next
-// button and no auto narration. Tapping one bounces it, says its name,
-// and moves on.
+// button. The instruction (which fruit/color/food) speaks on open;
+// tapping one bounces it, says its name, and moves on.
 
 import React, { useContext, useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -8,17 +8,19 @@ import { useWindowDimensions } from '../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { topBarHeight } from '../components/TopBar';
 import { AppContext } from '../store/AppContext';
-import { dir, ff } from '../theme/fonts';
+import { ff } from '../theme/fonts';
 import { questPlay } from './questSound';
+import { FaTestAudioKey } from '../assets/faTestAudio.generated';
 import { DisplayWord } from './questGroups';
 import { PickKind } from './pickLists';
 import ColorDot from './ColorDot';
 import WordArt from './WordArt';
 
-const PROMPTS: Record<PickKind, { fa: string; en: string; emoji: string }> = {
-  fruit: { fa: 'کدوم میوه رو دوست داری؟', en: 'Which fruit do you like?', emoji: '🍎' },
-  color: { fa: 'کدوم رنگ رو دوست داری؟', en: 'Which color do you like?', emoji: '🎨' },
-  dish: { fa: 'کدوم غذا رو دوست داری؟', en: 'Which food do you like?', emoji: '🍲' },
+// Spoken the moment each pick screen opens, before any option is read.
+const KIND_CLIP: Record<PickKind, FaTestAudioKey> = {
+  fruit: 'quest/which-fruit',
+  color: 'quest/which-color',
+  dish: 'quest/which-food',
 };
 
 function OptionButton({
@@ -52,7 +54,7 @@ function OptionButton({
         {kind === 'color' ? (
           <ColorDot id={word.id} size={size * 0.8} />
         ) : (
-          <WordArt word={word} size={size * 0.8} />
+          <WordArt word={word} size={size * 0.96} />
         )}
       </Animated.View>
       <Text
@@ -87,14 +89,16 @@ export default function PicksScreen({
 
   const bodyH = height - topBarHeight(height, insets.top, {}) - insets.bottom;
   const gap = Math.max(10, width * 0.02);
-  const optionSize = Math.max(64, Math.min((width * 0.9 - gap * 2) / 3, bodyH * 0.52));
-  const prompt = PROMPTS[kind];
+  const optionSize = Math.max(56, Math.min((width * 0.9 - gap * 2) / 3, bodyH * 0.36));
 
-  // No auto narration: only the tapped favorite says its name (in tap).
+  // The instruction speaks as the screen opens; the tapped favorite
+  // says its own name in tap.
   useEffect(() => {
+    void questPlay(KIND_CLIP[kind]);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const tap = (word: DisplayWord) => {
@@ -106,9 +110,6 @@ export default function PicksScreen({
 
   return (
     <View style={styles.root}>
-      <Text style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize: Math.max(17, bodyH * 0.065) }, dir(lang)]}>
-        {prompt.emoji} {isFa ? prompt.fa : prompt.en}
-      </Text>
       <View style={[styles.row, isFa && { flexDirection: 'row-reverse' }, { gap }]}>
         {options.map(word => (
           <OptionButton key={word.id} word={word} kind={kind} size={optionSize} onPress={() => tap(word)} />
@@ -124,7 +125,7 @@ export default function PicksScreen({
                 width: i === stepIndex ? bodyH * 0.07 : bodyH * 0.028,
                 height: bodyH * 0.028,
                 borderRadius: bodyH * 0.014,
-                backgroundColor: i === stepIndex ? '#FFB800' : '#FFFFFF',
+                backgroundColor: i === stepIndex ? '#FFB800' : 'rgba(255,255,255,0.45)',
                 opacity: i === stepIndex ? 1 : 0.75,
               },
             ]}
@@ -137,18 +138,11 @@ export default function PicksScreen({
 
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  prompt: { color: '#3A2A6B', backgroundColor: '#FFFFFF', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 8, marginBottom: 14, textAlign: 'center', overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   option: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 26,
-    shadowColor: 'rgba(58,42,107,0.30)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 5,
+    backgroundColor: 'transparent',
   },
   word: { color: '#3A2A6B', marginTop: 6, textAlign: 'center' },
   dots: { flexDirection: 'row', marginTop: 14 },

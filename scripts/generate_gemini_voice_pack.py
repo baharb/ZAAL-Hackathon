@@ -419,19 +419,24 @@ def output_path_for(row: Row, output_dir: Path, mime_type: str) -> Path:
     return output_dir / requested.with_suffix(guessed)
 
 
-def get_gemini_api_key() -> str:
+def get_gemini_api_keys() -> list[str]:
+    api_keys: list = []
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if api_key:
-        return api_key
+        return [api_key]
 
     key_file = os.environ.get("GEMINI_API_KEY_FILE", "").strip()
     if key_file:
         key_path = Path(key_file).expanduser()
         if key_path.exists():
-            key_text = key_path.read_text(encoding="utf-8").strip()
-            if key_text:
-                return key_text
+            key_text = key_path.read_text(encoding="utf-8")
+            for line in key_text.splitlines():
+                candidate = line.strip()
+                if candidate:
+                    api_keys.append(candidate)
 
+    if api_keys:
+        return api_keys
     raise RuntimeError(
         "Missing Gemini API key. Set GEMINI_API_KEY or GEMINI_API_KEY_FILE before running the generator."
     )
@@ -479,9 +484,11 @@ def generate_rows(rows: list[Row], output_dir: Path, model: str, overwrite: bool
     # and the only way out is Ctrl+C, which raises KeyboardInterrupt and
     # crashes past the retry/except logic below.
     client = genai.Client(
-        api_key=get_gemini_api_key(),
+        api_key=get_gemini_api_keys()[0],
         http_options=types.HttpOptions(timeout=60_000),
     )
+    api_keys = get_gemini_api_keys()
+    print(f"Loaded {len(api_keys)} API key(s).")
     pending_rows: list[Row] = []
 
     def write_pending() -> None:
@@ -503,12 +510,12 @@ def generate_rows(rows: list[Row], output_dir: Path, model: str, overwrite: bool
     # interrupt (Ctrl+C) still saves the retry queue built up so far,
     # instead of silently losing track of which rows still need audio.
     try:
-        _run_rows(rows, output_dir, model, overwrite, pause_seconds, client, pending_rows)
+        _run_rows(rows, output_dir, model, overwrite, pause_seconds, client, pending_rows, api_keys, {"index": 0})
     finally:
         write_pending()
 
 
-def _run_rows(rows: list[Row], output_dir: Path, model: str, overwrite: bool, pause_seconds: float, client, pending_rows: list[Row]) -> None:
+def _run_rows(rows: list[Row], output_dir: Path, model: str, overwrite: bool, pause_seconds: float, client, pending_rows: list[Row], api_keys: list | None = None, key_state: dict | None = None) -> None:
     for i, row in enumerate(rows, start=1):
         requested_path = Path(row.file)
         existing_path = output_dir / (requested_path if requested_path.suffix else requested_path.with_suffix(".wav"))
@@ -615,6 +622,11 @@ def _run_rows(rows: list[Row], output_dir: Path, model: str, overwrite: bool, pa
                 msg = str(exc)
                 if 'RESOURCE_EXHAUSTED' in msg or '429' in msg:
                     rate_limit_attempts += 1
+                    if key_state is not None and api_keys and key_state["index"] + 1 < len(api_keys):
+                        key_state["index"] += 1
+                        client = genai.Client(api_key=api_keys[key_state["index"]], http_options=types.HttpOptions(timeout=60_000))
+                        print(f"Rate limit hit; switching to key {key_state['index'] + 1}/{len(api_keys)} and retrying {row.file} ...")
+                        continue
                     retry_match = re.search(r"retryDelay': '([0-9]+)s'", msg)
                     retry_seconds = int(retry_match.group(1)) + 2 if retry_match else 0
                     if retry_seconds > 0:

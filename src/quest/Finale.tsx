@@ -12,12 +12,14 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Animated, Image, LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { createAudioPlayer } from 'expo-audio';
 import { useWindowDimensions } from '../layout/PortraitFallback';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { neliWorldAssets } from '../assets/neliWorldAssets';
 import PopperCelebration from '../components/PopperCelebration';
 import { AppContext } from '../store/AppContext';
 import { dir, ff } from '../theme/fonts';
 import { FaTestAudioKey } from '../assets/faTestAudio.generated';
-import { noteAudioPlayerReleased, playFaAudioSequence } from '../utils/faAudio';
-import { isQuestMuted } from './questSound';
+import { noteAudioPlayerReleased } from '../utils/faAudio';
+import { isQuestMuted, questPlay } from './questSound';
 import { BUDDIES, BuddyId } from './buddyStore';
 import { DisplayWord } from './questGroups';
 import { COLOR_HEX } from './pickLists';
@@ -31,6 +33,7 @@ import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 const CLICK_SOUND = require('../../assets/audio/key-tap.wav');
 const YAY_SOUND = require('../../assets/audio/yay-kids.wav');
 const TREE_SRC = require('../../assets/neli-world/quest/landmarks/apple-tree.png');
+const CAM_SRC = require('../../assets/neli-world/quest/camera.png');
 const PLATE_SRC = require('../../assets/neli-world/kitchen/plate.webp');
 
 // Reference height: a landscape phone is 360-440pt tall. k scales every
@@ -116,13 +119,19 @@ export default function Finale({
   const exitedRef = useRef(false);
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const photoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // The camera shows with a small delay, so the child sees the picnic
-  // scene first; the hand hint waits for the camera too.
+  // The camera shows once Neli has announced it, so the child sees the
+  // picnic scene first; the hand hint waits for the camera too.
   const [camReady, setCamReady] = useState(false);
   useEffect(() => {
     if (!celebrating) return;
-    const t = setTimeout(() => setCamReady(true), 2500);
-    return () => clearTimeout(t);
+    let live = true;
+    void (async () => {
+      await questPlay('quest/photo' as FaTestAudioKey, { awaitFinish: true });
+      if (live) setCamReady(true);
+    })();
+    return () => {
+      live = false;
+    };
   }, [celebrating]);
   const camIdle = useIdleHint(camReady && photoPhase === 'none', IDLE_HAND_DELAY, 0);
 
@@ -156,6 +165,7 @@ export default function Finale({
     }
     if (albumWasActive.current && photoTaken.current && !exitedRef.current) {
       albumWasActive.current = false;
+      void questPlay('quest/see-you' as FaTestAudioKey);
       const t = setTimeout(safeExit, 4000);
       return () => clearTimeout(t);
     }
@@ -176,6 +186,8 @@ export default function Finale({
   const gw = gameSize?.w ?? W;
   const gh = gameSize?.h ?? H;
   const k = gh / FINALE_REFERENCE_H;
+  const insets = useSafeAreaInsets();
+  const closeS = Math.max(48, Math.min(gh * 0.13, 56));
 
   // The 3 picks in quest order: fruit, color, dish.
   const fruitWord = words[0];
@@ -194,8 +206,9 @@ export default function Finale({
   // 360pt-tall phone as well as a tablet.
   const levelFont = Math.min(15, Math.max(11, 12.5 * k));
   const buttonH = Math.max(38, Math.min(54, gh * 0.13));
-  // One big round camera button, no text on it.
-  const camSize = buttonH * 1.6;
+  // One big camera picture in the middle of the scene, no circle behind
+  // it and no text on it — 1.5x bigger again so little thumbs find it.
+  const camSize = buttonH * 4.8;
 
   // Blanket on the grass at the bottom, in the child's chosen color.
   const blanketW = Math.min(gw * 0.46, gh * 1.12, 430);
@@ -240,11 +253,11 @@ export default function Finale({
   const treeH = Math.min(charH * 0.9, gh * 0.3);
   const treeW = treeH;
   const treeBottom = blanketBottom + blanketH * 0.55;
-  // The camera bar below reserves its space even after the photo (see the
-  // placeholder), so the scene height never changes mid-quest: the level
-  // pill is an overlay too. Balloons are capped so their tops always stay
+  // The camera floats over the middle of the scene and vanishes after
+  // the photo, so the scene always owns the full height: the level pill
+  // is an overlay too. Balloons are capped so their tops always stay
   // inside the scene, even on a 360pt-tall phone.
-  const sceneH = gh - (camSize + 4);
+  const sceneH = gh;
   const bsRaw = Math.min(charH * 0.42, 84);
   const bsMax = (sceneH - 8 - (treeBottom + treeH - 6)) / 1.36;
   const bs = Math.min(bsRaw, Math.max(24, bsMax));
@@ -269,9 +282,14 @@ export default function Finale({
     void (async () => {
       await new Promise(resolve => setTimeout(resolve, 350 + words.length * 280 + 500));
       if (!alive) return;
-      if (!isQuestMuted()) {
-        await playFaAudioSequence(words.map(w => w.audioKey as FaTestAudioKey));
-      }
+      // No roll-call of the picked names: the friends are already dancing
+      // on screen, and repeating every name bores a 4-year-old. The picnic
+      // speaks instead: arrived, grandma says hello, yum — then celebrate.
+      await questPlay('quest/arrived' as FaTestAudioKey, { awaitFinish: true });
+      if (!alive) return;
+      await questPlay('quest/grandma-hello' as FaTestAudioKey, { awaitFinish: true });
+      if (!alive) return;
+      await questPlay('quest/yum' as FaTestAudioKey, { awaitFinish: true });
       if (!alive) return;
       setCelebrating(true);
       // Safety net: a child who never taps the camera still leaves.
@@ -331,13 +349,19 @@ export default function Finale({
       cardAnim.setValue(0);
       Animated.timing(cardAnim, { toValue: 1, duration: 450, useNativeDriver: true }).start(() => {
         // Let the child look at the captured photo for 4 seconds, then
-        // fly it into the album and close the quest.
+        // fly it into the album: saved, see-you, then close the quest.
         photoTimer.current = setTimeout(() => {
           setPhotoPhase('flying');
           cardAnim.setValue(0);
           Animated.timing(cardAnim, { toValue: 1, duration: 650, useNativeDriver: true }).start(() => {
             setPhotoPhase('saved');
-            exitTimer.current = setTimeout(safeExit, 900);
+            void (async () => {
+              await questPlay('quest/saved' as FaTestAudioKey, { awaitFinish: true });
+              if (exitedRef.current) return;
+              await questPlay('quest/see-you' as FaTestAudioKey, { awaitFinish: true });
+              if (exitedRef.current) return;
+              exitTimer.current = setTimeout(safeExit, 300);
+            })();
           });
         }, 4000);
       });
@@ -394,6 +418,31 @@ export default function Finale({
 
   return (
     <View style={styles.root} onLayout={onGameLayout}>
+      {/* Same navy X as every game: it saves the day photo, then leaves. */}
+      <TouchableOpacity
+        onPress={safeExit}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        style={{
+          position: 'absolute',
+          top: insets.top + 8,
+          left: 12,
+          width: closeS,
+          height: closeS,
+          borderRadius: closeS / 2,
+          backgroundColor: '#1E2A5A',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 40,
+          elevation: 40,
+        }}
+      >
+        <Image
+          source={neliWorldAssets.ui.close}
+          style={{ width: closeS * 0.55, height: closeS * 0.55 }}
+          resizeMode="contain"
+        />
+      </TouchableOpacity>
       {/* Garden background, pinned to the bottom: it overflows off the top
           (sky), never the bottom, so the grass is always visible. */}
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, width: gw, height: gh, overflow: 'hidden' }}>
@@ -618,42 +667,31 @@ export default function Finale({
           </Text>
         </Animated.View>
       )}
-      {/* The bar keeps its exact height after the photo (empty
-          placeholder): if the space collapsed, the whole scene would drop
-          and the blanket would be cut off at the bottom. */}
+      {/* The camera floats in the middle of the scene until the photo:
+          big emoji, no circle behind it. Tapping shows the picture, and
+          the balloons rise while yay and the celebration play together. */}
       {camReady && photoPhase === 'none' && (
-        <View style={styles.bottomBar}>
-          <View>
-            {camIdle && (
-              <View
-                pointerEvents="none"
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 5,
-                }}
-              >
-                <IdleHand size={camSize * 0.65} />
-              </View>
-            )}
-            <TouchableOpacity
-              style={[styles.camera, { width: camSize, height: camSize, borderRadius: camSize / 2 }]}
-              onPress={takePhoto}
-              activeOpacity={0.85}
+        <View pointerEvents="box-none" style={styles.camCenter}>
+          {camIdle && (
+            <View pointerEvents="none" style={styles.camHint}>
+              <IdleHand size={camSize * 0.5} />
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={takePhoto}
+            activeOpacity={0.85}
+            accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
+            accessibilityRole="button"
+          >
+            <Image
+              source={CAM_SRC}
+              style={{ width: camSize, height: camSize * 0.72 }}
+              resizeMode="contain"
               accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
-              accessibilityRole="button"
-            >
-              <Text style={{ fontSize: camSize * 0.55 }}>📷</Text>
-            </TouchableOpacity>
-          </View>
+            />
+          </TouchableOpacity>
         </View>
       )}
-      {camReady && photoPhase !== 'none' && <View style={{ height: camSize + 4 }} />}
       {showCeleb && <PopperCelebration visible />}
     </View>
   );
@@ -714,15 +752,19 @@ const styles = StyleSheet.create({
   },
   polaroidPhoto: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   polaroidCaption: { color: '#3A2A6B', marginTop: 6, textAlign: 'center' },
-  bottomBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingTop: 4, maxWidth: '100%' },
-  camera: {
-    backgroundColor: '#F59E0B',
-    justifyContent: 'center',
+  camCenter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     alignItems: 'center',
-    shadowColor: '#7C2D12',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
+    justifyContent: 'center',
+  },
+  camHint: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
   },
 });

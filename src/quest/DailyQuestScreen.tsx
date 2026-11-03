@@ -11,6 +11,8 @@ import { AppContext } from '../store/AppContext';
 import { useNav } from '../store/NavContext';
 import { dir, ff } from '../theme/fonts';
 import { stopFaAudio } from '../utils/faAudio';
+import { FaTestAudioKey } from '../assets/faTestAudio.generated';
+import { questPlay } from './questSound';
 import { recordQuestResult } from '../store/questLevel';
 import { BuddyId, loadBuddy, saveBuddy } from './buddyStore';
 import { DisplayWord } from './questGroups';
@@ -80,6 +82,12 @@ export default function DailyQuestScreen() {
     setOptions(sampleOptions(pickPool(PICK_STEPS[0]!), 3, usedRef.current));
     setPhase('picks');
   };
+
+  // Every instruction is spoken: the buddy screen asks, the album greets.
+  useEffect(() => {
+    if (phase === 'buddy') void questPlay('quest/pick-buddy' as FaTestAudioKey);
+    else if (phase === 'album') void questPlay('quest/my-days' as FaTestAudioKey);
+  }, [phase]);
 
   const chooseBuddy = (id: BuddyId) => {
     setBuddy(id);

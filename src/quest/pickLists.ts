@@ -27,6 +27,17 @@ const FRUIT_IDS = new Set([
   'ingredients/lemon',
   'ingredients/cucumber',
   'feed-animals/food/banana',
+  'fruits/watermelon',
+  'fruits/pomegranate',
+  'fruits/strawberry',
+  'fruits/cherries',
+  'fruits/grapes',
+  'fruits/pear',
+  'fruits/peach',
+  'fruits/apricot',
+  'fruits/kiwi',
+  'fruits/fig',
+  'fruits/mango',
 ]);
 
 // Flat fill for the color circles drawn in code (crayon art is not used).
@@ -141,8 +152,10 @@ const COLOR_CLOSE: Record<string, string[]> = {
 const TOO_SIMILAR: Record<string, string[]> = {
   'ingredients/lemon': ['ingredients/orange'],
   'ingredients/orange': ['ingredients/lemon'],
-  'ingredients/apple': ['ingredients/tomato'],
-  'ingredients/tomato': ['ingredients/apple'],
+  'ingredients/apple': ['ingredients/tomato', 'fruits/cherries'],
+  'fruits/cherries': ['ingredients/apple', 'ingredients/tomato', 'fruits/strawberry'],
+  'fruits/strawberry': ['fruits/cherries'],
+  'ingredients/tomato': ['ingredients/apple', 'fruits/cherries'],
   'ingredients/chickpea': ['ingredients/lappeh'],
   'ingredients/lappeh': ['ingredients/chickpea'],
   'cooking/name/sabzi-polo': ['cooking/name/zereshk-polo'],

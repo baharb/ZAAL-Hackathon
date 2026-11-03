@@ -95,9 +95,15 @@ export default function FirstLetterGame() {
     if (alive.current) setPrompting(false);
   };
 
-  // Speak the first prompt after mount (user already tapped into the game).
+  // Speak the first prompt after mount (user already tapped into the
+  // game): the instruction first when its recording ships, then the word.
   useEffect(() => {
-    void speakPrompt(deal.word);
+    void (async () => {
+      if ('letter/which-letter' in FA_TEST_AUDIO) {
+        await playFaAudio('letter/which-letter' as FaTestAudioKey, { awaitFinish: true });
+      }
+      if (alive.current) void speakPrompt(deal.word);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

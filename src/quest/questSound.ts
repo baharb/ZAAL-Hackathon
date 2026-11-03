@@ -16,7 +16,7 @@ export function isQuestMuted() {
 }
 
 /** playFaAudio that respects the parent mute button. */
-export function questPlay(key: FaTestAudioKey) {
+export function questPlay(key: FaTestAudioKey, options?: { awaitFinish?: boolean }) {
   if (muted) return Promise.resolve(false);
-  return playFaAudio(key);
+  return playFaAudio(key, options);
 }
