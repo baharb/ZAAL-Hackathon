@@ -166,8 +166,8 @@ export default function FirstLetterGame() {
   // middle on the grass, the buddy big beside it, 3 chunky toy blocks
   // below (smaller than the picture). No cards, no English, no question
   // text — the spoken word is the question.
-  const picS = Math.min(height * 0.32, W * 0.22);
-  const blockS = Math.min(height * 0.19, W * 0.1);
+  const picS = Math.min(height * 0.28, W * 0.22);
+  const blockS = Math.min(height * 0.16, W * 0.1);
   const buddyS = Math.min(height * 0.55, W * 0.2);
   const blankW = picS * 1.9;
   const blankH = Math.max(26, picS * 0.3);
@@ -240,7 +240,7 @@ export default function FirstLetterGame() {
                   <Image source={neliWorldAssets.ui.voice} style={{ width: 24 * k, height: 24 * k }} resizeMode="contain" />
                 </TouchableOpacity>
               </View>
-              <View style={[s.blanket, { width: blankW, height: blankH, marginTop: -picS * 0.16, borderRadius: 14 * k }]} />
+              <View style={[s.blanket, { width: blankW, height: blankH, marginTop: -picS * 0.25, borderRadius: 14 * k }]} />
               <SoftShadow width={blankW} />
               {showName ? (
                 <View style={s.namePill}>
@@ -300,7 +300,7 @@ const styles = (k: number) =>
     starsWrap: { position: 'absolute', alignSelf: 'center', zIndex: 30, elevation: 30 },
     body: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 * k, columnGap: 12 * k },
     buddyCol: { width: '28%', alignItems: 'center', justifyContent: 'flex-end', alignSelf: 'stretch', paddingBottom: 10 * k },
-    midCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', rowGap: 6 * k, paddingBottom: 10 * k },
+    midCol: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'flex-end', rowGap: 6 * k, paddingBottom: 10 * k },
     objWrap: { position: 'relative', alignItems: 'center' },
     speakerBadge: {
       position: 'absolute',
