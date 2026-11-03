@@ -24,8 +24,17 @@ export function gardenDrawnSize(srcW: number, srcH: number, boxW: number, boxH: 
 }
 
 export function gardenSourceSize(source: any): { w: number; h: number } {
-  const r = Image.resolveAssetSource(source);
-  return { w: r?.width ?? 2048, h: r?.height ?? 1365 };
+  // resolveAssetSource exists on native only; react-native-web has no
+  // such function, so fall back to the source's own dims, then to the
+  // garden art's real size.
+  if (typeof Image.resolveAssetSource === 'function') {
+    const r = Image.resolveAssetSource(source);
+    if (r?.width && r?.height) return { w: r.width, h: r.height };
+  }
+  if (typeof source?.width === 'number' && typeof source?.height === 'number') {
+    return { w: source.width, h: source.height };
+  }
+  return { w: 2048, h: 1365 };
 }
 
 export default function QuestBackdrop() {
