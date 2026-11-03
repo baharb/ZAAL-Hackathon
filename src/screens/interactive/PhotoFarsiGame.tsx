@@ -142,7 +142,7 @@ function OpenBookIcon({ size }: { size: number }) {
 }
 
 export default function PhotoFarsiGame() {
-  const { height } = useWindowDimensions();
+  const { width: W, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { navigate } = useNav();
   const k = height / REFERENCE_H;
@@ -272,9 +272,12 @@ export default function PhotoFarsiGame() {
   // Scene: buddy stands big on the floor (bottom-anchored, never mid-air),
   // bubble right over her head, the big yellow camera square bottom-center.
   // One line of text, never wrapped.
-  const buddyS = Math.min(200 * k, height * 0.44);
   const camS = Math.min(height * 0.3, 150 * k);
   const miniS = Math.max(56, 60 * k);
+  const ctrlL = (W - (miniS * 2 + camS + 24 * k)) / 2;
+  // Never reach into the camera row: on squarer screens the controls start
+  // left of where a full-height buddy would end.
+  const buddyS = Math.min(200 * k, height * 0.44, Math.max(120, ctrlL - 24));
   const closeS = Math.max(48, 52 * k);
   const bubbleFa = !photo ? 'از اتاقت عکس بگیر' : (!result ? 'بزن نلی بگه!' : null);
   const s = styles(k);

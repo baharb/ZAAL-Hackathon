@@ -76,8 +76,8 @@ const SCENE_SLOTS: Record<SceneBg, { fx: number; fb: number }[]> = {
     { fx: 0.44, fb: 0.43 },
     { fx: 0.6, fb: 0.43 },
     { fx: 0.76, fb: 0.43 },
-    { fx: 0.55, fb: 0.22 },
-    { fx: 0.7, fb: 0.22 },
+    { fx: 0.53, fb: 0.22 },
+    { fx: 0.72, fb: 0.22 },
   ],
 };
 
@@ -201,7 +201,7 @@ export default function ListenFindGame() {
     const maxSize = Math.max(...sizes);
     const inBand = SCENE_SLOTS[scene.bg].filter(slot => {
       const cx = surfX(slot.fx, cover.imgW, cover.s, cover.offX);
-      return cx > maxSize * 0.75 && cx < W - maxSize * 0.75;
+      return cx > maxSize * 0.5 + 8 && cx < W - maxSize * 0.5 - 8;
     });
     const slotPool = inBand.length >= 3 ? inBand : SCENE_SLOTS[scene.bg];
     const rectOf = (slot: { fx: number; fb: number }, size: number) => {
@@ -220,6 +220,13 @@ export default function ListenFindGame() {
           .slice(i + 1)
           .some(o => r.left - pad < o.right && o.left - pad < r.right && r.top - pad < o.bottom && o.top - pad < r.bottom),
       );
+    // The buddy stands bottom-left: no object may sit on her either.
+    const buddyH = H * 0.52;
+    const buddyRect = { left: W * 0.03, top: H - buddyH, right: W * 0.03 + buddyH, bottom: H };
+    const TOL = 4;
+    const buddyHit = (r: { left: number; top: number; right: number; bottom: number }) =>
+      r.left < buddyRect.right - TOL && r.right > buddyRect.left + TOL &&
+      r.top < buddyRect.bottom - TOL && r.bottom > buddyRect.top + TOL;
     let slots = shuffle([...slotPool]).slice(0, 3);
     let settled = false;
     for (const wantGap of [true, false]) {
@@ -228,7 +235,7 @@ export default function ListenFindGame() {
         const rects = cand.map((s, i) => rectOf(s, sizes[i]!));
         const pad = wantGap ? Math.min(...sizes) : 0;
         if (t === 0 && wantGap) slots = cand;
-        if (clearBy(rects, pad)) {
+        if (clearBy(rects, pad) && !rects.some(buddyHit)) {
           slots = cand;
           settled = true;
         }
@@ -241,6 +248,7 @@ export default function ListenFindGame() {
         rects.slice(i + 1).forEach((o, j) => {
           if (overlaps(r, o)) console.warn(`[ListenFind] overlapping slots: ${scene.bg} #${i} vs #${i + j + 1}`);
         });
+        if (buddyHit(r)) console.warn(`[ListenFind] slot on buddy: ${scene.bg} #${i}`);
       });
     }
     const spots = choices.map((c, i) => {
