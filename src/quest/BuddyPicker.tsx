@@ -5,7 +5,6 @@ import React, { useContext, useRef, useState } from 'react';
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import TopBar, { topBarHeight } from '../components/TopBar';
 import { AppContext } from '../store/AppContext';
 import { dir, ff } from '../theme/fonts';
 import { BUDDIES, BuddyId } from './buddyStore';
@@ -71,6 +70,17 @@ function BuddyButton({
           />
         )}
       </Animated.View>
+      {/* Grass shadow: every buddy stands on the lawn. */}
+      <View
+        pointerEvents="none"
+        style={{
+          width: size * 0.7,
+          height: Math.max(6, size * 0.06),
+          borderRadius: 999,
+          backgroundColor: 'rgba(30,20,60,0.16)',
+          marginTop: -size * 0.04,
+        }}
+      />
       <Text
         style={[styles.name, { fontFamily: ff(lang, 'black'), fontSize: size * 0.14 }, dir(lang)]}
         numberOfLines={1}
@@ -94,7 +104,8 @@ export default function BuddyPicker({
   const isFa = lang === 'fa' || lang === 'ar';
   const [picked, setPicked] = useState<BuddyId | null>(initial);
 
-  const bodyH = height - topBarHeight(height, insets.top, {}) - insets.bottom;
+  // No bar on this scene — the buddies get the whole garden.
+  const bodyH = height - insets.top - insets.bottom;
   const gap = Math.max(8, width * 0.012);
   const cardSize = Math.min((width * 0.92 - gap * (BUDDIES.length - 1)) / BUDDIES.length, bodyH * 0.66);
 
@@ -129,23 +140,25 @@ export default function BuddyPicker({
 
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: { color: '#3A2A6B', backgroundColor: '#FFFFFF', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 8, marginBottom: 14, textAlign: 'center', overflow: 'hidden' },
+  title: {
+    color: '#FFFFFF',
+    marginBottom: 14,
+    textAlign: 'center',
+    textShadowColor: 'rgba(30,20,60,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   card: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: 'rgba(58,42,107,0.30)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 5,
+    backgroundColor: 'transparent',
     borderColor: '#FACC15',
     alignItems: 'center',
     justifyContent: 'center',
   },
   name: {
-    color: '#3A2A6B',
+    color: '#FFFFFF',
     marginTop: 4,
-    textShadowColor: 'transparent',
+    textShadowColor: 'rgba(30,20,60,0.6)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },

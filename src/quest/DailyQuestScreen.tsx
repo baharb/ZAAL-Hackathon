@@ -23,6 +23,10 @@ import DriveGame, { DriveRound } from './DriveGame';
 import Finale from './Finale';
 import MyDaysScreen from './MyDaysScreen';
 import QuestBackdrop, { QUEST_SKY } from './QuestBackdrop';
+import { neliWorldAssets } from '../assets/neliWorldAssets';
+
+// The drive's own garden: the buddy picker happens on the same grass.
+const BUDDY_BG = require('../../assets/neli-world/quest/garden-background.png');
 
 // The three picks, in order: fruit, color, food. None of the options shown
 // earlier may appear again in the same quest.
@@ -104,14 +108,29 @@ export default function DailyQuestScreen() {
   };
 
   const buddyFace = Math.max(40, height * 0.07);
-  // The purple bar shows only where a parent or the picker needs it.
-  // During the drive and at the picnic the game owns the whole screen
+  const closeS = Math.max(48, height * 0.13);
+  // The purple bar shows only where the picker needs it (loading + picks).
+  // The buddy picker is a garden scene with only the floating X;
+  // during the drive and at the picnic the game owns the whole screen
   // (only the floating buddy chip stays).
-  const showBar = phase === 'loading' || phase === 'buddy' || phase === 'picks';
+  const showBar = phase === 'loading' || phase === 'picks';
 
   return (
     <View style={styles.root}>
-      {(phase === 'buddy' || phase === 'picks' || phase === 'loading') && <QuestBackdrop />}
+      {(phase === 'picks' || phase === 'loading') && <QuestBackdrop />}
+      {phase === 'buddy' && (
+        <Image source={BUDDY_BG} style={styles.buddyBg} resizeMode="cover" />
+      )}
+      {phase === 'buddy' && (
+        <TouchableOpacity
+          onPress={goBack}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          style={[styles.closeBtn, { top: insets.top + 8, left: 12, width: closeS, height: closeS, borderRadius: closeS / 2 }]}
+        >
+          <Image source={neliWorldAssets.ui.close} style={{ width: closeS * 0.55, height: closeS * 0.55 }} resizeMode="contain" />
+        </TouchableOpacity>
+      )}
       {showBar && (
         <View style={styles.topWrap}>
           <TopBar
@@ -213,6 +232,18 @@ export default function DailyQuestScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: QUEST_SKY },
   topWrap: { position: 'relative', zIndex: 10, elevation: 10 },
+  buddyBg: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  closeBtn: {
+    position: 'absolute',
+    backgroundColor: 'rgba(20,16,60,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
   body: { flex: 1, paddingHorizontal: 12, paddingBottom: 12 },
   loading: { color: '#3A2A6B', fontSize: 44, textAlign: 'center', marginTop: 60 },
   startWrap: { flex: 1 },
