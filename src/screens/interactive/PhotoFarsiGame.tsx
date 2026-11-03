@@ -26,6 +26,7 @@ import {
   BuddyGuide,
   BuddyMood,
   CandyButton,
+  CloseButton,
   GameBg,
   GameCard,
   SoftShadow,
@@ -278,21 +279,12 @@ export default function PhotoFarsiGame() {
   // Never reach into the camera row: on squarer screens the controls start
   // left of where a full-height buddy would end.
   const buddyS = Math.min(200 * k, height * 0.44, Math.max(120, ctrlL - 24));
-  const closeS = Math.max(48, 52 * k);
   const bubbleFa = !photo ? 'از اتاقت عکس بگیر' : (!result ? 'بزن نلی بگه!' : null);
   const s = styles(k);
   return (
     <View style={s.root}>
       <GameBg pick={roomBackgroundPickers.bedroom} />
-      {/* Floating navy close only — no title bar. */}
-      <TouchableOpacity
-        onPress={() => navigate({ name: 'MagicGames' })}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        style={[s.closeBtn, { top: insets.top + 8, left: 12, width: closeS, height: closeS, borderRadius: closeS / 2 }]}
-      >
-        <Image source={neliWorldAssets.ui.close} style={{ width: closeS * 0.55, height: closeS * 0.55 }} resizeMode="contain" />
-      </TouchableOpacity>
+      <CloseButton onPress={() => navigate({ name: 'MagicGames' })} />
       <View style={s.body}>
         {/* Buddy stands on the pink floor, feet at the screen bottom, bubble
             up-right of her head (never under the close button). */}
@@ -408,9 +400,7 @@ export default function PhotoFarsiGame() {
             <View style={s.bookHead}>
               <Text style={[s.bookTitle, dir('fa')]}>کلمات من</Text>
               <Text style={s.bookCount}>★ {heard.length}/{PHOTO_FARSI_WORDS.length}</Text>
-              <TouchableOpacity style={s.bookClose} onPress={() => { tap(); setBookOpen(false); }} activeOpacity={0.85}>
-                <Image source={neliWorldAssets.ui.close} style={{ width: 30 * k, height: 30 * k }} resizeMode="contain" />
-              </TouchableOpacity>
+              <CloseButton inline size={Math.max(36, 40 * k)} onPress={() => { tap(); setBookOpen(false); }} />
             </View>
             <ScrollView contentContainerStyle={s.bookGrid} showsVerticalScrollIndicator={false}>
               {PHOTO_FARSI_WORDS.map(w => {
@@ -452,13 +442,6 @@ export default function PhotoFarsiGame() {
 const styles = (k: number) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: PLAY_INK },
-    closeBtn: {
-      position: 'absolute',
-      backgroundColor: 'rgba(20,16,60,0.85)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10,
-    },
     body: { flex: 1, flexDirection: 'row', paddingHorizontal: 14 * k, columnGap: 12 * k },
     left: { width: '34%', alignItems: 'flex-start', justifyContent: 'flex-end', rowGap: 6 * k, paddingLeft: 12 },
     bubble: {
@@ -569,7 +552,7 @@ const styles = (k: number) =>
     bookHead: { flexDirection: 'row', alignItems: 'center', columnGap: 10 * k, marginBottom: 8 * k },
     bookTitle: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 22 * k, flex: 1, textAlign: 'center' },
     bookCount: { fontSize: 14 * k, fontFamily: ff('en', 'black'), color: PLAY_INK },
-    bookClose: { width: Math.max(48, 52 * k), height: Math.max(48, 52 * k), alignItems: 'center', justifyContent: 'center' },
+
     bookGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 * k, paddingBottom: 4 * k },
     wordCard: {
       width: '31.5%',

@@ -12,6 +12,7 @@ import { useWindowDimensions } from '../layout/PortraitFallback';
 import TopBar from '../components/TopBar';
 import PopperCelebration from '../components/PopperCelebration';
 import { useNav } from '../store/NavContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dir, ff } from '../theme/fonts';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { BuddyId, loadBuddy } from '../quest/buddyStore';
@@ -349,33 +350,35 @@ export function OpenBookIcon({ size }: { size: number }) {
   );
 }
 
-/** Floating navy close button (top-left), same as the quest drive. */
-export function NavyClose({ top, left, size }: { top: number; left: number; size: number }) {
-  const { reset } = useNav();
+/** THE close button for the whole Magic box (menu, quest, all games,
+ * album, drawing sheet): one navy circle with a plain white X drawn in
+ * it — no icon asset, no inner ring. Same size and same spot everywhere:
+ * top-left with safe-area spacing. inline=true drops the absolute
+ * positioning so a sheet header can place it in its own row. */
+export function CloseButton({ onPress, size = 52, inline = false }: { onPress: () => void; size?: number; inline?: boolean }) {
+  const insets = useSafeAreaInsets();
   return (
     <TouchableOpacity
-      onPress={() => reset({ name: 'Main', tab: 'Games' })}
+      onPress={onPress}
       activeOpacity={0.8}
       accessibilityRole="button"
-      style={{
-        position: 'absolute',
-        top,
-        left,
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: '#1E2A5A',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 40,
-        elevation: 40,
-      }}
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: '#1E1B4B',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 40,
+          elevation: 40,
+        },
+        inline ? null : { position: 'absolute', top: insets.top + 8, left: 12 },
+      ]}
     >
-      <Image
-        source={neliWorldAssets.ui.close}
-        style={{ width: size * 0.55, height: size * 0.55 }}
-        resizeMode="contain"
-      />
+      <Svg width={size * 0.46} height={size * 0.46} viewBox="0 0 24 24">
+        <Path d="M5 5 L19 19 M19 5 L5 19" stroke="#FFFFFF" strokeWidth={3.2} strokeLinecap="round" />
+      </Svg>
     </TouchableOpacity>
   );
 }

@@ -12,7 +12,7 @@ import { MyDayEntry, loadMyDays } from './myDaysStore';
 import { STORIES } from './stories';
 import WordArt from './WordArt';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
-import { WordArt as PlayWordArt, WORD_ART } from '../ui/playKit';
+import { CloseButton, WordArt as PlayWordArt, WORD_ART } from '../ui/playKit';
 import PicnicPhoto from './PicnicPhoto';
 import { displayWordById } from './questGroups';
 
@@ -108,18 +108,9 @@ export default function MyDaysScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <View style={styles.root}>
+      <CloseButton onPress={onBack} />
       <View style={[styles.topRow, isFa && { flexDirection: 'row-reverse' }]}>
-        <TouchableOpacity
-          onPress={onBack}
-          activeOpacity={0.8}
-          accessibilityLabel={isFa ? 'برگرد' : 'Back'}
-          accessibilityRole="button"
-          style={styles.back}
-        >
-          <Text style={[styles.backText, { fontFamily: ff(lang, 'black') }]}>
-            {isFa ? '→ برگرد' : '← Back'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.back} />
         <View style={{ flexDirection: isFa ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
           <Image source={neliWorldAssets.ui.camera} style={{ width: 30, height: 30 }} resizeMode="contain" />
           <Text style={[styles.title, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
@@ -152,7 +143,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 8 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' },
   back: { minWidth: 90, alignItems: 'center' },
-  backText: { color: '#FACC15', fontSize: 16 },
+
   title: { color: '#FFFFFF', fontSize: 20, textAlign: 'center' },
   empty: { color: '#FFFFFF', marginTop: 40, textAlign: 'center', paddingHorizontal: 24 },
   list: { alignItems: 'center', gap: 12, paddingHorizontal: 8, paddingVertical: 12 },

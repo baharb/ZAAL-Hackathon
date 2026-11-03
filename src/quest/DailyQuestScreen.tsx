@@ -6,7 +6,6 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import TopBar, { topBarHeight } from '../components/TopBar';
 import { AppContext } from '../store/AppContext';
 import { useNav } from '../store/NavContext';
 import { dir, ff } from '../theme/fonts';
@@ -24,7 +23,8 @@ import PicksScreen from './PicksScreen';
 import DriveGame, { DriveRound } from './DriveGame';
 import Finale from './Finale';
 import MyDaysScreen from './MyDaysScreen';
-import QuestBackdrop, { QUEST_SKY } from './QuestBackdrop';
+import QuestBackdrop, { QUEST_SKY, gardenDrawnSize, gardenSourceSize } from './QuestBackdrop';
+import { CloseButton } from '../ui/playKit';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
 
 // The drive's own garden: the buddy picker happens on the same grass.
@@ -41,7 +41,7 @@ export default function DailyQuestScreen() {
   const { goBack, navigate } = useNav();
   // تمام! always lands on the one Magic menu, never on history.
   const backToMagic = () => navigate({ name: 'MagicGames' });
-  const { height } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isFa = lang === 'fa' || lang === 'ar';
 
@@ -118,40 +118,33 @@ export default function DailyQuestScreen() {
   };
 
   const buddyFace = Math.max(40, height * 0.07);
-  const closeS = Math.max(48, height * 0.13);
-  // The purple bar shows only on loading. Buddy + picks are the same
-  // garden scene with only the floating X; during the drive and at the
-  // picnic the game owns the whole screen (only the floating buddy
-  // chip stays).
-  const showBar = phase === 'loading';
+  // Garden drawn bottom-anchored with its pale cloud band cropped off
+  // the top (see QuestBackdrop) — no strip along the top edge.
+  const buddySrc = gardenSourceSize(BUDDY_BG);
+  const buddyDrawn = gardenDrawnSize(buddySrc.w, buddySrc.h, width, height);
+  // Buddy + picks are the garden scene with only the floating X; during
+  // the drive and at the picnic the game owns the whole screen (only the
+  // floating buddy chip stays).
   const fullBleed = phase === 'drive' || phase === 'arrived';
 
   return (
     <View style={styles.root}>
       {phase === 'loading' && <QuestBackdrop />}
       {(phase === 'buddy' || phase === 'picks') && (
-        <Image source={BUDDY_BG} style={styles.buddyBg} resizeMode="cover" />
+        <Image
+          source={BUDDY_BG}
+          style={{
+            position: 'absolute',
+            width: buddyDrawn.w,
+            height: buddyDrawn.h,
+            left: (width - buddyDrawn.w) / 2,
+            top: height - buddyDrawn.h,
+          }}
+          resizeMode="cover"
+        />
       )}
-      {(phase === 'buddy' || phase === 'picks') && (
-        <TouchableOpacity
-          onPress={goBack}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          style={[styles.closeBtn, { top: insets.top + 8, left: 12, width: closeS, height: closeS, borderRadius: closeS / 2 }]}
-        >
-          <Image source={neliWorldAssets.ui.close} style={{ width: closeS * 0.55, height: closeS * 0.55 }} resizeMode="contain" />
-        </TouchableOpacity>
-      )}
-      {showBar && (
-        <View style={styles.topWrap}>
-          <TopBar
-            title="My Daily Quest"
-            titleFa="بازی امروز من"
-            dark
-            showClose
-            onBack={goBack}
-          />
-        </View>
+      {(phase === 'buddy' || phase === 'picks' || phase === 'loading') && (
+        <CloseButton onPress={goBack} />
       )}
       {(phase === 'picks' || phase === 'drive' || phase === 'arrived') && (
         <TouchableOpacity
@@ -159,7 +152,7 @@ export default function DailyQuestScreen() {
           activeOpacity={0.8}
           accessibilityLabel={isFa ? 'تغییر دوست' : 'Change buddy'}
           accessibilityRole="button"
-          style={[styles.buddyChip, { top: (showBar ? topBarHeight(height, insets.top, {}) : insets.top) + 4 }]}
+          style={[styles.buddyChip, { top: insets.top + 4 }]}
         >
           <Image source={buddyPose(buddy, 'base')} style={{ width: buddyFace, height: buddyFace }} resizeMode="contain" />
         </TouchableOpacity>
@@ -175,7 +168,7 @@ export default function DailyQuestScreen() {
               activeOpacity={0.8}
               accessibilityLabel={isFa ? 'روزهای من' : 'My Days'}
               accessibilityRole="button"
-              style={styles.albumButton}
+              style={[styles.albumButton, { top: insets.top + 8, right: 12 }]}
             >
               <View style={{ flexDirection: isFa ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
                 <Image source={neliWorldAssets.ui.camera} style={{ width: 20, height: 20 }} resizeMode="contain" />
@@ -245,30 +238,19 @@ export default function DailyQuestScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: QUEST_SKY },
-  topWrap: { position: 'relative', zIndex: 10, elevation: 10 },
-  buddyBg: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-  },
-  closeBtn: {
-    position: 'absolute',
-    backgroundColor: 'rgba(20,16,60,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
   body: { flex: 1, paddingHorizontal: 12, paddingBottom: 12 },
   loading: { color: '#3A2A6B', fontSize: 44, textAlign: 'center', marginTop: 60 },
   startWrap: { flex: 1 },
   startBody: { flex: 1 },
   albumButton: {
-    alignSelf: 'center',
+    // Top-right corner: never near the close button (top-left).
+    position: 'absolute',
     backgroundColor: 'rgba(255,253,245,0.92)',
     borderRadius: 999,
     paddingHorizontal: 18,
     paddingVertical: 8,
-    marginTop: 2,
+    zIndex: 20,
+    elevation: 20,
   },
   albumButtonText: { color: '#3A2A6B', fontSize: 15 },
   albumOverlay: {

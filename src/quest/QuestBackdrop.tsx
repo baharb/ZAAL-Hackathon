@@ -5,7 +5,7 @@
 // tablets. The drive and the picnic finale keep their own scenery.
 
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import { QUEST_COLORS } from './questTheme';
 
@@ -13,6 +13,20 @@ export const QUEST_SKY = '#BEE3FA';
 export const QUEST_SUN = '#FFD93D';
 export const QUEST_GRASS = '#7ED491';
 export const QUEST_GRASS_DARK = '#5CBF6E';
+
+// The garden art carries pale clouds in its top ~24%. Plain cover
+// slices them into a pale strip along the top edge of the screen, so
+// quest scenes draw the image bottom-anchored and oversized: the whole
+// cloud band ends up above the screen (never half-visible).
+export function gardenDrawnSize(srcW: number, srcH: number, boxW: number, boxH: number): { w: number; h: number } {
+  const scale = Math.max(boxW / srcW, boxH / 0.73 / srcH);
+  return { w: Math.round(srcW * scale), h: Math.round(srcH * scale) };
+}
+
+export function gardenSourceSize(source: any): { w: number; h: number } {
+  const r = Image.resolveAssetSource(source);
+  return { w: r?.width ?? 2048, h: r?.height ?? 1365 };
+}
 
 export default function QuestBackdrop() {
   const { width: W, height: H } = useWindowDimensions();
@@ -42,10 +56,10 @@ export default function QuestBackdrop() {
         </View>
         <Text style={{ fontSize: sun * 0.22, color: '#7A4A00', marginTop: -sun * 0.04 }}>‿</Text>
       </View>
-      {/* Soft clouds. */}
-      <View style={[styles.cloud, { left: W * 0.34, top: H * 0.03, width: W * 0.2, height: H * 0.09 }]} />
-      <View style={[styles.cloud, { left: W * 0.62, top: H * 0.12, width: W * 0.15, height: H * 0.07 }]} />
-      <View style={[styles.cloud, { left: W * 0.16, top: H * 0.2, width: W * 0.12, height: H * 0.06 }]} />
+      {/* Soft clouds: puffy and fully on-screen (never top-edge strips). */}
+      <Puff left={W * 0.36} top={H * 0.06} s={H / 400} />
+      <Puff left={W * 0.66} top={H * 0.16} s={(H / 400) * 0.75} />
+      <Puff left={W * 0.14} top={H * 0.24} s={(H / 400) * 0.6} />
       {/* Grassy hill along the bottom. */}
       <View
         style={{
@@ -87,12 +101,18 @@ export default function QuestBackdrop() {
   );
 }
 
+/** One puffy cloud: three overlapping circles in a soft white. */
+function Puff({ left, top, s }: { left: number; top: number; s: number }) {
+  const c = { position: 'absolute' as const, backgroundColor: QUEST_COLORS.card, borderRadius: 999, opacity: 0.92 };
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', left, top, width: 96 * s, height: 52 * s }}>
+      <View style={[c, { left: 0, bottom: 0, width: 96 * s, height: 30 * s }]} />
+      <View style={[c, { left: 18 * s, top: 0, width: 42 * s, height: 42 * s }]} />
+      <View style={[c, { left: 52 * s, top: 10 * s, width: 32 * s, height: 32 * s }]} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   sky: { ...StyleSheet.absoluteFillObject },
-  cloud: {
-    position: 'absolute',
-    backgroundColor: QUEST_COLORS.card,
-    borderRadius: 999,
-    opacity: 0.9,
-  },
 });

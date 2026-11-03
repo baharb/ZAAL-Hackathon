@@ -24,10 +24,11 @@ import { BUDDIES, BuddyId } from './buddyStore';
 import { DisplayWord } from './questGroups';
 import { COLOR_HEX } from './pickLists';
 import { Story } from './stories';
+import { gardenDrawnSize, gardenSourceSize } from './QuestBackdrop';
 import { buddyPose } from './questTheme';
 import { saveMyDay } from './myDaysStore';
 import WordArt from './WordArt';
-import { SoftShadow } from '../ui/playKit';
+import { CloseButton, SoftShadow } from '../ui/playKit';
 import PicnicPhoto from './PicnicPhoto';
 import Balloon from './Balloon';
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
@@ -206,6 +207,8 @@ export default function Finale({
   };
   const gw = gameSize?.w ?? W;
   const gh = gameSize?.h ?? H;
+  const picnicDims = gardenSourceSize(story.background);
+  const picnicDrawn = gardenDrawnSize(picnicDims.w, picnicDims.h, gw, gh);
   const k = gh / FINALE_REFERENCE_H;
   const insets = useSafeAreaInsets();
   const closeS = Math.max(48, Math.min(gh * 0.13, 56));
@@ -472,37 +475,14 @@ export default function Finale({
 
   return (
     <View style={styles.root} onLayout={onGameLayout}>
-      {/* Same navy X as every game: it saves the day photo, then leaves. */}
-      <TouchableOpacity
-        onPress={safeExit}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        style={{
-          position: 'absolute',
-          top: insets.top + 8,
-          left: 12,
-          width: closeS,
-          height: closeS,
-          borderRadius: closeS / 2,
-          backgroundColor: '#1E2A5A',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 40,
-          elevation: 40,
-        }}
-      >
-        <Image
-          source={neliWorldAssets.ui.close}
-          style={{ width: closeS * 0.55, height: closeS * 0.55 }}
-          resizeMode="contain"
-        />
-      </TouchableOpacity>
-      {/* Garden background, pinned to the bottom: it overflows off the top
-          (sky), never the bottom, so the grass is always visible. */}
+      <CloseButton onPress={safeExit} />
+      {/* Garden background, pinned to the bottom and oversized so its
+          pale cloud band overflows off the top (never a half-cut strip),
+          and the grass is always visible. */}
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, width: gw, height: gh, overflow: 'hidden' }}>
         <Image
           source={story.background}
-          style={{ position: 'absolute', left: 0, bottom: 0, width: gw, height: gh * 1.25 }}
+          style={{ position: 'absolute', left: (gw - picnicDrawn.w) / 2, bottom: 0, width: picnicDrawn.w, height: picnicDrawn.h }}
           resizeMode="cover"
           accessibilityLabel={isFa ? 'باغ' : 'Garden'}
         />

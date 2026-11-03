@@ -17,6 +17,7 @@ import { FA_TEST_AUDIO, FaTestAudioKey } from '../../assets/faTestAudio.generate
 import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
 import { roomBackgroundPickers, neliWorldAssets } from '../../assets/neliWorldAssets';
 import { PHOTO_FARSI_WORDS, PhotoFarsiWord } from '../../data/photoFarsiWords';
+import { useNav } from '../../store/NavContext';
 import { loadBuddy } from '../../quest/buddyStore';
 import { saveMyDay } from '../../quest/myDaysStore';
 import { IdleHand, useIdleHint } from '../../quest/IdleHand';
@@ -24,7 +25,7 @@ import PopperCelebration from '../../components/PopperCelebration';
 import {
   BuddyGuide,
   BuddyMood,
-  NavyClose,
+  CloseButton,
   PLAY_INK,
   SoftShadow,
   SquareButton,
@@ -155,6 +156,7 @@ type CardAnims = { shake: Animated.Value; pop: Animated.Value; rise: Animated.Va
 export default function ListenFindGame() {
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const { navigate } = useNav();
   const k = H / REFERENCE_H;
   const [round, setRound] = useState(0);
   const lastWordId = useRef<string | null>(null);
@@ -417,7 +419,6 @@ export default function ListenFindGame() {
 
   const objSize = H * 0.22;
   const buddySize = Math.min(H * 0.52, 400 * k);
-  const closeS = Math.max(48, 52 * k);
   const s = styles(k);
   return (
     <View style={s.root}>
@@ -429,7 +430,7 @@ export default function ListenFindGame() {
         />
         <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(46,26,107,0.10)' }]} />
       </View>
-      <NavyClose top={insets.top + 8} left={12} size={closeS} />
+      <CloseButton onPress={() => navigate({ name: 'MagicGames' })} />
 
       {/* Progress stars, top-center: big, bold, gold when filled. No round text. */}
       {!done ? (

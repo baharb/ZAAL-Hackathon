@@ -11,7 +11,7 @@ import * as Haptics from 'expo-haptics';
 import { useWindowDimensions } from '../../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNav } from '../../store/NavContext';
-import { BuddyGuide, GameBg, SoftShadow, WORD_ART, WordArt } from '../../ui/playKit';
+import { BuddyGuide, CloseButton, GameBg, SoftShadow, WORD_ART, WordArt } from '../../ui/playKit';
 import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAssets';
 import { IdleHand, useIdleHint } from '../../quest/IdleHand';
 import { dir, ff } from '../../theme/fonts';
@@ -167,21 +167,12 @@ export default function FirstLetterGame() {
   const picS = Math.min(height * 0.28, W * 0.22);
   const blockS = Math.min(height * 0.16, W * 0.1);
   const buddyS = Math.min(height * 0.55, W * 0.2);
-  const closeS = Math.max(48, 52 * k);
   const answerIdx = deal.choices.findIndex(c => c.id === deal.answer.id);
   const s = styles(k);
   return (
     <View style={s.root}>
       <GameBg pick={roomBackgroundPickers.playground} />
-      {/* Floating navy close only — no title bar. */}
-      <TouchableOpacity
-        onPress={() => navigate({ name: 'MagicGames' })}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        style={[s.closeBtn, { top: insets.top + 8, left: 12, width: closeS, height: closeS, borderRadius: closeS / 2 }]}
-      >
-        <Image source={neliWorldAssets.ui.close} style={{ width: closeS * 0.55, height: closeS * 0.55 }} resizeMode="contain" />
-      </TouchableOpacity>
+      <CloseButton onPress={() => navigate({ name: 'MagicGames' })} />
       {/* Gold progress stars, top-center. */}
       {!done ? (
         <View style={[s.starsWrap, { top: insets.top + 12 }]} pointerEvents="none">
@@ -288,13 +279,6 @@ const CARD_SHADOW = {
 const styles = (k: number) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: '#7FCDFF' },
-    closeBtn: {
-      position: 'absolute',
-      backgroundColor: 'rgba(20,16,60,0.85)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10,
-    },
     starsWrap: { position: 'absolute', alignSelf: 'center', zIndex: 30, elevation: 30 },
     body: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 * k, columnGap: 12 * k },
     buddyCol: { width: '28%', alignItems: 'center', justifyContent: 'flex-end', alignSelf: 'stretch', paddingBottom: 10 * k },

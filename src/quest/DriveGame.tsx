@@ -11,7 +11,8 @@ import Svg, { Line, Rect } from 'react-native-svg';
 import { createAudioPlayer } from 'expo-audio';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { NavyClose } from '../ui/playKit';
+import { CloseButton } from '../ui/playKit';
+import { useNav } from '../store/NavContext';
 import { AppContext } from '../store/AppContext';
 import { dir, ff } from '../theme/fonts';
 import { noteAudioPlayerReleased, playFaAudio, stopFaAudio } from '../utils/faAudio';
@@ -26,6 +27,7 @@ import Balloon from './Balloon';
 import ColorDot from './ColorDot';
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 import { Story } from './stories';
+import { gardenDrawnSize, gardenSourceSize } from './QuestBackdrop';
 import WordArt from './WordArt';
 
 const POP_SOUND = require('../../assets/audio/pop.wav');
@@ -506,6 +508,7 @@ export default function DriveGame({
   const { lang } = useContext(AppContext);
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const { navigate } = useNav();
   const isFa = lang === 'fa' || lang === 'ar';
 
   // The real game area: this view sits below the title bar, so measure it
@@ -892,7 +895,7 @@ export default function DriveGame({
   return (
     <View style={styles.root} onLayout={onGameLayout}>
       {/* Every game gets the same navy X home (unmount stops the engine). */}
-      <NavyClose top={insets.top + 8} left={12} size={Math.max(48, Math.min(gh * 0.13, 56))} />
+      <CloseButton onPress={() => navigate({ name: 'MagicGames' })} />
       {/* Camera: the long world slides past; only the part around the car shows. */}
       <Animated.View
         style={{
@@ -911,6 +914,9 @@ export default function DriveGame({
         <View style={[styles.bgRow, { width: worldW, height: gh, backgroundColor: '#CDEBF7' }]}>
           {Array.from({ length: WORLD_SCREENS }).map((_, i) => {
             const tileW = i === 0 ? gw : gw + BG_OVERLAP;
+            const bgSrc = story.background ?? GARDEN_BG;
+            const bgDims = gardenSourceSize(bgSrc);
+            const drawn = gardenDrawnSize(bgDims.w, bgDims.h, tileW + BG_EDGE_CROP * 2, gh);
             return (
               <View
                 key={i}
@@ -924,8 +930,8 @@ export default function DriveGame({
                 }}
               >
                 <Image
-                  source={story.background ?? GARDEN_BG}
-                  style={{ position: 'absolute', left: -BG_EDGE_CROP, top: 0, width: tileW + BG_EDGE_CROP * 2, height: gh }}
+                  source={bgSrc}
+                  style={{ position: 'absolute', left: (tileW - drawn.w) / 2, bottom: 0, width: drawn.w, height: drawn.h }}
                   resizeMode="cover"
                 />
               </View>

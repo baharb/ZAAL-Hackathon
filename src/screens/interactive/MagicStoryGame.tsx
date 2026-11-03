@@ -35,6 +35,7 @@ import {
   BuddyGuide,
   BuddyMood,
   CandyButton,
+  CloseButton,
   GameBg,
   PLAY_ACCENTS,
   PLAY_INK,
@@ -394,7 +395,7 @@ function IdleHand({ size }: { size: number }) {
 export default function MagicStoryGame() {
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { reset } = useNav();
+  const { navigate } = useNav();
   const k = H / REFERENCE_H;
   const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -805,7 +806,6 @@ export default function MagicStoryGame() {
   const entryBuddyH = Math.min(H * 0.44, W * 0.22);
   const tileS = Math.min(H * 0.13, 76 * k);
   const wandH = Math.max(64, 72 * k);
-  const closeS = Math.max(48, 52 * k);
   const s = styles(k, totalSlides > 7);
   const storyIdx = Math.max(0, safeIdx - 1);
   // Every page: the buddy AND the one friend, side by side, big.
@@ -815,15 +815,7 @@ export default function MagicStoryGame() {
     <View style={s.root}>
       <GameBg pick={roomBackgroundPickers.garden} />
 
-      {/* Floating navy close (top-left), safe-area spaced, no bar. */}
-      <TouchableOpacity
-        onPress={() => reset({ name: 'Main', tab: 'Games' })}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        style={[s.closeBtn, { top: insets.top + 8, left: 12, width: closeS, height: closeS, borderRadius: closeS / 2 }]}
-      >
-        <Image source={neliWorldAssets.ui.close} style={{ width: closeS * 0.55, height: closeS * 0.55 }} resizeMode="contain" />
-      </TouchableOpacity>
+      <CloseButton onPress={() => navigate({ name: 'MagicGames' })} />
 
       {/* Center stage: camera → cast → story. */}
       {!showingNote ? (
@@ -1044,9 +1036,9 @@ export default function MagicStoryGame() {
               <>
                 <View style={s.drawHead}>
                   <Text style={[s.drawTitle, dir('fa')]}>نقاشیتو بکش!</Text>
-                  <TouchableOpacity onPress={closeDrawing} activeOpacity={0.7} accessibilityRole="button" style={s.drawCloseBtn}>
-                    <Text style={s.drawCloseText}>×</Text>
-                  </TouchableOpacity>
+                  <View style={s.drawCloseBtn}>
+                    <CloseButton inline size={Math.max(36, 40 * k)} onPress={closeDrawing} />
+                  </View>
                 </View>
                 {conjuring ? (
                   <View style={s.noteThinking}>
@@ -1174,13 +1166,6 @@ export default function MagicStoryGame() {
 
 const styles = (k: number, compactDots: boolean) => StyleSheet.create({
   root: { flex: 1 },
-  closeBtn: {
-    position: 'absolute',
-    backgroundColor: 'rgba(20,16,60,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
   stage: { flex: 1, alignItems: 'center', justifyContent: 'center', rowGap: 8 * k, paddingHorizontal: 16 * k },
   bubble: {
     backgroundColor: '#FFFFFF',
@@ -1250,7 +1235,7 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
     marginBottom: -2 * k,
   },
   drawTitle: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 20 * k },
-  drawCloseText: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 26 * k, paddingHorizontal: 10 * k },
+
   paperWrap: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12 * k,
