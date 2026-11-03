@@ -169,8 +169,6 @@ export default function FirstLetterGame() {
   const picS = Math.min(height * 0.28, W * 0.22);
   const blockS = Math.min(height * 0.16, W * 0.1);
   const buddyS = Math.min(height * 0.55, W * 0.2);
-  const blankW = picS * 1.9;
-  const blankH = Math.max(26, picS * 0.3);
   const closeS = Math.max(48, 52 * k);
   const answerIdx = deal.choices.findIndex(c => c.id === deal.answer.id);
   const s = styles(k);
@@ -223,10 +221,11 @@ export default function FirstLetterGame() {
               <BuddyGuide mood={prompting ? 'thinking' : rightId ? 'happy' : 'idle'} size={buddyS} />
               <SoftShadow width={buddyS} />
             </View>
-            <View style={s.midCol}>
-              {/* The word's picture picnics on a blanket on the grass — tap
-                  it to hear the word again. Speaker badge on its corner. */}
-              <View style={s.objWrap}>
+            {/* Object stands straight on the grass (bottom ~88%), blocks
+                in a row to its right, word pill above the blocks. The
+                swing is background only. Tap the object to hear the word. */}
+            <View style={[s.midCol, { paddingBottom: height * 0.12 }]}>
+              <View style={s.objSide}>
                 <TouchableOpacity onPress={replay} disabled={prompting || done} activeOpacity={0.85} accessibilityRole="button">
                   <WordArt art={WORD_ART[deal.word.id] ?? null} emoji={deal.word.emoji} size={picS} />
                 </TouchableOpacity>
@@ -239,37 +238,38 @@ export default function FirstLetterGame() {
                 >
                   <Image source={neliWorldAssets.ui.voice} style={{ width: 24 * k, height: 24 * k }} resizeMode="contain" />
                 </TouchableOpacity>
+                <SoftShadow width={picS} />
               </View>
-              <View style={[s.blanket, { width: blankW, height: blankH, marginTop: -picS * 0.25, borderRadius: 14 * k }]} />
-              <SoftShadow width={blankW} />
-              {showName ? (
-                <View style={s.namePill}>
-                  <Text style={[s.nameFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{deal.word.fa}</Text>
-                </View>
-              ) : null}
-              <View style={s.choiceRow}>
-                {deal.choices.map((c, i) => (
-                  <View key={c.id} style={s.blockWrap}>
-                    {showHand && i === answerIdx ? (
-                      <View pointerEvents="none" style={[s.hand, { top: -blockS * 0.75 }]}>
-                        <IdleHand size={blockS * 0.8} />
-                      </View>
-                    ) : null}
-                    <TouchableOpacity
-                      style={[
-                        s.card,
-                        { backgroundColor: BLOCK_COLORS[i % BLOCK_COLORS.length], borderBottomColor: BLOCK_EDGES[i % BLOCK_EDGES.length], width: blockS, height: blockS, borderRadius: 18 * k },
-                        c.id === wrongId && s.cardWrong,
-                        c.id === rightId && s.cardRight,
-                      ]}
-                      onPress={() => void choose(c)}
-                      disabled={prompting}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={[s.cardGlyph, dir('fa'), { textAlign: 'center' }]}>{c.glyph}</Text>
-                    </TouchableOpacity>
+              <View style={s.blockSide}>
+                {showName ? (
+                  <View style={s.namePill}>
+                    <Text style={[s.nameFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{deal.word.fa}</Text>
                   </View>
-                ))}
+                ) : null}
+                <View style={s.choiceRow}>
+                  {deal.choices.map((c, i) => (
+                    <View key={c.id} style={s.blockWrap}>
+                      {showHand && i === answerIdx ? (
+                        <View pointerEvents="none" style={[s.hand, { top: -blockS * 0.75 }]}>
+                          <IdleHand size={blockS * 0.8} />
+                        </View>
+                      ) : null}
+                      <TouchableOpacity
+                        style={[
+                          s.card,
+                          { backgroundColor: BLOCK_COLORS[i % BLOCK_COLORS.length], borderBottomColor: BLOCK_EDGES[i % BLOCK_EDGES.length], width: blockS, height: blockS, borderRadius: 18 * k },
+                          c.id === wrongId && s.cardWrong,
+                          c.id === rightId && s.cardRight,
+                        ]}
+                        onPress={() => void choose(c)}
+                        disabled={prompting}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={[s.cardGlyph, dir('fa'), { textAlign: 'center' }]}>{c.glyph}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
               </View>
             </View>
           </>
@@ -300,8 +300,9 @@ const styles = (k: number) =>
     starsWrap: { position: 'absolute', alignSelf: 'center', zIndex: 30, elevation: 30 },
     body: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 * k, columnGap: 12 * k },
     buddyCol: { width: '28%', alignItems: 'center', justifyContent: 'flex-end', alignSelf: 'stretch', paddingBottom: 10 * k },
-    midCol: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'flex-end', rowGap: 6 * k, paddingBottom: 10 * k },
-    objWrap: { position: 'relative', alignItems: 'center' },
+    midCol: { flex: 1, alignSelf: 'stretch', flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', columnGap: 14 * k },
+    objSide: { position: 'relative', alignItems: 'center' },
+    blockSide: { alignItems: 'center', justifyContent: 'flex-end', rowGap: 6 * k },
     speakerBadge: {
       position: 'absolute',
       right: 6 * k,
@@ -312,13 +313,6 @@ const styles = (k: number) =>
       alignItems: 'center',
       justifyContent: 'center',
       ...CARD_SHADOW,
-    },
-    blanket: {
-      backgroundColor: '#FFF6E5',
-      borderWidth: 3 * k,
-      borderColor: '#E63B3B',
-      borderBottomWidth: 6 * k,
-      borderBottomColor: '#B91C1C',
     },
     namePill: {
       backgroundColor: 'rgba(255,253,245,0.95)',
