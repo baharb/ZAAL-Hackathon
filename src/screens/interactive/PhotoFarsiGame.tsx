@@ -290,8 +290,9 @@ export default function PhotoFarsiGame() {
       >
         <Image source={neliWorldAssets.ui.close} style={{ width: closeS * 0.55, height: closeS * 0.55 }} resizeMode="contain" />
       </TouchableOpacity>
-      <View style={[s.body, { paddingBottom: camS + 20 * k }]}>
-        {/* Buddy stands on the floor (bottom-anchored), bubble over her head. */}
+      <View style={s.body}>
+        {/* Buddy stands on the pink floor, feet at the screen bottom, bubble
+            up-right of her head (never under the close button). */}
         <View style={s.left}>
           {bubbleFa ? (
             <View style={s.bubble}>
@@ -305,8 +306,8 @@ export default function PhotoFarsiGame() {
           <SoftShadow width={buddyS} />
         </View>
 
-        {/* Right: polaroid / thinking / answer */}
-        <View style={s.right}>
+        {/* Right: polaroid / thinking / answer (kept above the camera). */}
+        <View style={[s.right, { paddingBottom: camS + 20 * k }]}>
           {!photo ? null : asking && !result ? (
             <GameCard radius={22 * k} style={s.thinkCard}>
               <ThinkingDots size={14 * k} />
@@ -392,8 +393,8 @@ export default function PhotoFarsiGame() {
         </TouchableOpacity>
       </View>
 
-      {/* Privacy: small cream pill pinned bottom-left, never over the wardrobe. */}
-      <View style={[s.privacyPill, { bottom: 10 * k, left: 12 }]} pointerEvents="none">
+      {/* Privacy: small cream pill pinned bottom-right, clear of her feet. */}
+      <View style={[s.privacyPill, { bottom: 10 * k, right: 12 }]} pointerEvents="none">
         <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>عکس‌ها از دستگاه بیرون نمی‌رود</Text>
       </View>
 
@@ -456,13 +457,14 @@ const styles = (k: number) =>
       zIndex: 10,
     },
     body: { flex: 1, flexDirection: 'row', paddingHorizontal: 14 * k, columnGap: 12 * k },
-    left: { width: '34%', alignItems: 'center', justifyContent: 'flex-end', rowGap: 6 * k },
+    left: { width: '34%', alignItems: 'flex-start', justifyContent: 'flex-end', rowGap: 6 * k, paddingLeft: 12 },
     bubble: {
       backgroundColor: '#FFFFFF',
       borderRadius: 16 * k,
       paddingHorizontal: 14 * k,
       paddingVertical: 8 * k,
-      width: '100%',
+      alignSelf: 'flex-end',
+      width: '96%',
       shadowColor: 'rgba(45,27,105,0.30)',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 1,
@@ -473,7 +475,7 @@ const styles = (k: number) =>
     bubbleTail: {
       position: 'absolute',
       bottom: -7 * k,
-      left: '46%',
+      left: '28%',
       width: 14 * k,
       height: 14 * k,
       backgroundColor: '#FFFFFF',
@@ -518,7 +520,7 @@ const styles = (k: number) =>
       borderRadius: 999,
       paddingHorizontal: 12 * k,
       paddingVertical: 4 * k,
-      maxWidth: '30%',
+      maxWidth: '24%',
     },
     privacy: { fontFamily: ff('fa', 'regular'), color: PLAY_INK, fontSize: 11 * k },
     right: { flex: 1, rowGap: 8 * k, minHeight: 0, alignItems: 'center', justifyContent: 'center' },
