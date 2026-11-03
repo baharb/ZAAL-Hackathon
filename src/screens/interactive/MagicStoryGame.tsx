@@ -797,8 +797,11 @@ export default function MagicStoryGame() {
   const isTitle = lines !== null && safeIdx === 0;
   const isRecap = lines !== null && safeIdx === lines.length + 1;
   const artH = Math.min(H * 0.32, 240 * k);
-  // The paper is the sheet: most of the card, in every size.
-  const paperS = Math.min(W * 0.55, H * 0.58, 520);
+  // The paper IS the sheet: it flex-fills everything the title, colors
+  // and button leave. First frame uses an estimate; onLayout measures.
+  const paperEst = Math.min(W * 0.9, H * 0.5, 520);
+  const [paperBox, setPaperBox] = useState({ w: 0, h: 0 });
+  const pb = paperBox.w > 10 && paperBox.h > 10 ? paperBox : { w: paperEst, h: paperEst };
   const revealS = Math.min(H * 0.4, 200 * k);
   const buddyH = Math.min(H * 0.42, W * 0.17);
   // Start screen: Neli stands big on the ground, bubble above her.
@@ -1036,11 +1039,14 @@ export default function MagicStoryGame() {
       {/* Drawing overlay: finger painting, then the AI cartoon reveal. */}
       {drawing ? (
         <View style={s.noteWrap} pointerEvents="box-none">
-          <View style={[s.drawCard, { width: Math.min(W * 0.94, 860), maxHeight: H * 0.94 }]}>
+          <View style={[s.drawCard, { width: Math.min(W * 0.94, 860), height: H * 0.94 }]}>
             {!cartoonUri ? (
               <>
                 <View style={s.drawHead}>
                   <Text style={[s.drawTitle, dir('fa')]}>نقاشیتو بکش!</Text>
+                  <TouchableOpacity onPress={closeDrawing} activeOpacity={0.7} accessibilityRole="button" style={s.drawCloseBtn}>
+                    <Text style={s.drawCloseText}>×</Text>
+                  </TouchableOpacity>
                 </View>
                 {conjuring ? (
                   <View style={s.noteThinking}>
@@ -1051,14 +1057,15 @@ export default function MagicStoryGame() {
                 ) : (
                   <>
                     <View
-                      style={[s.paperWrap, { width: paperS, height: paperS }]}
+                      style={[s.paperWrap, { width: '100%', flex: 1 }]}
                       onLayout={e => {
                         const { width: w, height: h } = e.nativeEvent.layout;
                         paperRef.current = { w, h };
+                        setPaperBox(prev => (Math.abs(prev.w - w) > 0.5 || Math.abs(prev.h - h) > 0.5 ? { w, h } : prev));
                       }}
                       {...paperResponder.panHandlers}
                     >
-                      <Svg width={paperS} height={paperS} viewBox="0 0 100 100">
+                      <Svg width={pb.w} height={pb.h} viewBox="0 0 100 100" preserveAspectRatio="none">
                         {dstrokes.map(st => (
                           <Path
                             key={st.id}
@@ -1079,7 +1086,11 @@ export default function MagicStoryGame() {
                           onPress={() => { tap(); setDrawColor(c); }}
                           activeOpacity={0.8}
                           accessibilityRole="button"
-                          style={[s.crayon, { backgroundColor: c }, c === drawColor && s.crayonOn]}
+                          style={[
+                          s.crayon,
+                          { backgroundColor: c, borderBottomColor: 'rgba(0,0,0,0.28)', width: 36 * k, height: 36 * k, borderRadius: 12 * k },
+                          c === drawColor && [s.crayonOn, { transform: [{ scale: 1.18 }] }],
+                        ]}
                         />
                       ))}
                       {DRAW_WIDTHS.map((w, i) => (
@@ -1126,9 +1137,6 @@ export default function MagicStoryGame() {
                       </TouchableOpacity>
                     </View>
                     <Text style={[s.drawPrivacy, dir('fa'), { textAlign: 'center' }]}>نقاشی فقط برای کارتونی شدن فرستاده می‌شود و نگه داشته نمی‌شود</Text>
-                    <TouchableOpacity onPress={closeDrawing} activeOpacity={0.7} accessibilityRole="button">
-                      <Text style={[s.retake, s.drawPrivacy, dir('fa'), { textAlign: 'center' }]}>برگرد</Text>
-                    </TouchableOpacity>
                   </>
                 )}
                 {error ? <Text style={s.error}>{error}</Text> : null}
@@ -1230,7 +1238,8 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  drawHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%' },
+  drawHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%', position: 'relative' },
+  drawCloseBtn: { position: 'absolute', right: 0, top: -8 * k, width: 44 * k, height: 44 * k, alignItems: 'center', justifyContent: 'center' },
   drawPrivacy: { color: PLAY_INK, fontSize: 11 * k, fontFamily: ff('fa', 'regular') },
   tail: {
     width: 16 * k,
@@ -1250,8 +1259,8 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
     overflow: 'hidden',
   },
   crayonRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 * k, flexWrap: 'wrap' },
-  crayon: { width: 30 * k, height: 30 * k, borderRadius: 15 * k, borderWidth: 2, borderColor: '#FFFFFF' },
-  crayonOn: { borderColor: PLAY_INK, borderWidth: 3 },
+  crayon: { borderBottomWidth: 5 * k },
+  crayonOn: { borderWidth: 3, borderColor: '#FFB800' },
   widthDot: {
     width: 30 * k,
     height: 30 * k,
