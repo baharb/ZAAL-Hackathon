@@ -169,7 +169,7 @@ export default function FirstLetterGame() {
   const picS = Math.min(height * 0.32, W * 0.22);
   const blockS = Math.min(height * 0.19, W * 0.1);
   const buddyS = Math.min(height * 0.55, W * 0.2);
-  const blankW = picS * 1.5;
+  const blankW = picS * 1.9;
   const blankH = Math.max(26, picS * 0.3);
   const closeS = Math.max(48, 52 * k);
   const answerIdx = deal.choices.findIndex(c => c.id === deal.answer.id);
@@ -299,8 +299,8 @@ const styles = (k: number) =>
     },
     starsWrap: { position: 'absolute', alignSelf: 'center', zIndex: 30, elevation: 30 },
     body: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 * k, columnGap: 12 * k },
-    buddyCol: { width: '28%', alignItems: 'center', justifyContent: 'flex-end', alignSelf: 'stretch', paddingBottom: 18 * k },
-    midCol: { flex: 1, alignItems: 'center', justifyContent: 'center', rowGap: 6 * k },
+    buddyCol: { width: '28%', alignItems: 'center', justifyContent: 'flex-end', alignSelf: 'stretch', paddingBottom: 10 * k },
+    midCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', rowGap: 6 * k, paddingBottom: 10 * k },
     objWrap: { position: 'relative', alignItems: 'center' },
     speakerBadge: {
       position: 'absolute',
