@@ -1,9 +1,11 @@
-// Listen & Find — scene version. The game IS the kitchen: three real
-// objects float in the scene at real size with soft shadows, the big buddy
-// stands central behind them, and tapping the buddy replays the prompt
-// (audio-only listening practice — no prompt text anywhere). A tap bounces
-// the object; the right one pops and flies to the buddy. Five rounds, then
-// a paper recap note with a camera button that saves to روزهای من.
+// Listen & Find — scene version. Each round opens in a random room (kitchen
+// or bedroom) with three objects that belong there, scattered at new spots
+// every time, the big buddy central behind them. Tapping the buddy replays
+// the prompt (audio-only listening practice — no prompt text anywhere).
+// A tap bounces the object; the right one pops and flies to the buddy.
+// Stuck for 7 quiet seconds? A hand points at the right object. Five
+// rounds, then a paper recap note with a camera button that saves to
+// روزهای من.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -17,6 +19,7 @@ import { roomBackgroundPickers, neliWorldAssets } from '../../assets/neliWorldAs
 import { PHOTO_FARSI_WORDS, PhotoFarsiWord } from '../../data/photoFarsiWords';
 import { loadBuddy } from '../../quest/buddyStore';
 import { saveMyDay } from '../../quest/myDaysStore';
+import { IdleHand, useIdleHint } from '../../quest/IdleHand';
 import PopperCelebration from '../../components/PopperCelebration';
 import {
   BuddyGuide,
@@ -24,7 +27,6 @@ import {
   NavyClose,
   PLAY_INK,
   SquareButton,
-  StarsRow,
   WORD_ART,
   WordArt,
 } from '../../ui/playKit';
@@ -35,6 +37,54 @@ const REFERENCE_H = 400;
 const ROUNDS = 5;
 
 const VOICED_WORDS = PHOTO_FARSI_WORDS.filter(w => w.audioKey != null && w.audioKey in FA_TEST_AUDIO);
+
+/** Where each round happens: the background and the words that live in
+ * it, so every object always belongs to its scene. The kitchen serves
+ * food and drink words only — never animals. A new scene (and new
+ * spots) every round keeps the game fresh. */
+const SCENES = [
+  { bg: 'kitchenCheerful', words: ['apple', 'orange', 'bread', 'water'] },
+  { bg: 'bedroom', words: ['book', 'backpack', 'hat', 'shoe'] },
+] as const;
+type SceneBg = (typeof SCENES)[number]['bg'];
+
+const BY_ID: Record<string, PhotoFarsiWord> = Object.fromEntries(VOICED_WORDS.map(w => [w.id, w]));
+
+// Named standing spots, bottom-anchored to a real surface in the art
+// (kitchen counter + island, bedroom bed + rug). The background is
+// bottom-anchored at 125% height, so surfaces sit at fixed screen
+// fractions on every size. Three random slots per round.
+const SCENE_SLOTS: Record<SceneBg, { left: number; base: number }[]> = {
+  kitchenCheerful: [
+    { left: 0.08, base: 0.375 },
+    { left: 0.3, base: 0.375 },
+    { left: 0.6, base: 0.375 },
+    { left: 0.15, base: 0.537 },
+    { left: 0.45, base: 0.537 },
+  ],
+  bedroom: [
+    { left: 0.45, base: 0.41 },
+    { left: 0.62, base: 0.41 },
+    { left: 0.78, base: 0.41 },
+    { left: 0.28, base: 0.625 },
+    { left: 0.7, base: 0.625 },
+  ],
+};
+
+// The catalog art has different amounts of empty padding (the shoes are
+// mostly padding, the orange fills its frame), so equal boxes look
+// unequal. These zooms were matched by eye against the real files so all
+// three choices read as the same visual size.
+const ART_ZOOM: Record<string, number> = {
+  apple: 1.1,
+  orange: 1.0,
+  bread: 1.3,
+  water: 1.15,
+  book: 1.0,
+  backpack: 1.15,
+  hat: 1.6,
+  shoe: 1.7,
+};
 
 function shuffle<T>(items: T[]): T[] {
   return [...items].sort(() => Math.random() - 0.5);
@@ -63,10 +113,15 @@ function GroundShadow({ width }: { width: number }) {
   );
 }
 
-/** Pulsing gold disc behind the buddy: tap to hear again. */
-function BuddyReplay({ size, mood, onReplay }: { size: number; mood: BuddyMood; onReplay: () => void }) {
+/** Tap the buddy to hear again. The subtle pulse ring shows ONLY while
+ * the word is playing — never a permanent stain behind her. */
+function BuddyReplay({ size, mood, onReplay, playing }: { size: number; mood: BuddyMood; onReplay: () => void; playing: boolean }) {
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
+    if (!playing) {
+      pulse.setValue(1);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1.07, duration: 800, useNativeDriver: true }),
@@ -75,21 +130,23 @@ function BuddyReplay({ size, mood, onReplay }: { size: number; mood: BuddyMood; 
     );
     loop.start();
     return () => loop.stop();
-  }, [pulse]);
+  }, [pulse, playing]);
   return (
     <TouchableOpacity onPress={onReplay} activeOpacity={0.9} accessibilityRole="button">
       <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-        <Animated.View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            width: size * 1.02,
-            height: size * 1.02,
-            borderRadius: (size * 1.02) / 2,
-            backgroundColor: 'rgba(255,184,0,0.45)',
-            transform: [{ scale: pulse }],
-          }}
-        />
+        {playing ? (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              width: size * 1.02,
+              height: size * 1.02,
+              borderRadius: (size * 1.02) / 2,
+              backgroundColor: 'rgba(255,184,0,0.35)',
+              transform: [{ scale: pulse }],
+            }}
+          />
+        ) : null}
         <BuddyGuide mood={mood} size={size} />
       </View>
     </TouchableOpacity>
@@ -99,18 +156,36 @@ function BuddyReplay({ size, mood, onReplay }: { size: number; mood: BuddyMood; 
 type CardAnims = { shake: Animated.Value; pop: Animated.Value; rise: Animated.Value; fade: Animated.Value };
 
 export default function ListenFindGame() {
-  const { height: H } = useWindowDimensions();
+  const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const k = H / REFERENCE_H;
   const [round, setRound] = useState(0);
   const lastWordId = useRef<string | null>(null);
-  const freshCards = (): { answer: PhotoFarsiWord; choices: PhotoFarsiWord[] } => {
-    let pool = VOICED_WORDS.filter(w => w.id !== lastWordId.current);
-    if (pool.length === 0) pool = VOICED_WORDS;
-    const picked = shuffle(pool);
-    const first = picked[0]!;
-    lastWordId.current = first.id;
-    return { answer: first, choices: shuffle(picked.filter(w => w.id !== first.id).slice(0, 2).concat(first)) };
+  const lastSceneBg = useRef<SceneBg | null>(null);
+  const freshCards = (): {
+    answer: PhotoFarsiWord;
+    choices: PhotoFarsiWord[];
+    scene: SceneBg;
+    spots: { left: number; top: number }[];
+  } => {
+    // A new scene every round (never the same twice in a row).
+    let scenes = SCENES.filter(s => s.bg !== lastSceneBg.current);
+    if (scenes.length === 0) scenes = [...SCENES];
+    const scene = scenes[Math.floor(Math.random() * scenes.length)]!;
+    lastSceneBg.current = scene.bg;
+    // Answer + distractors all belong to this scene.
+    const words = scene.words.map(id => BY_ID[id]!).filter(Boolean);
+    let pool = words.filter(w => w.id !== lastWordId.current);
+    if (pool.length === 0) pool = words;
+    const answer = shuffle(pool)[0]!;
+    lastWordId.current = answer.id;
+    const choices = shuffle([...shuffle(words.filter(w => w.id !== answer.id)).slice(0, 2), answer]);
+    // Three random standing spots, bottom-anchored to their surface.
+    const objS = H * 0.22;
+    const spots = shuffle([...SCENE_SLOTS[scene.bg]])
+      .slice(0, 3)
+      .map(s => ({ left: W * s.left, top: H * s.base - objS }));
+    return { answer, choices, scene: scene.bg, spots };
   };
   const [cards, setCards] = useState(freshCards);
   const [prompting, setPrompting] = useState(true);
@@ -120,6 +195,10 @@ export default function ListenFindGame() {
   const [wrongIdx, setWrongIdx] = useState<number | null>(null);
   const [mood, setMood] = useState<BuddyMood>('idle');
   const [saved, setSaved] = useState(false);
+  // Every tap restarts the idle wait: the hand only appears when she is
+  // truly stuck, then points at the right object.
+  const [taps, setTaps] = useState(0);
+  const showHand = useIdleHint(!done && !prompting, 7000, round * 1000 + taps);
   const alive = useRef(true);
   const anims = useRef<CardAnims[]>(
     [0, 1, 2].map(() => ({
@@ -170,6 +249,7 @@ export default function ListenFindGame() {
     setWrongIdx(null);
     setRound(next);
     setMood('idle');
+    setTaps(0);
     resetAnims();
     void speakPrompt(deal.answer);
   };
@@ -178,6 +258,7 @@ export default function ListenFindGame() {
     const word = cards.choices[index]!;
     if (prompting || done) return;
     tap();
+    setTaps(t => t + 1);
     if (word.id === cards.answer.id) {
       setPrompting(true);
       setMood('happy');
@@ -234,6 +315,7 @@ export default function ListenFindGame() {
     setDone(false);
     setFound([]);
     setSaved(false);
+    setTaps(0);
     setCards(deal);
     setWrongIdx(null);
     setMood('idle');
@@ -265,12 +347,11 @@ export default function ListenFindGame() {
   const buddySize = Math.min(H * 0.52, 400 * k);
   const closeS = Math.max(48, 52 * k);
   const s = styles(k);
-  const lefts = ['16%', '43%', '70%'] as const;
   return (
     <View style={s.root}>
       <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
         <Image
-          source={roomBackgroundPickers.kitchenCheerful(800, 400)}
+          source={roomBackgroundPickers[cards.scene](800, 400)}
           style={{ position: 'absolute', left: 0, right: 0, bottom: 0, width: '100%', height: '125%' }}
           resizeMode="cover"
         />
@@ -278,27 +359,52 @@ export default function ListenFindGame() {
       </View>
       <NavyClose top={insets.top + 8} left={12} size={closeS} />
 
-      {/* Progress stars, top-center. No round text. */}
+      {/* Progress stars, top-center: big, bold, gold when filled. No round text. */}
       {!done ? (
         <View style={[s.starsWrap, { top: insets.top + 12 }]} pointerEvents="none">
-          <StarsRow total={ROUNDS} filled={stars} size={Math.max(16, 20 * k)} />
+          <View style={{ flexDirection: 'row', gap: 6 * k }}>
+            {Array.from({ length: ROUNDS }).map((_, i) => (
+              <Text
+                key={i}
+                style={{
+                  fontSize: Math.max(22, 26 * k),
+                  color: i < stars ? '#FFB800' : 'rgba(255,255,255,0.45)',
+                  textShadowColor: 'rgba(30,20,60,0.6)',
+                  textShadowOffset: { width: 0, height: 2 },
+                  textShadowRadius: 3,
+                }}
+              >
+                ★
+              </Text>
+            ))}
+          </View>
         </View>
       ) : null}
 
       {/* Buddy, big and central. Tap to hear again. */}
       {!done ? (
         <View style={[s.buddyWrap, { bottom: H * 0.02 }]}>
-          <BuddyReplay size={buddySize} mood={mood} onReplay={replay} />
+          <BuddyReplay size={buddySize} mood={mood} onReplay={replay} playing={prompting} />
           <GroundShadow width={buddySize * 0.5} />
         </View>
       ) : null}
 
-      {/* Three real objects floating in the scene. */}
+      {/* Three real objects scattered over the scene, new spots each round.
+          Stuck (7 quiet seconds)? The hand points at the right one. */}
       {!done
         ? cards.choices.map((c, i) => {
             const a = anims[i]!;
+            const spot = cards.spots[i]!;
             return (
-              <View key={c.id} style={[s.objSlot, { left: lefts[i], top: H * 0.26 }]}>
+              <View key={c.id} style={[s.objSlot, { left: spot.left, top: spot.top }]}>
+                {showHand && c.id === cards.answer.id ? (
+                  <View
+                    pointerEvents="none"
+                    style={{ position: 'absolute', alignSelf: 'center', top: -objSize * 0.12, zIndex: 15, elevation: 15 }}
+                  >
+                    <IdleHand size={objSize * 0.85} />
+                  </View>
+                ) : null}
                 <TouchableOpacity onPress={() => void choose(i)} disabled={prompting} activeOpacity={0.9} accessibilityRole="button">
                   <Animated.View
                     style={{
@@ -307,7 +413,7 @@ export default function ListenFindGame() {
                       transform: [{ translateX: a.shake }, { translateY: a.rise }, { scale: a.pop }],
                     }}
                   >
-                    <WordArt art={WORD_ART[c.id] ?? null} emoji={c.emoji} size={objSize} />
+                    <WordArt art={WORD_ART[c.id] ?? null} emoji={c.emoji} size={objSize * (ART_ZOOM[c.id] ?? 1)} />
                     <GroundShadow width={objSize * 0.7} />
                   </Animated.View>
                 </TouchableOpacity>
@@ -326,7 +432,7 @@ export default function ListenFindGame() {
             <View style={s.foundRow}>
               {found.map(w => (
                 <View key={w.id} style={s.foundItem}>
-                  <WordArt art={WORD_ART[w.id] ?? null} emoji={w.emoji} size={52 * k} />
+                  <WordArt art={WORD_ART[w.id] ?? null} emoji={w.emoji} size={52 * k * (ART_ZOOM[w.id] ?? 1)} />
                   <View style={s.wordTag}>
                     <Text style={[s.wordTagText, dir('fa')]} numberOfLines={1}>{w.fa}</Text>
                   </View>
