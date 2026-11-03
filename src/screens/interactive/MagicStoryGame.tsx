@@ -38,6 +38,7 @@ import {
   GameBg,
   PLAY_ACCENTS,
   PLAY_INK,
+  SoftShadow,
   WORD_ART,
   WordArt,
 } from '../../ui/playKit';
@@ -837,6 +838,10 @@ export default function MagicStoryGame() {
                 <Text style={[s.bubbleText, dir('fa'), { textAlign: 'center' }]}>از اتاقت عکس بگیر یا نقاشی بکش!</Text>
               </View>
               <View style={s.tail} />
+              <BuddyGuide mood={mood} size={entryBuddyH} />
+              <SoftShadow width={entryBuddyH} />
+              {/* Both buttons live at the bottom, left and right of her —
+                  never over her feet or the bubble's tail. */}
               <View style={s.entryRow}>
                 <View style={s.entryHalf}>
                   <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={takeRoomPhoto} disabled={analyzing} height={wandH}>
@@ -850,7 +855,6 @@ export default function MagicStoryGame() {
                   </CandyButton>
                 </View>
               </View>
-              <BuddyGuide mood={mood} size={entryBuddyH} />
               <View style={s.privacyPill}>
                 <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]}>عکس‌ها از دستگاه بیرون نمی‌رود</Text>
               </View>
