@@ -5,8 +5,9 @@
 // draws on the tablet instead: the drawing is repainted as a real cartoon
 // by Meta's image model (Edge Function `cartoon` — same model also
 // repaints photos) and stars as the hero. Those stickers star in a REAL
-// 10-page bedtime story — beginning, gentle problem, happy ending — plus
-// a recap page with the lesson learned. A non-reader follows the pictures;
+// 6-line storybook — who/where, one small happy problem solved together,
+// happy ending — plus a recap page with the lesson learned. A non-reader
+// follows the pictures;
 // a guiding hand appears if she sits on a page. The only spoken word is a
 // recorded one (iPhones have no Persian voice). Room photos live in
 // session state only — processed and discarded, like Photo Farsi. A
@@ -26,8 +27,10 @@ import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
 import { askCartoon, askMeta } from '../../services/metaAI';
 import { DrawStroke, drawingToPngBase64 } from '../../utils/drawingPng';
 import { roomBackgroundPickers, neliWorldAssets } from '../../assets/neliWorldAssets';
-import { STORY_FOCUS_WORDS, StoryFocus } from '../../data/magicStory';
+import { STORY_FOCUS_WORDS, StoryFocus, fallbackStory, validStoryLines } from '../../data/magicStory';
 import { ROOM_ITEMS, RecognizedWord, RoomItem, matchRoomItem } from '../../data/roomItems';
+import { BUDDIES, BuddyId, loadBuddy } from '../../quest/buddyStore';
+import { buddyPose } from '../../quest/questTheme';
 import {
   BuddyGuide,
   BuddyMood,
@@ -63,15 +66,18 @@ const DRAW_ITEM: RoomItem = { id: 'mydrawing', fa: ['نقاشی'], en: ['drawing
 const DRAW_CRAYONS = ['#E63B3B', '#FF8A00', '#FFD93B', '#2FBF6B', '#2B7FFF', '#9B4DFF', '#5B3A29', '#222222'];
 const DRAW_WIDTHS = [0.025, 0.05];
 
-/** Story themes: picked fresh for EVERY story so no two tales feel the same. */
-const STORY_THEMES = [
-  { fa: 'پیک‌نیک', en: 'a sunny picnic in the park', setup: 'packing yummy food, ants marching by, sharing with friends' },
-  { fa: 'باران', en: 'a rainy day indoors', setup: 'building a blanket fort, drumming on pots, rainbow after rain' },
-  { fa: 'برج', en: 'building the tallest block tower', setup: 'blocks tumbling down with a laugh, rebuilding together' },
-  { fa: 'تولد', en: 'a little birthday party', setup: 'blowing candles, a lopsided cake, dancing in a circle' },
-  { fa: 'باغ', en: 'a morning in the garden', setup: 'a snail race, watering flowers, a ladybug landing on a nose' },
-  { fa: 'حمام', en: 'splashy bath time', setup: 'paper boats racing, bubbles shaped like hats, splashing gently' },
-];
+/** Catalog ids that are animals — only these can be the tale's friend. */
+const ANIMAL_IDS = new Set([
+  'fish', 'chick', 'bee', 'parrot', 'frog', 'elephant', 'jellyfish',
+  'cat', 'monkey', 'bear', 'panda', 'rabbit',
+]);
+
+/** Fallback friends (all have art) when the room shows no animal. */
+const DEFAULT_FRIEND_IDS = ['bear', 'rabbit', 'cat'];
+
+function roomItemById(id: string): RoomItem | undefined {
+  return ROOM_ITEMS.find(r => r.id === id);
+}
 
 function parseItems(text: string): RecognizedWord[] | null {
   const clean = (text ?? '').replace(/```json|```/g, '');
@@ -110,36 +116,32 @@ export type StoryText = { title: string; lines: string[]; recap: string; lesson:
 function parseStory(text: string): StoryText | null {
   const clean = (text ?? '').replace(/```json|```/g, '');
   const match = clean.match(/\{[\s\S]*\}/);
-  let lines: string[] | null = null;
-  let title = '';
-  let recap = '';
-  let lesson = '';
   if (match) {
     try {
       const obj = JSON.parse(match[0]);
-      if (Array.isArray(obj.lines)) {
-        const ls = obj.lines.filter((l: unknown) => typeof l === 'string').map((l: string) => l.slice(0, 80));
-        if (ls.length >= 8 && ls.length <= 12) lines = ls;
-      }
-      if (typeof obj.title === 'string') title = obj.title.slice(0, 50);
-      if (typeof obj.recap === 'string') recap = obj.recap.slice(0, 140);
-      if (typeof obj.lesson === 'string') lesson = obj.lesson.slice(0, 90);
+      const ls = Array.isArray(obj.lines)
+        ? obj.lines.filter((l: unknown) => typeof l === 'string').map((l: string) => l.slice(0, 80))
+        : [];
+      const title = typeof obj.title === 'string' ? obj.title.slice(0, 50).trim() : '';
+      const recap = typeof obj.recap === 'string' ? obj.recap.slice(0, 140).trim() : '';
+      const lesson = typeof obj.lesson === 'string' ? obj.lesson.slice(0, 90).trim() : '';
+      // The gate: exactly 6 short clean lines plus a real title, recap
+      // and lesson — anything else goes back for one retry, then fallback.
+      if (validStoryLines(ls) && title && recap && lesson) return { title, lines: ls, recap, lesson };
+      return null;
     } catch { /* fall through to salvage below */ }
   }
-  if (!lines) {
-    // Salvage: keep the Farsi-looking lines so the child still gets a
-    // story — but a short one is not a storybook, so demand at least 8.
-    const faRange = new RegExp('[\\u0600-\\u06FF]');
-    const seen = new Set<string>();
-    const ls = clean
-      .split('\n')
-      .map(l => l.replace(/^[\s*#\-–—\d.)\]]+/, '').replace(/["*]/g, '').trim())
-      .filter(l => l.length > 0 && l.length <= 80 && faRange.test(l))
-      .filter(l => (seen.has(l) ? false : (seen.add(l), true)));
-    if (ls.length < 8) return null;
-    lines = ls.slice(0, 12);
-  }
-  return { title, lines, recap, lesson };
+  // Salvage: Farsi-looking lines, still through the same gate.
+  const faRange = new RegExp('[\\u0600-\\u06FF]');
+  const seen = new Set<string>();
+  const ls = clean
+    .split('\n')
+    .map(l => l.replace(/^[\s*#\-–—\d.)\]]+/, '').replace(/["*]/g, '').trim())
+    .filter(l => l.length > 0 && l.length <= 80 && faRange.test(l))
+    .filter(l => (seen.has(l) ? false : (seen.add(l), true)))
+    .slice(0, 6);
+  if (!validStoryLines(ls)) return null;
+  return { title: '', lines: ls, recap: '', lesson: '' };
 }
 
 /** The room photo as a comic-print cartoon: circular die-cut plus a
@@ -397,6 +399,19 @@ export default function MagicStoryGame() {
   const [analyzing, setAnalyzing] = useState(false);
   const [cast, setCast] = useState<StoryCastMember[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // The book's people: the child's buddy plus ONE friend. Room finds that
+  // are not the friend become silent objects (at most 2), never talkers.
+  const [buddyId, setBuddyId] = useState<BuddyId>('neli');
+  const [storyObjects, setStoryObjects] = useState<StoryCastMember[]>([]);
+  useEffect(() => {
+    let live = true;
+    loadBuddy().then(b => {
+      if (live && b) setBuddyId(b);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
   const [focus, setFocus] = useState<StoryFocus | null>(null);
   const [lines, setLines] = useState<string[] | null>(null);
   const [storyTitle, setStoryTitle] = useState('');
@@ -475,6 +490,7 @@ export default function MagicStoryGame() {
       setUnmatched([]);
       setPhoto({ uri: asset.uri, base64: asset.base64 });
       setRoomCartoon(null);
+      setStoryObjects([]);
       cartoonSeqRef.current++;
       setAnalyzing(true);
       const named = await askMeta({
@@ -512,8 +528,19 @@ export default function MagicStoryGame() {
         setPhoto(null);
         return;
       }
-      setCast(matched.slice(0, 5));
-      setSelectedIds(matched.slice(0, 5).map(m => m.item.id));
+      // ONE friend: matched animals first; friendly defaults when the room
+      // shows none. Everything else found becomes a silent object (max 2).
+      const animals = matched.filter(m => ANIMAL_IDS.has(m.item.id));
+      const options: StoryCastMember[] =
+        animals.length > 0
+          ? animals
+          : DEFAULT_FRIEND_IDS.map(id => {
+              const item = roomItemById(id)!;
+              return { item, fa: item.fa[0]!, en: item.en[0]! };
+            });
+      setCast(options);
+      setSelectedIds([options[0]!.item.id]);
+      setStoryObjects(matched.filter(m => m.item.id !== options[0]!.item.id).slice(0, 2));
       // Same sticker magic as drawings, for the room photo too — in the
       // background, so picking the cast never waits for it. A stale reply
       // (photo retaken mid-flight) is dropped by the sequence guard.
@@ -530,8 +557,9 @@ export default function MagicStoryGame() {
     }
   };
 
+  // One friend only: tapping picks THE friend, never a crowd.
   const toggleItem = (id: string) => {
-    setSelectedIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+    setSelectedIds([id]);
   };
 
   // A new story source means: clear everything downstream.
@@ -556,6 +584,7 @@ export default function MagicStoryGame() {
     setPhoto(null);
     setCast([]);
     setSelectedIds([]);
+    setStoryObjects([]);
     setCartoonUri(null);
     setDrawing(true);
   };
@@ -644,6 +673,7 @@ export default function MagicStoryGame() {
     const m: StoryCastMember = { item: DRAW_ITEM, fa: 'نقاشی', en: 'drawing', heroUri: cartoonUri };
     setCast([m]);
     setSelectedIds([DRAW_ITEM.id]);
+    setStoryObjects([]);
     setCartoonUri(null);
     setDstrokes([]);
     setDrawing(false);
@@ -668,59 +698,65 @@ export default function MagicStoryGame() {
     setCelebrate(false);
     setPageIdx(0);
     try {
-      // The one spoken word must have a real recording: prefer a cast
-      // member that has one, otherwise draw any recorded word.
-      const recorded = selected.find(m => m.item.audioKey && m.item.audioKey in FA_TEST_AUDIO);
-      const nextFocus: StoryFocus = recorded
-        ? { id: recorded.item.id, fa: recorded.fa, en: recorded.en, emoji: '⭐', audioKey: recorded.item.audioKey! }
+      // The book's people: the child's buddy plus ONE friend. Room finds
+      // that are not the friend are silent objects (at most 2) — mentioned
+      // like things, never talking characters.
+      const buddy = BUDDIES.find(b => b.id === buddyId) ?? BUDDIES[0]!;
+      const friend = selected[0]!;
+      const objs = storyObjects.slice(0, 2);
+      // The one spoken word must have a real recording: prefer the friend
+      // when it has one, otherwise draw any recorded word.
+      const honk = friend.item.audioKey && friend.item.audioKey in FA_TEST_AUDIO ? friend : null;
+      const nextFocus: StoryFocus = honk
+        ? { id: honk.item.id, fa: honk.fa, en: honk.en, emoji: '⭐', audioKey: honk.item.audioKey! }
         : STORY_FOCUS_WORDS[Math.floor(Math.random() * STORY_FOCUS_WORDS.length)]!;
-      const castList = selected.map(m => `${m.fa} (${m.en})`).join(', ');
-      const hasDrawing = selected.some(m => m.item.id === DRAW_ITEM.id);
-      // A fresh theme EVERY story: the model can no longer fall back to its
-      // favourite fear-and-sleep tale. Fear, darkness and monsters are banned
-      // unless the theme itself asks for them (none of them do).
-      const theme = STORY_THEMES[Math.floor(Math.random() * STORY_THEMES.length)]!;
-      const res = await askMeta({
-        prompt:
-          `Write a beloved picture-book story in Farsi for a 4-year-old: EXACTLY 10 very short lines, ` +
-          `plus a title, a one-line recap and a one-line sweet lesson. ` +
-          `Friends in the story: ${castList}. Today's adventure: ${theme.en} (${theme.setup}). ` +
-          (hasDrawing
-            ? `One friend is the child's own magic drawing (نقاشی) — the bravest, kindest hero of all. `
-            : '') +
-          `Write like Llama Llama and Elephant & Piggie: a simple repeating rhythm, one funny little refrain ` +
-          `that comes back twice, gentle silliness, big warm feelings. One small funny problem in the middle ` +
-          `(something spilled, something lost, something upside down), solved together with a hug and laughter. ` +
-          `NEVER write about fear, darkness, monsters, nightmares or falling asleep. ` +
-          `Do NOT list the friends' names like a roll call — weave them in naturally; some lines name nobody ` +
-          `at all, just the moment. The story MUST include the word "${nextFocus.fa}" (${nextFocus.en}) once, ` +
-          `as part of the tale, never announced. ` +
-          `Each line is ONE thing happening, and line N+1 must follow from line N — a real chain of events, ` +
-          `never random sentences. Each line at most 8 very simple Farsi words a 3-year-old knows. ` +
-          `The recap is one line about what happened today (never a list of names). ` +
-          `The lesson is one sweet line. ` +
-          `Reply with ONLY this JSON and no other text: ` +
-          `{"title": "...", "lines": ["...", ...10 total...], "recap": "...", "lesson": "..."}`,
-        system:
-          'Title plus exactly ten lines plus recap plus lesson. Beloved-book rhythm: refrain twice, gentle humor, ' +
-          'warm hugs, no roll-call of names, no fear or sleep. One event per line, each line follows the last. ' +
-          'JSON only, never any other text.',
-        maxTokens: 1000,
-      });
-      if ('error' in res || !res.text || !res.text.trim()) {
-        setError('نلی الان نمی‌تونه، دوباره امتحان کن');
-        return;
+      const objLine =
+        objs.length > 0
+          ? `Things in the story — never talking, just things the friends use and play with: ${objs
+              .map(o => `${o.fa} (${o.en})`)
+              .join(' and ')}. Mention each at most once, in passing. `
+          : '';
+      const buildPrompt = () =>
+        `Write a picture-book story in Farsi for a 4-year-old: EXACTLY 6 very short lines, ` +
+        `plus a title, a one-line recap and a one-line sweet lesson. ` +
+        `Hero: ${buddy.fa} (${buddy.en}) — the child's best friend. ` +
+        `Friend: ${friend.fa} (${friend.en}). ` +
+        objLine +
+        `Setting: a cozy home day. ` +
+        `Everyday spoken Farsi, like a mom talking to a 4-year-old. One simple sentence per line, max 8 words. ` +
+        `No poetry, no rhyme, no refrain. ` +
+        `Plot: who and where → one small happy problem → solve it together → happy ending. ` +
+        `Each line follows from the one before. ` +
+        `The story MUST include the word "${nextFocus.fa}" (${nextFocus.en}) once, as part of the tale, never announced. ` +
+        `NEVER write about fear, the dark, monsters, nightmares, falling asleep or crying. ` +
+        `Do NOT list names like a roll call. ` +
+        `Example to follow (same shape, a NEW story, not this one): ` +
+        `{"title":"نلی و توپ قرمز","lines":["نلی یه توپ قرمز داشت.","توپ قل خورد و رفت زیر میز.","نلی گفت: توپ جونی کجایی","آیدین اومد و زیر میز رو نگاه کرد.","توپ اونجا بود! نلی خندید.","نلی و آیدین با هم توپبازی کردن."],"recap":"نلی توپش رو پیدا کرد.","lesson":"دوستا به هم کمک میکنن."} ` +
+        `Reply with ONLY this JSON and no other text: ` +
+        `{"title": "...", "lines": ["...", ...6 total...], "recap": "...", "lesson": "..."}`;
+      const system =
+        'Title plus exactly six lines plus recap plus lesson. Mom-talking Farsi, no poetry, no fear, no roll call. ' +
+        'One event per line, each line follows the last. JSON only, never any other text.';
+      // Ask at most twice; a hand-written fallback guarantees the child
+      // always gets a real story, never an error screen.
+      let filled = null as null | { title: string; lines: string[]; recap: string; lesson: string };
+      for (let attempt = 0; attempt < 2 && !filled; attempt++) {
+        const res = await askMeta({ prompt: buildPrompt(), system, maxTokens: 600, temperature: 0.7 });
+        if ('error' in res || !res.text || !res.text.trim()) continue;
+        const parsed = parseStory(res.text);
+        if (parsed && parsed.title && parsed.recap && parsed.lesson) filled = parsed;
       }
-      const parsed = parseStory(res.text);
-      if (!parsed) {
-        setError('نلی الان نمی‌تونه، دوباره امتحان کن');
-        return;
+      if (!filled) {
+        filled = fallbackStory(
+          { buddy: buddy.fa, friend: friend.fa, obj: objs[0]?.fa ?? 'توپ' },
+          Math.floor(Math.random() * 5),
+        );
       }
       setFocus(nextFocus);
-      setStoryTitle(parsed.title || `قصه‌ی ${selected[0].fa}`);
-      setLines(parsed.lines);
-      setRecap(parsed.recap);
-      setLesson(parsed.lesson);
+      setStoryTitle(filled.title || `قصه‌ی ${friend.fa}`);
+      setLines(filled.lines);
+      setRecap(filled.recap);
+      setLesson(filled.lesson);
       setCelebrate(true);
       // The one spoken word only — no afarin after it. The story ends
       // soft, and the recap page says what was learned.
@@ -740,17 +776,20 @@ export default function MagicStoryGame() {
   const isTitle = lines !== null && safeIdx === 0;
   const isRecap = lines !== null && safeIdx === lines.length + 1;
   const artH = Math.min(H * 0.32, 240 * k);
-  const paperS = Math.min(W * 0.52, H * 0.46, 460);
+  // The paper is the sheet: most of the card, in every size.
+  const paperS = Math.min(W * 0.55, H * 0.58, 520);
   const revealS = Math.min(H * 0.4, 200 * k);
   const buddyH = Math.min(H * 0.42, W * 0.17);
+  // Start screen: Neli stands big on the ground, bubble above her.
+  const entryBuddyH = Math.min(H * 0.44, W * 0.22);
   const tileS = Math.min(H * 0.13, 76 * k);
   const wandH = Math.max(64, 72 * k);
   const closeS = Math.max(48, 52 * k);
   const s = styles(k, totalSlides > 7);
   const storyIdx = Math.max(0, safeIdx - 1);
-  const featured = lines && selected.length > 0 ? selected[storyIdx % selected.length]! : null;
-  const friend = lines && selected.length > 1 ? selected[(storyIdx + 1) % selected.length]! : null;
-  const showFriend = !!friend && !!featured && friend.item.id !== featured.item.id && storyIdx % 2 === 1;
+  // Every page: the buddy AND the one friend, side by side, big.
+  const friend = lines && selected.length > 0 ? selected[0]! : null;
+  const buddyArt = buddyPose(buddyId, 'base');
   return (
     <View style={s.root}>
       <GameBg pick={roomBackgroundPickers.garden} />
@@ -770,10 +809,11 @@ export default function MagicStoryGame() {
         <View style={s.stage}>
           {!photo && cast.length === 0 ? (
             <>
-              <BuddyGuide mood={mood} size={buddyH} />
               <View style={s.bubble}>
                 <Text style={[s.bubbleText, dir('fa'), { textAlign: 'center' }]}>از اتاقت عکس بگیر یا نقاشی بکش!</Text>
               </View>
+              <View style={s.tail} />
+              <BuddyGuide mood={mood} size={entryBuddyH} />
               <View style={s.entryRow}>
                 <View style={s.entryHalf}>
                   <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={takeRoomPhoto} disabled={analyzing} height={wandH}>
@@ -808,7 +848,7 @@ export default function MagicStoryGame() {
                   </StickerFrame>
                 ) : null}
                 <View style={s.bubbleSmall}>
-                  <Text style={[s.bubbleSmallText, dir('fa'), { textAlign: 'center' }]}>کی توی قصه باشه؟</Text>
+                  <Text style={[s.bubbleSmallText, dir('fa'), { textAlign: 'center' }]}>کدوم دوست توی قصه باشه؟</Text>
                 </View>
               </View>
               <View style={s.castRow}>
@@ -833,6 +873,11 @@ export default function MagicStoryGame() {
               {unmatched.length > 0 ? (
                 <Text style={[s.extraFa, dir('fa'), { textAlign: 'center' }]}>…و {unmatched.join('، ')} هم هست</Text>
               ) : null}
+              {storyObjects.length > 0 ? (
+                <Text style={[s.extraFa, dir('fa'), { textAlign: 'center' }]}>
+                  تو قصه هست: {storyObjects.map(o => o.fa).join('، ')}
+                </Text>
+              ) : null}
               <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={tellStory} disabled={asking || selected.length === 0} height={wandH}>
                 <Image source={neliWorldAssets.ui.sparkle} style={{ width: wandH * 0.45, height: wandH * 0.45 }} resizeMode="contain" />
                 <Text style={s.tellText}>{asking ? '…' : 'قصه بگو'}</Text>
@@ -843,7 +888,7 @@ export default function MagicStoryGame() {
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
-                  onPress={() => { tap(); setCast([]); setSelectedIds([]); openDrawing(); }}
+                  onPress={() => { tap(); setCast([]); setSelectedIds([]); setStoryObjects([]); openDrawing(); }}
                   activeOpacity={0.7}
                 >
                   <Text style={[s.retake, dir('fa'), { textAlign: 'center' }]}>یه نقاشی دیگه</Text>
@@ -871,9 +916,12 @@ export default function MagicStoryGame() {
                 {isTitle ? (
                   <>
                     <View style={s.recapCast}>
-                      {selected.map(m => (
-                        <CastSticker key={m.item.id} m={m} size={Math.min(72 * k, H * 0.16)} tilt={-6} />
-                      ))}
+                      <Image
+                        source={buddyArt}
+                        style={{ width: Math.min(72 * k, H * 0.16), height: Math.min(72 * k, H * 0.16) }}
+                        resizeMode="contain"
+                      />
+                      {friend ? <CastSticker m={friend} size={Math.min(72 * k, H * 0.16)} tilt={-6} /> : null}
                     </View>
                     <Text style={[s.titleFa, dir('fa'), { textAlign: 'center' }]}>{storyTitle}</Text>
                   </>
@@ -884,32 +932,33 @@ export default function MagicStoryGame() {
                         <CartoonSticker uri={roomCartoon} size={artH * 0.9} tilt={-6} />
                       ) : photo ? (
                         <ToonPhoto uri={photo.uri} size={artH} />
-                      ) : featured?.heroUri ? (
-                        <CartoonSticker uri={featured.heroUri} size={artH * 0.9} tilt={-6} />
+                      ) : friend?.heroUri ? (
+                        <CartoonSticker uri={friend.heroUri} size={artH * 0.9} tilt={-6} />
                       ) : null}
-                      {featured ? (
-                        <View style={s.pageFigure}>
-                          <CastSticker m={featured} size={artH * 0.44} tilt={6} />
-                        </View>
-                      ) : null}
-                      {showFriend && friend ? (
+                      <View style={s.pageFigure}>
+                        <Image
+                          source={buddyArt}
+                          style={{ width: artH * 0.44, height: artH * 0.44 }}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      {friend ? (
                         <View style={s.pageFriend}>
-                          <CastSticker m={friend} size={artH * 0.34} tilt={-6} />
+                          <CastSticker m={friend} size={artH * 0.44} tilt={-6} />
                         </View>
-                      ) : (
-                        <View style={s.pageBuddy}>
-                          <BuddyGuide mood="happy" size={artH * 0.34} />
-                        </View>
-                      )}
+                      ) : null}
                     </View>
                     <Text style={[s.line, dir('fa'), { textAlign: 'center' }]}>{lines[storyIdx]}</Text>
                   </>
                 ) : (
                   <>
                     <View style={s.recapCast}>
-                      {selected.map(m => (
-                        <CastSticker key={m.item.id} m={m} size={Math.min(64 * k, H * 0.14)} tilt={-6} />
-                      ))}
+                      <Image
+                        source={buddyArt}
+                        style={{ width: Math.min(64 * k, H * 0.14), height: Math.min(64 * k, H * 0.14) }}
+                        resizeMode="contain"
+                      />
+                      {friend ? <CastSticker m={friend} size={Math.min(64 * k, H * 0.14)} tilt={-6} /> : null}
                     </View>
                     {recap ? <Text style={[s.line, dir('fa'), { textAlign: 'center' }]}>{recap}</Text> : null}
                     {lesson ? (
@@ -969,9 +1018,6 @@ export default function MagicStoryGame() {
               <>
                 <View style={s.drawHead}>
                   <Text style={[s.drawTitle, dir('fa')]}>نقاشیتو بکش!</Text>
-                  <TouchableOpacity onPress={closeDrawing} activeOpacity={0.7} accessibilityRole="button">
-                    <Text style={s.drawCloseText}>×</Text>
-                  </TouchableOpacity>
                 </View>
                 {conjuring ? (
                   <View style={s.noteThinking}>
@@ -1053,7 +1099,10 @@ export default function MagicStoryGame() {
                         <EraserIcon size={30 * k} />
                       </TouchableOpacity>
                     </View>
-                    <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]}>نقاشی فقط برای کارتونی شدن فرستاده می‌شود و نگه داشته نمی‌شود</Text>
+                    <Text style={[s.drawPrivacy, dir('fa'), { textAlign: 'center' }]}>نقاشی فقط برای کارتونی شدن فرستاده می‌شود و نگه داشته نمی‌شود</Text>
+                    <TouchableOpacity onPress={closeDrawing} activeOpacity={0.7} accessibilityRole="button">
+                      <Text style={[s.retake, s.drawPrivacy, dir('fa'), { textAlign: 'center' }]}>برگرد</Text>
+                    </TouchableOpacity>
                   </>
                 )}
                 {error ? <Text style={s.error}>{error}</Text> : null}
@@ -1149,7 +1198,16 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  drawHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' },
+  drawHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%' },
+  drawPrivacy: { color: PLAY_INK, fontSize: 11 * k, fontFamily: ff('fa', 'regular') },
+  tail: {
+    width: 16 * k,
+    height: 16 * k,
+    backgroundColor: '#FFFFFF',
+    transform: [{ rotate: '45deg' }],
+    marginTop: -14 * k,
+    marginBottom: -2 * k,
+  },
   drawTitle: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 20 * k },
   drawCloseText: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 26 * k, paddingHorizontal: 10 * k },
   paperWrap: {
