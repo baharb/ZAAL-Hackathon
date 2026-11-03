@@ -203,7 +203,7 @@ export default function ListenFindGame() {
       const cx = surfX(slot.fx, cover.imgW, cover.s, cover.offX);
       return cx > maxSize * 0.75 && cx < W - maxSize * 0.75;
     });
-    const pool = inBand.length >= 3 ? inBand : SCENE_SLOTS[scene.bg];
+    const slotPool = inBand.length >= 3 ? inBand : SCENE_SLOTS[scene.bg];
     const rectOf = (slot: { fx: number; fb: number }, size: number) => {
       const left = surfX(slot.fx, cover.imgW, cover.s, cover.offX) - size / 2;
       const top = surfTop(slot.fb, cover.imgH, cover.s, H, cover.offYBelow) - size;
@@ -220,11 +220,11 @@ export default function ListenFindGame() {
           .slice(i + 1)
           .some(o => r.left - pad < o.right && o.left - pad < r.right && r.top - pad < o.bottom && o.top - pad < r.bottom),
       );
-    let slots = shuffle([...pool]).slice(0, 3);
+    let slots = shuffle([...slotPool]).slice(0, 3);
     let settled = false;
     for (const wantGap of [true, false]) {
       for (let t = 0; t < 12 && !settled; t++) {
-        const cand = shuffle([...pool]).slice(0, 3);
+        const cand = shuffle([...slotPool]).slice(0, 3);
         const rects = cand.map((s, i) => rectOf(s, sizes[i]!));
         const pad = wantGap ? Math.min(...sizes) : 0;
         if (t === 0 && wantGap) slots = cand;
