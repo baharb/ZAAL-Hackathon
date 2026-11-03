@@ -59,6 +59,7 @@ export function CandyButton({
   onPress,
   disabled,
   height,
+  padH,
   children,
 }: {
   color: string;
@@ -66,6 +67,7 @@ export function CandyButton({
   onPress: () => void;
   disabled?: boolean;
   height: number;
+  padH?: number;
   children: React.ReactNode;
 }) {
   const { scale, pressIn, pressOut } = useTapScale();
@@ -85,7 +87,7 @@ export function CandyButton({
             backgroundColor: disabled ? '#B9C4D6' : color,
             borderRadius: height * 0.32,
             height,
-            paddingHorizontal: height * 0.4,
+            paddingHorizontal: padH ?? height * 0.4,
             paddingBottom: edgeH,
             alignItems: 'center',
             justifyContent: 'center',

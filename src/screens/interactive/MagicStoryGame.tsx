@@ -843,13 +843,13 @@ export default function MagicStoryGame() {
               {/* Both buttons live at the bottom, left and right of her —
                   never over her feet or the bubble's tail. */}
               <View style={s.entryRow}>
-                <View style={s.entryHalf}>
-                  <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={takeRoomPhoto} disabled={analyzing} height={wandH}>
-                    <Image source={neliWorldAssets.ui.camera} style={{ width: wandH * 0.4, height: wandH * 0.4 }} resizeMode="contain" />
-                    <Text style={s.tellText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>عکس بگیر</Text>
+                <View style={[s.entryHalf, { flex: 1.3 }]}>
+                  <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={takeRoomPhoto} disabled={analyzing} height={wandH} padH={wandH * 0.15}>
+                    <Image source={neliWorldAssets.ui.camera} style={{ width: wandH * 0.3, height: wandH * 0.3, flexShrink: 0 }} resizeMode="contain" />
+                    <Text style={s.tellText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>عکس بگیر</Text>
                   </CandyButton>
                 </View>
-                <View style={s.entryHalf}>
+                <View style={[s.entryHalf, { flex: 0.7 }]}>
                   <CandyButton color={PLAY_ACCENTS.sunny.color} edge={PLAY_ACCENTS.sunny.edge} onPress={openDrawing} disabled={analyzing} height={wandH}>
                     <Text style={s.tellText}>بکش!</Text>
                   </CandyButton>
