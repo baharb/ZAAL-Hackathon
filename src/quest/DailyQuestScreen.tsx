@@ -38,7 +38,9 @@ type Phase = 'loading' | 'buddy' | 'picks' | 'drive' | 'arrived' | 'album';
 
 export default function DailyQuestScreen() {
   const { lang } = useContext(AppContext);
-  const { goBack } = useNav();
+  const { goBack, navigate } = useNav();
+  // تمام! always lands on the one Magic menu, never on history.
+  const backToMagic = () => navigate({ name: 'MagicGames' });
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isFa = lang === 'fa' || lang === 'ar';
@@ -222,7 +224,7 @@ export default function DailyQuestScreen() {
             story={STORIES[0]!}
             leveledUp={leveledUp}
             level={finalLevel}
-            onDone={goBack}
+            onDone={backToMagic}
             onAlbum={() => {
               setAlbumReturn('arrived');
               setPhase('album');
