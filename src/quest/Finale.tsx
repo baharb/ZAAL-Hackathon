@@ -488,7 +488,7 @@ export default function Finale({
           activeOpacity={0.85}
           accessibilityLabel={isFa ? 'روزهای من' : 'My Days'}
           accessibilityRole="button"
-          style={[styles.albumChip, { top: insets.top + closeS + 10, left: 12, paddingHorizontal: Math.max(8, 12 * k) }]}
+          style={[styles.albumChip, { top: insets.top + 8 + closeS + 12, left: 12, paddingHorizontal: Math.max(8, 12 * k), zIndex: 45, elevation: 45 }]}
         >
           <View style={{ flexDirection: isFa ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
             <Image source={neliWorldAssets.ui.camera} style={{ width: levelFont, height: levelFont }} resizeMode="contain" />
