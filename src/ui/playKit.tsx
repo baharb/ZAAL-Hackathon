@@ -7,7 +7,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Path, Svg } from 'react-native-svg';
+import { Defs, Ellipse, Path, RadialGradient, Stop, Svg } from 'react-native-svg';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import TopBar from '../components/TopBar';
 import PopperCelebration from '../components/PopperCelebration';
@@ -306,34 +306,27 @@ export const PLACE_ART: Record<string, any> = {
   sea: ALPHABET('boat'),
 };
 
-/** ONE shared ground shadow. Pass the OBJECT's width: the shadow renders
- * a dark ellipse ~20% opacity (soft pale halo for the blurred edge), 70%
- * as wide as the object, tucked so it sits exactly under the object's
- * bottom edge instead of floating below it. Replaces every grey bar. */
+/** ONE shared ground shadow. Pass the OBJECT's width: one SVG ellipse,
+ * 70% as wide as the object and 18% as tall, filled with a radial
+ * gradient (dark center fading to transparent) so the edge looks soft on
+ * every platform — a flat View can never blur. Tucked so it sits exactly
+ * under the object's bottom edge instead of floating below it. */
 export function SoftShadow({ width }: { width: number }) {
+  const gid = React.useId().replace(/[^a-zA-Z0-9]/g, '');
   const w = width * 0.7;
-  const h = Math.max(5, w * 0.18);
+  const h = Math.max(4, w * 0.18);
   return (
-    <View
-      pointerEvents="none"
-      style={{
-        width: w,
-        height: h * 1.6,
-        borderRadius: 999,
-        backgroundColor: 'rgba(23,16,53,0.10)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: -h * 0.7,
-      }}
-    >
-      <View
-        style={{
-          width: w * 0.8,
-          height: h,
-          borderRadius: 999,
-          backgroundColor: 'rgba(23,16,53,0.20)',
-        }}
-      />
+    <View pointerEvents="none" style={{ width: w, height: h, marginTop: -h * 0.55 }}>
+      <Svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+        <Defs>
+          <RadialGradient id={`sh${gid}`} cx="50%" cy="50%" rx="50%" ry="50%">
+            <Stop offset="0%" stopColor="#000000" stopOpacity={0.25} />
+            <Stop offset="70%" stopColor="#000000" stopOpacity={0.12} />
+            <Stop offset="100%" stopColor="#000000" stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Ellipse cx={w / 2} cy={h / 2} rx={w / 2} ry={h / 2} fill={`url(#sh${gid})`} />
+      </Svg>
     </View>
   );
 }
