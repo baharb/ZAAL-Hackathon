@@ -286,6 +286,8 @@ export const WORD_ART: Record<string, any> = {
   kiwi: neliWorldAssets.foods.kiwi,
   fig: neliWorldAssets.foods.fig,
   mango: neliWorldAssets.foods.mango,
+  plum: neliWorldAssets.foods.plum,
+  pineapple: neliWorldAssets.foods.pineapple,
   fish: ALPHABET('fish'),
   water: neliWorldAssets.foods.water,
   bed: require('../../assets/neli-world/word-art/bed.webp'),

@@ -88,6 +88,8 @@ export const QUEST_WORDS: QuestWord[] = [
   { id: 'fruits/kiwi', category: 'fruits', fa: 'کیوی', art: neliWorldAssets.foods.kiwi, audioKey: 'fruits/kiwi', firstLetterId: 'kaf' },
   { id: 'fruits/fig', category: 'fruits', fa: 'انجیر', art: neliWorldAssets.foods.fig, audioKey: 'fruits/fig', firstLetterId: 'alef' },
   { id: 'fruits/mango', category: 'fruits', fa: 'انبه', art: neliWorldAssets.foods.mango, audioKey: 'fruits/mango', firstLetterId: 'alef' },
+  { id: 'fruits/plum', category: 'fruits', fa: 'آلو', art: neliWorldAssets.foods.plum, audioKey: 'fruits/plum', firstLetterId: 'alef' },
+  { id: 'fruits/pineapple', category: 'fruits', fa: 'آناناس', art: neliWorldAssets.foods.pineapple, audioKey: 'fruits/pineapple', firstLetterId: 'alef' },
   // --- clothes (Farsi from DressUpGame) ---
   // clothes/coat and clothes/tshirt have recordings but no art: skipped.
   { id: 'clothes/backpack', category: 'clothes', fa: 'کوله‌پشتی', art: neliWorldAssets.clothes.backpack, audioKey: 'clothes/backpack', firstLetterId: 'kaf' },

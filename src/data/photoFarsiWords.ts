@@ -36,6 +36,8 @@ export const PHOTO_FARSI_WORDS: PhotoFarsiWord[] = [
   { id: 'kiwi', fa: 'کیوی', en: 'Kiwi', emoji: '🥝', audioKey: 'fruits/kiwi' },
   { id: 'fig', fa: 'انجیر', en: 'Fig', emoji: '🟣', audioKey: 'fruits/fig' },
   { id: 'mango', fa: 'انبه', en: 'Mango', emoji: '🥭', audioKey: 'fruits/mango' },
+  { id: 'plum', fa: 'آلو', en: 'Plum', emoji: '🟣', audioKey: 'fruits/plum' },
+  { id: 'pineapple', fa: 'آناناس', en: 'Pineapple', emoji: '🍍', audioKey: 'fruits/pineapple' },
   // --- record later with the same voice (text-only until then) ---
   { id: 'bed', fa: 'تخت', en: 'Bed', emoji: '🛏️', audioKey: null },
   { id: 'lamp', fa: 'چراغ', en: 'Lamp', emoji: '💡', audioKey: null },

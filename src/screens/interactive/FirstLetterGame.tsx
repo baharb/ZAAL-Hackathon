@@ -99,9 +99,7 @@ export default function FirstLetterGame() {
   // game): the instruction first when its recording ships, then the word.
   useEffect(() => {
     void (async () => {
-      if ('letter/which-letter' in FA_TEST_AUDIO) {
-        await playFaAudio('letter/which-letter' as FaTestAudioKey, { awaitFinish: true });
-      }
+      await playFaAudio('letter/which-letter', { awaitFinish: true });
       if (alive.current) void speakPrompt(deal.word);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
