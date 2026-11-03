@@ -6,6 +6,8 @@ import TopBar, { topBarHeight } from '../components/TopBar';
 import { characterAssets } from '../assets/characterAssets';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
 import CharacterAvatar from '../components/CharacterAvatar';
+import { OpenBookIcon } from '../ui/playKit';
+import { buddyPose } from '../quest/questTheme';
 import { AppContext } from '../store/AppContext';
 import { useNav } from '../store/NavContext';
 import { dir, ff } from '../theme/fonts';
@@ -244,15 +246,26 @@ function BigCardArt({ art, size }: { art: BigCard['art']; size: number }) {
     );
   }
   if (art === 'magic') {
-    // Magic Games (judges box): Neli with a storybook under sparkles.
+    // Magic Games (judges box): buddies around a big open magic book.
     return (
       <View style={[styles.sceneFill, styles.magicScene]}>
-        <Image source={neliWorldAssets.ui.book} style={{ width: 72 * k, height: 72 * k }} resizeMode="contain" />
-        <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 30 * k, height: 30 * k, top: 10 * k, left: 12 * k }]} resizeMode="contain" />
-        <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 22 * k, height: 22 * k, bottom: 54 * k, right: 14 * k }]} resizeMode="contain" />
+        <OpenBookIcon size={84 * k} />
         <Image
-          source={characterAssets.neli.poses.base}
-          style={{ position: 'absolute', width: 110 * k, height: 140 * k, bottom: 36 * k, right: 8 * k }}
+          source={buddyPose('aidin', 'waving')}
+          style={{ position: 'absolute', width: 72 * k, height: 92 * k, bottom: 34 * k, left: 8 * k }}
+          resizeMode="contain"
+        />
+        <Image
+          source={buddyPose('mila', 'waving')}
+          style={{ position: 'absolute', width: 60 * k, height: 78 * k, bottom: 100 * k, left: 52 * k }}
+          resizeMode="contain"
+        />
+        <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 18 * k, height: 18 * k, bottom: 60 * k, left: 20 * k }]} resizeMode="contain" />
+        <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 30 * k, height: 30 * k, top: 8 * k, left: 10 * k }]} resizeMode="contain" />
+        <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 24 * k, height: 24 * k, top: 26 * k, right: 12 * k }]} resizeMode="contain" />
+        <Image
+          source={buddyPose('neli', 'waving')}
+          style={{ position: 'absolute', width: 92 * k, height: 116 * k, bottom: 34 * k, right: 6 * k }}
           resizeMode="contain"
         />
       </View>
