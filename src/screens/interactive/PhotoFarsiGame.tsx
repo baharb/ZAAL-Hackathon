@@ -398,7 +398,7 @@ export default function PhotoFarsiGame() {
 
       {/* Privacy: small cream pill pinned bottom-right, clear of her feet. */}
       <View style={[s.privacyPill, { bottom: 10 * k, right: 12 }]} pointerEvents="none">
-        <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>عکس‌ها از دستگاه بیرون نمی‌رود</Text>
+        <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]}>عکس‌ها از دستگاه بیرون نمی‌رود</Text>
       </View>
 
       {/* Sticker book overlay (in-screen, never a Modal — iOS crash rule). */}
