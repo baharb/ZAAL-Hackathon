@@ -27,6 +27,7 @@ import { Story } from './stories';
 import { buddyPose } from './questTheme';
 import { saveMyDay } from './myDaysStore';
 import WordArt from './WordArt';
+import { SoftShadow } from '../ui/playKit';
 import Balloon from './Balloon';
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 
@@ -257,7 +258,6 @@ export default function Finale({
   const charW = charH * 0.85;
   // Distance of each figure from its screen edge: the blanket's edge minus
   // a small overlap, so each figure tucks just against the blanket.
-  const castInset = Math.max(2, gw / 2 - blanketW / 2 - charW * 0.55);
 
   // Tree behind the blanket with the trip balloons tied to it.
   const treeH = Math.min(charH * 0.9, gh * 0.3);
@@ -587,25 +587,26 @@ export default function Finale({
         <View
           style={[
             styles.buddySide,
-            isFa ? { right: castInset } : { left: castInset },
-            { bottom: blanketBottom },
+            isFa ? { right: gw / 2 - blanketW / 2 + blanketW * 0.07 } : { left: gw / 2 - blanketW / 2 + blanketW * 0.07 },
+            { bottom: blanketBottom + blanketH * 0.55, alignItems: 'center' },
           ]}
           pointerEvents="none"
         >
-          <Animated.View style={{ transform: [{ scale: buddyBounce }] }}>
+          <Animated.View style={{ transform: [{ scale: buddyBounce }], alignItems: 'center' }}>
             <Image
               source={buddyPose(buddy, celebrating ? 'celebration' : 'base')}
               style={{ width: charW, height: charH }}
               resizeMode="contain"
               accessibilityLabel={buddy}
             />
+            <SoftShadow width={charW} />
           </Animated.View>
         </View>
         <View
           style={[
             styles.grandmaSide,
-            isFa ? { left: castInset } : { right: castInset },
-            { bottom: blanketBottom },
+            isFa ? { left: gw / 2 - blanketW / 2 + blanketW * 0.07 } : { right: gw / 2 - blanketW / 2 + blanketW * 0.07 },
+            { bottom: blanketBottom + blanketH * 0.55, alignItems: 'center' },
           ]}
           pointerEvents="none"
         >
@@ -615,6 +616,7 @@ export default function Finale({
             resizeMode="contain"
             accessibilityLabel={isFa ? 'مادربزرگ' : 'Grandma'}
           />
+          <SoftShadow width={charW} />
         </View>
       </View>
       {/* White camera flash. */}
