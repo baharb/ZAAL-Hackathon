@@ -325,8 +325,12 @@ function CountingView({
       setDone(true);
       const firstTry = tries === 0;
       recordQuestAnswer(fruit.id, firstTry);
-      void questPlay(`counting/number/${count}` as FaTestAudioKey);
-      onCorrect(firstTry);
+      // The number finishes before the item flies: the engine that starts
+      // after would otherwise talk over its tail.
+      void (async () => {
+        await questPlay(`counting/number/${count}` as FaTestAudioKey, { awaitFinish: true });
+        onCorrect(firstTry);
+      })();
       return;
     }
     // A wrong tap changes nothing on screen: only the try-again voice plays.
@@ -611,6 +615,9 @@ export default function DriveGame({
   // collected word so the picnic ties up the same balloons.
   const paletteRef = useRef<string[]>([]);
   const firstTriesRef = useRef<boolean[]>([]);
+  // The flying-item word replay: the drive to the next box waits for it,
+  // so the engine never talks over the voice.
+  const replayDone = useRef<Promise<boolean>>(Promise.resolve(false));
   const phaseRef = useRef<DrivePhase>('driving');
   phaseRef.current = phase;
   const legIndexRef = useRef(0);
@@ -732,8 +739,16 @@ export default function DriveGame({
     startedRef.current = true;
     carX.setValue(worldW + 80);
     cameraX.setValue(Math.max(worldW - gw, 0));
-    void questPlay('quest/lets-go' as FaTestAudioKey);
-    driveToBox(0);
+    // lets-go finishes BEFORE the engine starts: the separate engine
+    // player would otherwise talk right over the voice.
+    let live = true;
+    void (async () => {
+      await questPlay('quest/lets-go' as FaTestAudioKey, { awaitFinish: true });
+      if (live) driveToBox(0);
+    })();
+    return () => {
+      live = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameSize]);
 
@@ -808,7 +823,7 @@ export default function DriveGame({
     firstTriesRef.current.push(firstTry);
     setPhase('flying');
     // The counting round already played its number clip; nothing else plays.
-    if (round.kind !== 'fruit') void questPlay(questionClip(round));
+    if (round.kind !== 'fruit') replayDone.current = questPlay(questionClip(round));
     // The open box is already faded (the question covers it); remove it so
     // the reverse never flashes it back.
     setBoxGone(true);
@@ -824,13 +839,17 @@ export default function DriveGame({
       Animated.timing(dimAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => {
       setFlying(null);
-      const item: DisplayWord =
-        round.kind === 'fruit' && countQ
-          ? { ...round.answer, count: countQ.count }
-          : round.kind === 'color'
-            ? { ...round.answer, balloonIds: paletteRef.current }
-            : round.answer;
-      const next = [...collectedRef.current, item];
+      void (async () => {
+        // Let the word replay finish before the engine starts again.
+        await replayDone.current;
+        if (phaseRef.current !== 'flying') return;
+        const item: DisplayWord =
+          round.kind === 'fruit' && countQ
+            ? { ...round.answer, count: countQ.count }
+            : round.kind === 'color'
+              ? { ...round.answer, balloonIds: paletteRef.current }
+              : round.answer;
+        const next = [...collectedRef.current, item];
       collectedRef.current = next;
       setCollected(next);
       setBoxGone(false);
@@ -845,6 +864,7 @@ export default function DriveGame({
         setLegIndex(nextLeg);
         driveToBox(nextLeg);
       }
+      })();
     });
   };
 

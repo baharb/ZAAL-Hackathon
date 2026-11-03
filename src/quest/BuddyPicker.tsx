@@ -10,6 +10,8 @@ import { AppContext } from '../store/AppContext';
 import { dir, ff } from '../theme/fonts';
 import { BUDDIES, BuddyId } from './buddyStore';
 import { buddyPose } from './questTheme';
+import { questPlay } from './questSound';
+import { FaTestAudioKey } from '../assets/faTestAudio.generated';
 
 function BuddyButton({
   id,
@@ -132,6 +134,12 @@ export default function BuddyPicker({
   const bodyH = height - insets.top - insets.bottom;
   const gap = Math.max(8, width * 0.012);
   const cardSize = Math.min((width * 0.92 - gap * (BUDDIES.length - 1)) / BUDDIES.length, bodyH * 0.66);
+
+  // The instruction speaks as the screen opens: who will be today's hero?
+  useEffect(() => {
+    void questPlay('quest/pick-buddy' as FaTestAudioKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const choose = (id: BuddyId) => {
     setPicked(id);

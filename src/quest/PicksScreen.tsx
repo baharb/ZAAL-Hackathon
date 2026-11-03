@@ -106,8 +106,12 @@ export default function PicksScreen({
   const tap = (word: DisplayWord) => {
     if (locked.current) return;
     locked.current = true;
-    void questPlay(word.audioKey);
-    timer.current = setTimeout(() => onPick(word), 600);
+    // The picked name finishes before the next screen's instruction: the
+    // next pick screen would otherwise cut its tail off.
+    void (async () => {
+      await questPlay(word.audioKey, { awaitFinish: true });
+      timer.current = setTimeout(() => onPick(word), 250);
+    })();
   };
 
   return (

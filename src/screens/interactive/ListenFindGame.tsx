@@ -304,11 +304,13 @@ export default function ListenFindGame() {
           Animated.timing(a.fade, { toValue: 0, duration: 380, useNativeDriver: true }),
         ]),
       ]).start();
-      await playFaAudio('feedback/afarin');
+      // afarin finishes before the next word: the prompt would otherwise
+      // cut its tail off.
+      await playFaAudio('feedback/afarin', { awaitFinish: true });
       if (!alive.current) return;
       setStars(s => s + 1);
       setFound(prev => [...prev, word]);
-      setTimeout(() => alive.current && nextRound(round + 1), 550);
+      setTimeout(() => alive.current && nextRound(round + 1), 250);
     } else {
       setWrongIdx(index);
       setMood('thinking');
