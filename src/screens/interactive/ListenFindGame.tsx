@@ -16,6 +16,7 @@ import { dir, ff } from '../../theme/fonts';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../../assets/faTestAudio.generated';
 import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
 import { roomBackgroundPickers, neliWorldAssets } from '../../assets/neliWorldAssets';
+import { bgCover, surfTop, surfX } from '../../utils/bgSurface';
 import { PHOTO_FARSI_WORDS, PhotoFarsiWord } from '../../data/photoFarsiWords';
 import { loadBuddy } from '../../quest/buddyStore';
 import { saveMyDay } from '../../quest/myDaysStore';
@@ -26,6 +27,7 @@ import {
   BuddyMood,
   NavyClose,
   PLAY_INK,
+  SoftShadow,
   SquareButton,
   WORD_ART,
   WordArt,
@@ -57,24 +59,25 @@ type SceneBg = (typeof SCENES)[number]['bg'];
 
 const BY_ID: Record<string, PhotoFarsiWord> = Object.fromEntries(VOICED_WORDS.map(w => [w.id, w]));
 
-// Named standing spots, bottom-anchored to a real surface in the art
-// (kitchen counter + island, bedroom bed + rug). The background is
-// bottom-anchored at 125% height, so surfaces sit at fixed screen
-// fractions on every size. Three random slots per round.
-const SCENE_SLOTS: Record<SceneBg, { left: number; base: number }[]> = {
+// Named standing spots as fractions OF THE ARTWORK (fx from the left,
+// fb above the bottom), bottom-anchored to a real drawn surface: kitchen
+// counter + stool + floor, bedroom bed + rug. Artwork fractions survive
+// cover() cropping, so objects sit on furniture at EVERY aspect ratio.
+// Three random slots per round, across the room from the buddy (left).
+const SCENE_SLOTS: Record<SceneBg, { fx: number; fb: number }[]> = {
   kitchenCheerful: [
-    { left: 0.08, base: 0.375 },
-    { left: 0.3, base: 0.375 },
-    { left: 0.6, base: 0.375 },
-    { left: 0.15, base: 0.537 },
-    { left: 0.45, base: 0.537 },
+    { fx: 0.38, fb: 0.457 },
+    { fx: 0.56, fb: 0.457 },
+    { fx: 0.68, fb: 0.457 },
+    { fx: 0.135, fb: 0.165 },
+    { fx: 0.25, fb: 0.02 },
   ],
   bedroom: [
-    { left: 0.45, base: 0.41 },
-    { left: 0.62, base: 0.41 },
-    { left: 0.78, base: 0.41 },
-    { left: 0.28, base: 0.625 },
-    { left: 0.7, base: 0.625 },
+    { fx: 0.52, fb: 0.39 },
+    { fx: 0.6, fb: 0.39 },
+    { fx: 0.68, fb: 0.39 },
+    { fx: 0.55, fb: 0.16 },
+    { fx: 0.66, fb: 0.16 },
   ],
 };
 
@@ -82,26 +85,28 @@ const SCENE_SLOTS: Record<SceneBg, { left: number; base: number }[]> = {
 // mostly padding, the orange fills its frame), so equal boxes look
 // unequal. These zooms were matched by eye against the real files so all
 // three choices read as the same visual size.
+// Equalized by motif AREA (measured from the real files): flat art like
+// the hat would otherwise read huge next to tall art like the book.
 const ART_ZOOM: Record<string, number> = {
-  apple: 1.0,
-  orange: 1.0,
-  bread: 1.13,
-  water: 1.3,
+  apple: 0.88,
+  orange: 0.9,
+  bread: 1.0,
+  water: 1.35,
   book: 1.0,
-  backpack: 1.11,
-  hat: 1.55,
-  shoe: 1.55,
-  watermelon: 1.0,
-  pomegranate: 1.0,
-  strawberry: 1.0,
-  cherries: 1.0,
-  grapes: 1.0,
-  pear: 1.0,
-  peach: 1.0,
-  apricot: 1.0,
-  kiwi: 1.0,
-  fig: 1.0,
-  mango: 1.0,
+  backpack: 1.0,
+  hat: 1.56,
+  shoe: 1.56,
+  watermelon: 0.9,
+  pomegranate: 0.9,
+  strawberry: 0.9,
+  cherries: 0.9,
+  grapes: 0.9,
+  pear: 0.9,
+  peach: 0.9,
+  apricot: 0.9,
+  kiwi: 0.9,
+  fig: 0.9,
+  mango: 0.9,
 };
 
 function shuffle<T>(items: T[]): T[] {
@@ -116,20 +121,7 @@ function tap() {
   }
 }
 
-/** Soft ground shadow under a standing object. */
-function GroundShadow({ width }: { width: number }) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        width,
-        height: Math.max(6, width * 0.09),
-        borderRadius: 999,
-        backgroundColor: 'rgba(30,20,60,0.14)',
-      }}
-    />
-  );
-}
+
 
 /** Tap the buddy to hear again. The subtle pulse ring shows ONLY while
  * the word is playing — never a permanent stain behind her. */
@@ -198,11 +190,19 @@ export default function ListenFindGame() {
     const answer = shuffle(pool)[0]!;
     lastWordId.current = answer.id;
     const choices = shuffle([...shuffle(words.filter(w => w.id !== answer.id)).slice(0, 2), answer]);
-    // Three random standing spots, bottom-anchored to their surface.
+    // Three random standing spots, bottom-anchored to the drawn surface
+    // through the artwork fractions (same furniture on phone + tablet).
     const objS = H * 0.22;
-    const spots = shuffle([...SCENE_SLOTS[scene.bg]])
-      .slice(0, 3)
-      .map(s => ({ left: W * s.left, top: H * s.base - objS }));
+    const cover = bgCover(scene.bg, W, H, W, H * 1.25);
+    const slots = shuffle([...SCENE_SLOTS[scene.bg]]).slice(0, 3);
+    const spots = choices.map((c, i) => {
+      const slot = slots[i]!;
+      const size = objS * (ART_ZOOM[c.id] ?? 1);
+      return {
+        left: surfX(slot.fx, cover.imgW, cover.s) - size / 2,
+        top: surfTop(slot.fb, cover.imgH, cover.s, H) - size,
+      };
+    });
     return { answer, choices, scene: scene.bg, spots };
   };
   const [cards, setCards] = useState(freshCards);
@@ -392,10 +392,10 @@ export default function ListenFindGame() {
                 key={i}
                 style={{
                   fontSize: Math.max(22, 26 * k),
-                  color: i < stars ? '#FFB800' : 'rgba(255,255,255,0.45)',
-                  textShadowColor: 'rgba(30,20,60,0.6)',
-                  textShadowOffset: { width: 0, height: 2 },
-                  textShadowRadius: 3,
+                  color: i < stars ? '#FFB800' : 'rgba(255,255,255,0.92)',
+                  textShadowColor: 'rgba(30,20,60,0.65)',
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 5,
                 }}
               >
                 ★
@@ -405,11 +405,11 @@ export default function ListenFindGame() {
         </View>
       ) : null}
 
-      {/* Buddy, big and central. Tap to hear again. */}
+      {/* Buddy, big on the left. Tap to hear again. */}
       {!done ? (
-        <View style={[s.buddyWrap, { bottom: H * 0.02 }]}>
+        <View style={[s.buddyWrap, { left: W * 0.03, bottom: H * 0.02 }]}>
           <BuddyReplay size={buddySize} mood={mood} onReplay={replay} playing={prompting} />
-          <GroundShadow width={buddySize * 0.5} />
+          <SoftShadow width={buddySize * 0.5} />
         </View>
       ) : null}
 
@@ -438,7 +438,7 @@ export default function ListenFindGame() {
                     }}
                   >
                     <WordArt art={WORD_ART[c.id] ?? null} emoji={c.emoji} size={objSize * (ART_ZOOM[c.id] ?? 1)} />
-                    <GroundShadow width={objSize * 0.7} />
+                    <SoftShadow width={objSize * 0.7} />
                   </Animated.View>
                 </TouchableOpacity>
               </View>

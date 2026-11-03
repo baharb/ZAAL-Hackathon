@@ -6,7 +6,6 @@ import React, { useContext, useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { topBarHeight } from '../components/TopBar';
 import { AppContext } from '../store/AppContext';
 import { ff } from '../theme/fonts';
 import { questPlay } from './questSound';
@@ -57,12 +56,14 @@ function OptionButton({
           <WordArt word={word} size={size * 0.96} />
         )}
       </Animated.View>
-      <Text
-        style={[styles.word, { fontFamily: ff('fa', 'black'), fontSize: Math.max(14, size * 0.13) }]}
-        numberOfLines={1}
-      >
-        {word.fa}
-      </Text>
+      <View style={styles.namePill}>
+        <Text
+          style={[styles.word, { fontFamily: ff('fa', 'black'), fontSize: Math.max(14, size * 0.13) }]}
+          numberOfLines={1}
+        >
+          {word.fa}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -87,7 +88,8 @@ export default function PicksScreen({
   const locked = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const bodyH = height - topBarHeight(height, insets.top, {}) - insets.bottom;
+  // No bar on this scene: the options get the whole garden.
+  const bodyH = height - insets.top - insets.bottom;
   const gap = Math.max(10, width * 0.02);
   const optionSize = Math.max(56, Math.min((width * 0.9 - gap * 2) / 3, bodyH * 0.36));
 
@@ -125,8 +127,10 @@ export default function PicksScreen({
                 width: i === stepIndex ? bodyH * 0.07 : bodyH * 0.028,
                 height: bodyH * 0.028,
                 borderRadius: bodyH * 0.014,
-                backgroundColor: i === stepIndex ? '#FFB800' : 'rgba(255,255,255,0.45)',
-                opacity: i === stepIndex ? 1 : 0.75,
+                backgroundColor: i <= stepIndex ? '#FFB800' : '#FFFFFF',
+                borderWidth: i <= stepIndex ? 0 : 2,
+                borderColor: 'rgba(30,20,60,0.45)',
+                opacity: i === stepIndex ? 1 : 0.85,
               },
             ]}
           />
@@ -144,7 +148,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
   },
-  word: { color: '#3A2A6B', marginTop: 6, textAlign: 'center' },
+  word: { color: '#3A2A6B', textAlign: 'center' },
+  namePill: {
+    marginTop: 6,
+    backgroundColor: 'rgba(255,253,245,0.95)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    maxWidth: '100%',
+  },
   dots: { flexDirection: 'row', marginTop: 14 },
   dot: { backgroundColor: '#FACC15' },
 });

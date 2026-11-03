@@ -385,7 +385,7 @@ export default function PhotoFarsiGame() {
         >
           <OpenBookIcon size={40 * k} />
           <View style={s.heardBadge}>
-            <Text style={s.heardText}>⭐ {heard.length}/{PHOTO_FARSI_WORDS.length}</Text>
+            <Text style={s.heardText}>★ {heard.length}/{PHOTO_FARSI_WORDS.length}</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -396,7 +396,7 @@ export default function PhotoFarsiGame() {
           <GameCard radius={22 * k} style={s.bookCard}>
             <View style={s.bookHead}>
               <Text style={[s.bookTitle, dir('fa')]}>کلمات من</Text>
-              <Text style={s.bookCount}>⭐ {heard.length}/{PHOTO_FARSI_WORDS.length}</Text>
+              <Text style={s.bookCount}>★ {heard.length}/{PHOTO_FARSI_WORDS.length}</Text>
               <TouchableOpacity style={s.bookClose} onPress={() => { tap(); setBookOpen(false); }} activeOpacity={0.85}>
                 <Image source={neliWorldAssets.ui.close} style={{ width: 30 * k, height: 30 * k }} resizeMode="contain" />
               </TouchableOpacity>
@@ -419,9 +419,9 @@ export default function PhotoFarsiGame() {
                     {hasVoice ? (
                       <Image source={neliWorldAssets.ui.voice} style={s.voiceBadge} resizeMode="contain" />
                     ) : (
-                      <Text style={s.seedBadge}>🌱</Text>
+                      <Image source={neliWorldAssets.ui.microphone} style={s.voiceBadge} resizeMode="contain" />
                     )}
-                    {done ? <Text style={s.doneStar}>⭐</Text> : null}
+                    {done ? <Text style={s.doneStar}>★</Text> : null}
                   </TouchableOpacity>
                 );
               })}

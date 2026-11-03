@@ -464,7 +464,7 @@ export default function Finale({
             style={[styles.level, { fontFamily: ff(lang, 'black'), fontSize: levelFont }, dir(lang)]}
             numberOfLines={1}
           >
-            {isFa ? `سطح ${level}! 🌟` : `Level ${level}! 🌟`}
+            {isFa ? `سطح ${level}! ★` : `Level ${level}! ★`}
           </Text>
         </View>
       )}
@@ -479,9 +479,12 @@ export default function Finale({
           accessibilityRole="button"
           style={[styles.albumChip, { top: Math.max(2, 4 * k), left: 8, paddingHorizontal: Math.max(8, 12 * k) }]}
         >
-          <Text style={[styles.albumChipText, { fontFamily: ff(lang, 'black'), fontSize: levelFont }, dir(lang)]}>
-            {isFa ? 'روزهای من 📸' : 'My Days 📸'}
-          </Text>
+          <View style={{ flexDirection: isFa ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
+            <Image source={neliWorldAssets.ui.camera} style={{ width: levelFont, height: levelFont }} resizeMode="contain" />
+            <Text style={[styles.albumChipText, { fontFamily: ff(lang, 'black'), fontSize: levelFont }, dir(lang)]}>
+              {isFa ? 'روزهای من' : 'My Days'}
+            </Text>
+          </View>
         </TouchableOpacity>
       )}
       {/* One real scene: tree with balloons behind the blanket, blanket on
@@ -663,7 +666,7 @@ export default function Finale({
             style={[styles.polaroidCaption, { fontFamily: ff(lang, 'black'), fontSize: Math.max(11, cardW * 0.055) }, dir(lang)]}
             numberOfLines={1}
           >
-            {isFa ? `پیک‌نیک با ${buddyName?.fa ?? 'نلی'} 📸 ${todayISO}` : `Picnic with ${buddyName?.en ?? 'Neli'} 📸 ${todayISO}`}
+            {isFa ? `پیک‌نیک با ${buddyName?.fa ?? 'نلی'} • ${todayISO}` : `Picnic with ${buddyName?.en ?? 'Neli'} • ${todayISO}`}
           </Text>
         </Animated.View>
       )}

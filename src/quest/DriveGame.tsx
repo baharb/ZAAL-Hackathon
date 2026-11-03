@@ -21,6 +21,7 @@ import { BuddyId } from './buddyStore';
 import { DisplayWord } from './questGroups';
 import { COLOR_HEX, farApartPair, PickKind, pickPool, sampleOptions, shuffle } from './pickLists';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../assets/faTestAudio.generated';
+import { neliWorldAssets } from '../assets/neliWorldAssets';
 import Balloon from './Balloon';
 import ColorDot from './ColorDot';
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
@@ -244,7 +245,7 @@ function QuestionView({
   return (
     <View style={[styles.question, { paddingBottom: lift }]} pointerEvents="box-none">
       <View style={styles.promptRow}>
-        <Text style={{ fontSize: optSize * 0.32 }}>👉</Text>
+        <Image source={neliWorldAssets.ui.point} style={{ width: optSize * 0.34, height: optSize * 0.34 }} resizeMode="contain" />
         <Text
           style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize: Math.max(16, optSize * 0.24) }, dir(lang)]}
         >
@@ -256,7 +257,7 @@ function QuestionView({
           accessibilityLabel={isFa ? 'دوباره بشنو' : 'Hear it again'}
           accessibilityRole="button"
         >
-          <Text style={{ fontSize: optSize * 0.32 }}>👂</Text>
+          <Image source={neliWorldAssets.ui.voice} style={{ width: optSize * 0.34, height: optSize * 0.34 }} resizeMode="contain" />
         </TouchableOpacity>
       </View>
       <View style={[styles.qRow, isFa && { flexDirection: 'row-reverse' }]}>
@@ -429,7 +430,7 @@ function BalloonView({
   return (
     <View style={[styles.question, { paddingBottom: lift }]} pointerEvents="box-none">
       <View style={styles.promptRow}>
-        <Text style={{ fontSize: optSize * 0.32 }}>👉</Text>
+        <Image source={neliWorldAssets.ui.point} style={{ width: optSize * 0.34, height: optSize * 0.34 }} resizeMode="contain" />
         <Text
           style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize: Math.max(16, optSize * 0.24) }, dir(lang)]}
         >
@@ -441,7 +442,7 @@ function BalloonView({
           accessibilityLabel={isFa ? 'دوباره بشنو' : 'Hear it again'}
           accessibilityRole="button"
         >
-          <Text style={{ fontSize: optSize * 0.32 }}>👂</Text>
+          <Image source={neliWorldAssets.ui.voice} style={{ width: optSize * 0.34, height: optSize * 0.34 }} resizeMode="contain" />
         </TouchableOpacity>
       </View>
       <View style={[styles.qRow, isFa && { flexDirection: 'row-reverse' }]}>
@@ -982,7 +983,7 @@ export default function DriveGame({
               <View key={i} style={{ position: 'absolute', left: worldX - boxW / 2, top: boxY - boxH / 2, zIndex: 2 }}>
                 <Image source={BOX_CLOSED} style={{ width: boxW, height: boxH }} resizeMode="contain" />
                 <View pointerEvents="none" style={{ position: 'absolute', right: -boxW * 0.04, top: -boxH * 0.04 }}>
-                  <Text style={{ fontSize: boxW * 0.34 }}>⭐</Text>
+                  <Image source={neliWorldAssets.ui.star} style={{ width: boxW * 0.34, height: boxW * 0.34 }} resizeMode="contain" />
                 </View>
               </View>
             );
@@ -1040,7 +1041,7 @@ export default function DriveGame({
                 />
                 {!boxOpen && (
                   <View pointerEvents="none" style={{ position: 'absolute', right: -boxW * 0.04, top: -boxH * 0.04 }}>
-                    <Text style={{ fontSize: boxW * 0.34 }}>⭐</Text>
+                    <Image source={neliWorldAssets.ui.star} style={{ width: boxW * 0.34, height: boxW * 0.34 }} resizeMode="contain" />
                   </View>
                 )}
                 {spark && <SparkBurst x={boxW / 2} y={-boxH * 0.2} size={boxW} />}

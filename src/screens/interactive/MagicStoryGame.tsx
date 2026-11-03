@@ -385,7 +385,7 @@ function IdleHand({ size }: { size: number }) {
       pointerEvents="none"
       style={{ transform: [{ translateX: nudge.interpolate({ inputRange: [0, 1], outputRange: [0, size * 0.3] }) }] }}
     >
-      <Text style={{ fontSize: size }}>👉</Text>
+      <Image source={neliWorldAssets.ui.point} style={{ width: size, height: size }} resizeMode="contain" />
     </Animated.View>
   );
 }
@@ -834,7 +834,6 @@ export default function MagicStoryGame() {
                 <Text style={[s.bubbleText, dir('fa'), { textAlign: 'center' }]}>از اتاقت عکس بگیر یا نقاشی بکش!</Text>
               </View>
               <View style={s.tail} />
-              <BuddyGuide mood={mood} size={entryBuddyH} />
               <View style={s.entryRow}>
                 <View style={s.entryHalf}>
                   <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={takeRoomPhoto} disabled={analyzing} height={wandH}>
@@ -848,7 +847,10 @@ export default function MagicStoryGame() {
                   </CandyButton>
                 </View>
               </View>
-              <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]}>عکس‌ها از دستگاه بیرون نمی‌رود</Text>
+              <BuddyGuide mood={mood} size={entryBuddyH} />
+              <View style={s.privacyPill}>
+                <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]}>عکس‌ها از دستگاه بیرون نمی‌رود</Text>
+              </View>
             </>
           ) : analyzing || cast.length === 0 ? (
             <>
@@ -1107,7 +1109,10 @@ export default function MagicStoryGame() {
                         activeOpacity={0.85}
                         accessibilityRole="button"
                       >
-                        <Text style={s.magicSimpleText}>⭐ جادویی‌اش کن</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Image source={neliWorldAssets.ui.sparkle} style={{ width: 22 * k, height: 22 * k }} resizeMode="contain" />
+                          <Text style={s.magicSimpleText}>جادویی‌اش کن</Text>
+                        </View>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[s.eraserBtn, dstrokes.length === 0 && s.pageBtnOff]}
@@ -1196,7 +1201,13 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
   },
   bubbleSmallText: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 15 * k },
   tellText: { color: '#FFFFFF', fontSize: 20 * k, fontFamily: ff('fa', 'black') },
-  privacy: { color: '#FFFFFF', fontSize: 11 * k, fontFamily: ff('fa', 'regular'), textShadowColor: 'rgba(46,26,107,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  privacy: { color: PLAY_INK, fontSize: 11 * k, fontFamily: ff('fa', 'regular') },
+  privacyPill: {
+    backgroundColor: 'rgba(255,253,245,0.95)',
+    borderRadius: 999,
+    paddingHorizontal: 14 * k,
+    paddingVertical: 3 * k,
+  },
   roomRow: { flexDirection: 'row', alignItems: 'center', gap: 10 * k },
   castRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 * k, maxWidth: 560 },
   castFa: { color: '#FFFFFF', fontSize: 13 * k, fontFamily: ff('fa', 'black'), textShadowColor: 'rgba(46,26,107,0.7)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3, marginTop: 2 * k, maxWidth: 84 * k },

@@ -117,19 +117,20 @@ export default function DailyQuestScreen() {
 
   const buddyFace = Math.max(40, height * 0.07);
   const closeS = Math.max(48, height * 0.13);
-  // The purple bar shows only where the picker needs it (loading + picks).
-  // The buddy picker is a garden scene with only the floating X;
-  // during the drive and at the picnic the game owns the whole screen
-  // (only the floating buddy chip stays).
-  const showBar = phase === 'loading' || phase === 'picks';
+  // The purple bar shows only on loading. Buddy + picks are the same
+  // garden scene with only the floating X; during the drive and at the
+  // picnic the game owns the whole screen (only the floating buddy
+  // chip stays).
+  const showBar = phase === 'loading';
+  const fullBleed = phase === 'drive' || phase === 'arrived';
 
   return (
     <View style={styles.root}>
-      {(phase === 'picks' || phase === 'loading') && <QuestBackdrop />}
-      {phase === 'buddy' && (
+      {phase === 'loading' && <QuestBackdrop />}
+      {(phase === 'buddy' || phase === 'picks') && (
         <Image source={BUDDY_BG} style={styles.buddyBg} resizeMode="cover" />
       )}
-      {phase === 'buddy' && (
+      {(phase === 'buddy' || phase === 'picks') && (
         <TouchableOpacity
           onPress={goBack}
           activeOpacity={0.8}
@@ -161,7 +162,7 @@ export default function DailyQuestScreen() {
           <Image source={buddyPose(buddy, 'base')} style={{ width: buddyFace, height: buddyFace }} resizeMode="contain" />
         </TouchableOpacity>
       )}
-      <View style={styles.body}>
+      <View style={[styles.body, fullBleed && { paddingHorizontal: 0, paddingBottom: 0 }]}>
         {phase === 'loading' && (
           <Text style={[styles.loading, { fontFamily: ff(lang, 'black') }, dir(lang)]}>✨</Text>
         )}
@@ -174,9 +175,12 @@ export default function DailyQuestScreen() {
               accessibilityRole="button"
               style={styles.albumButton}
             >
-              <Text style={[styles.albumButtonText, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
-                {isFa ? 'روزهای من 📸' : 'My Days 📸'}
-              </Text>
+              <View style={{ flexDirection: isFa ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
+                <Image source={neliWorldAssets.ui.camera} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                <Text style={[styles.albumButtonText, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
+                  {isFa ? 'روزهای من' : 'My Days'}
+                </Text>
+              </View>
             </TouchableOpacity>
             <View style={styles.startBody}>
               <BuddyPicker initial={buddy} onPick={chooseBuddy} />

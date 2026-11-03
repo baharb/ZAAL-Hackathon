@@ -13,6 +13,7 @@ import { STORIES } from './stories';
 import { COLOR_HEX } from './pickLists';
 import { buddyPose } from './questTheme';
 import WordArt from './WordArt';
+import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { WordArt as PlayWordArt, WORD_ART } from '../ui/playKit';
 import Balloon from './Balloon';
 import { displayWordById } from './questGroups';
@@ -52,7 +53,7 @@ function DayCard({ entry, cardW }: { entry: MyDayEntry; cardW: number }) {
           style={[styles.caption, { fontFamily: ff(lang, 'black'), fontSize: Math.max(13, cardW * 0.055) }, dir(lang)]}
           numberOfLines={2}
         >
-          {(isFa ? entry.game.fa : entry.game.en) + ` 📸 ${entry.dateISO}`}
+          {(isFa ? entry.game.fa : entry.game.en) + ` • ${entry.dateISO}`}
         </Text>
       </View>
     );
@@ -134,8 +135,8 @@ function DayCard({ entry, cardW }: { entry: MyDayEntry; cardW: number }) {
         numberOfLines={2}
       >
         {isFa
-          ? `پیک‌نیک با ${buddyName?.fa ?? 'نلی'} 📸 ${entry.dateISO}`
-          : `Picnic with ${buddyName?.en ?? 'Neli'} 📸 ${entry.dateISO}`}
+          ? `پیک‌نیک با ${buddyName?.fa ?? 'نلی'} • ${entry.dateISO}`
+          : `Picnic with ${buddyName?.en ?? 'Neli'} • ${entry.dateISO}`}
       </Text>
       <Text
         style={[styles.picks, { fontFamily: ff(lang, 'bold'), fontSize: Math.max(11, cardW * 0.045) }, dir(lang)]}
@@ -179,16 +180,19 @@ export default function MyDaysScreen({ onBack }: { onBack: () => void }) {
             {isFa ? '→ برگرد' : '← Back'}
           </Text>
         </TouchableOpacity>
-        <Text style={[styles.title, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
-          {isFa ? 'روزهای من 📸' : 'My Days 📸'}
-        </Text>
+        <View style={{ flexDirection: isFa ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+          <Image source={neliWorldAssets.ui.camera} style={{ width: 30, height: 30 }} resizeMode="contain" />
+          <Text style={[styles.title, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
+            {isFa ? 'روزهای من' : 'My Days'}
+          </Text>
+        </View>
         <View style={styles.back} />
       </View>
       {days === null ? (
-        <Text style={[styles.empty, { fontFamily: ff(lang, 'black') }, dir(lang)]}>✨</Text>
+        <Image source={neliWorldAssets.ui.sparkle} style={{ width: 44, height: 44, alignSelf: 'center' }} resizeMode="contain" />
       ) : days.length === 0 ? (
         <Text style={[styles.empty, { fontFamily: ff(lang, 'black'), fontSize: 17 }, dir(lang)]}>
-          {isFa ? 'هنوز عکسی نداری! اول پیک‌نیک بگیر. 📷' : 'No photos yet! Have a picnic first. 📷'}
+          {isFa ? 'هنوز عکسی نداری! اول پیک‌نیک بگیر.' : 'No photos yet! Have a picnic first.'}
         </Text>
       ) : (
         <FlatList

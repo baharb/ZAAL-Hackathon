@@ -193,10 +193,10 @@ export default function FirstLetterGame() {
                 key={i}
                 style={{
                   fontSize: Math.max(22, 26 * k),
-                  color: i < stars ? '#FFB800' : 'rgba(255,255,255,0.45)',
-                  textShadowColor: 'rgba(30,20,60,0.6)',
-                  textShadowOffset: { width: 0, height: 2 },
-                  textShadowRadius: 3,
+                  color: i < stars ? '#FFB800' : 'rgba(255,255,255,0.92)',
+                  textShadowColor: 'rgba(30,20,60,0.65)',
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 5,
                 }}
               >
                 ★
@@ -227,7 +227,9 @@ export default function FirstLetterGame() {
               <WordArt art={WORD_ART[deal.word.id] ?? null} emoji={deal.word.emoji} size={picS} />
               <View style={s.shadowDot} />
               {showName ? (
-                <Text style={[s.nameFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{deal.word.fa}</Text>
+                <View style={s.namePill}>
+                  <Text style={[s.nameFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{deal.word.fa}</Text>
+                </View>
               ) : null}
               <View style={s.choiceRow}>
                 {deal.choices.map((c, i) => (
@@ -298,7 +300,13 @@ const styles = (k: number) =>
       borderRadius: 999,
       backgroundColor: 'rgba(30,20,60,0.14)',
     },
-    nameFa: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', fontSize: 22 * k, textShadowColor: 'rgba(30,20,60,0.6)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+    namePill: {
+      backgroundColor: 'rgba(255,253,245,0.95)',
+      borderRadius: 999,
+      paddingHorizontal: 16 * k,
+      paddingVertical: 3 * k,
+    },
+    nameFa: { fontFamily: ff('fa', 'black'), color: '#3A2A6B', fontSize: 22 * k },
     choiceRow: { flexDirection: 'row', columnGap: 12 * k, marginTop: 4 * k },
     blockWrap: { position: 'relative', alignItems: 'center' },
     hand: { position: 'absolute', alignSelf: 'center', zIndex: 15, elevation: 15 },

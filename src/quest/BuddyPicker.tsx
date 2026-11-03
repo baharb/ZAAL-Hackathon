@@ -116,11 +116,13 @@ export default function BuddyPicker({
 
   return (
     <View style={styles.root}>
-      <Text
-        style={[styles.title, { fontFamily: ff(lang, 'black'), fontSize: Math.max(11, bodyH * 0.038) }, dir(lang)]}
-      >
-        {isFa ? 'امروز می‌خوای کدوم دوست باشی؟' : 'Which character do you want to be today?'}
-      </Text>
+      <View style={styles.titlePill}>
+        <Text
+          style={[styles.title, { fontFamily: ff(lang, 'black'), fontSize: Math.max(11, bodyH * 0.038) }, dir(lang)]}
+        >
+          {isFa ? 'امروز می‌خوای کدوم دوست باشی؟' : 'Which character do you want to be today?'}
+        </Text>
+      </View>
       <View style={[styles.row, isFa && { flexDirection: 'row-reverse' }, { gap }]}>
         {BUDDIES.map(b => (
           <BuddyButton
@@ -140,13 +142,16 @@ export default function BuddyPicker({
 
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: {
-    color: '#FFFFFF',
+  titlePill: {
+    backgroundColor: 'rgba(255,253,245,0.95)',
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
     marginBottom: 14,
+  },
+  title: {
+    color: '#3A2A6B',
     textAlign: 'center',
-    textShadowColor: 'rgba(30,20,60,0.6)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
   },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   card: {
