@@ -16,11 +16,11 @@ type BigCard = {
   en: string;
   fa: string;
   route: any;
-  art: 'gamesHub' | 'alphabetHub' | 'paint' | 'cook' | 'quest';
+  art: 'gamesHub' | 'alphabetHub' | 'paint' | 'cook' | 'quest' | 'magic';
 };
 
 const BIG_CARDS: BigCard[] = [
-  { en: 'My Daily Quest', fa: 'بازی امروز من', route: { name: 'DailyQuest' }, art: 'quest' },
+  { en: 'Magic Games', fa: 'بازی‌های جادویی', route: { name: 'MagicGames' }, art: 'magic' },
   { en: 'Games', fa: 'بازی ها', route: { name: 'Main', tab: 'Games' }, art: 'gamesHub' },
   { en: 'Cooking', fa: 'آشپزی', route: { name: 'Cooking' }, art: 'cook' },
   { en: 'Painting', fa: 'نقاشی', route: { name: 'Coloring' }, art: 'paint' },
@@ -240,6 +240,21 @@ function BigCardArt({ art, size }: { art: BigCard['art']; size: number }) {
         <View style={[styles.questNew, { borderRadius: 20 * k, paddingHorizontal: 10 * k, paddingVertical: 3 * k, top: 8 * k, left: 8 * k }]}>
           <Text style={[styles.questNewText, { fontSize: 15 * k }]}>✨</Text>
         </View>
+      </View>
+    );
+  }
+  if (art === 'magic') {
+    // Magic Games (judges box): Neli with a storybook under sparkles.
+    return (
+      <View style={[styles.sceneFill, styles.magicScene]}>
+        <Image source={neliWorldAssets.ui.book} style={{ width: 72 * k, height: 72 * k }} resizeMode="contain" />
+        <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 30 * k, height: 30 * k, top: 10 * k, left: 12 * k }]} resizeMode="contain" />
+        <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 22 * k, height: 22 * k, bottom: 54 * k, right: 14 * k }]} resizeMode="contain" />
+        <Image
+          source={characterAssets.neli.poses.base}
+          style={{ position: 'absolute', width: 110 * k, height: 140 * k, bottom: 36 * k, right: 8 * k }}
+          resizeMode="contain"
+        />
       </View>
     );
   }
@@ -472,6 +487,8 @@ const styles = StyleSheet.create({
   questHill: { position: 'absolute', backgroundColor: '#8FD694' },
   questNew: { position: 'absolute', backgroundColor: '#FF5C8A' },
   questNewText: { color: '#FFFFFF' },
+  magicScene: { backgroundColor: '#7C3AED', alignItems: 'center', justifyContent: 'center' },
+  magicSpark: { position: 'absolute' },
   cookNeli: { width: 190, height: 248 },
   cookIngredient: { position: 'absolute', width: 46, height: 46 },
   cookIngredientOne: { left: 16, top: 8, transform: [{ rotate: '-16deg' }] },

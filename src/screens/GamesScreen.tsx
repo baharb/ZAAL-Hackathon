@@ -29,10 +29,6 @@ type Tile = {
 
 const GAMES: Tile[] = [
   { id: 'dailyQuest', route: { name: 'DailyQuest' }, en: 'My Daily Quest', fa: 'بازی امروز من', descEn: 'A new game every day', descFa: 'هر روز یک بازی تازه', kind: 'quest', color: '#FF5C8A', accent: '#FACC15', group: 'play' },
-  { id: 'photoFarsi', route: { name: 'PhotoFarsi' }, en: 'Photo Farsi', fa: 'فارسی با عکس', descEn: 'Photograph and name', descFa: 'عکس بگیر و یاد بگیر', kind: 'photo', color: '#22D3EE', accent: '#FACC15', group: 'play' },
-  { id: 'magicStory', route: { name: 'MagicStory' }, en: 'Magic Story', fa: 'قصه جادویی', descEn: 'A story with your hero', descFa: 'با قهرمانت قصه بساز', kind: 'story', color: '#A855F7', accent: '#FACC15', group: 'play' },
-  { id: 'listenFind', route: { name: 'ListenFind' }, en: 'Listen & Find', fa: 'بشنو و پیدا کن', descEn: 'Hear it, tap it', descFa: 'بشنو و بزن', kind: 'listen', color: '#F472B6', accent: '#FACC15', group: 'play' },
-  { id: 'firstLetter', route: { name: 'FirstLetter' }, en: 'First Letter', fa: 'حرف اول', descEn: 'Which letter starts it?', descFa: 'اولش کدام حرف است؟', kind: 'letter', color: '#06B6D4', accent: '#FACC15', group: 'learn' },
   { id: 'talk', route: { name: 'ConversationGame' }, en: 'Talk with Neli', fa: 'گفت و گو', descEn: 'Listen and answer', descFa: 'بشنو و جواب بده', kind: 'talk', color: '#6C4EFF', accent: '#FACC15', group: 'play' },
   { id: 'grandma', route: { name: 'GrandmaCall' }, en: "Grandma's Call", fa: 'زنگ مامان‌بزرگ', descEn: 'Answer Grandma in Farsi', descFa: 'به مامان‌بزرگ جواب بده', kind: 'grandma', color: '#FF7A5C', accent: '#FFD86B', group: 'play' },
   { id: 'animals', route: { name: 'FeedAnimals' }, en: 'Feed Animals', fa: 'غذا بده', descEn: 'Drag food to animals', descFa: 'غذا را به حیوان بده', kind: 'animal', color: '#22C55E', accent: '#FACC15', group: 'play' },

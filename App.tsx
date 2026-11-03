@@ -41,6 +41,7 @@ import AudiobooksScreen    from './src/screens/AudiobooksScreen';
 import PhysicalActivityScreen from './src/screens/PhysicalActivityScreen';
 import SELScreen           from './src/screens/SELScreen';
 import InteractiveGamesHub from './src/screens/interactive/InteractiveGamesHub';
+import MagicGamesScreen from './src/screens/MagicGamesScreen';
 import DailyRoutineGame    from './src/screens/interactive/DailyRoutineGame';
 import FeedAnimalsGame     from './src/screens/interactive/FeedAnimalsGame';
 import BuildSceneGame      from './src/screens/interactive/BuildSceneGame';
@@ -93,6 +94,7 @@ function Router() {
     case 'PhysicalActivity': return <PhysicalActivityScreen />;
     case 'SEL':              return <SELScreen />;
     case 'InteractiveGames': return <InteractiveGamesHub />;
+    case 'MagicGames': return <MagicGamesScreen />;
     case 'DailyRoutine':     return <GameLandscapeFrame><DailyRoutineGame /></GameLandscapeFrame>;
     case 'FeedAnimals':      return <GameLandscapeFrame><FeedAnimalsGame /></GameLandscapeFrame>;
     case 'BuildScene':       return <GameLandscapeFrame><BuildSceneGame /></GameLandscapeFrame>;
@@ -211,7 +213,11 @@ export default function App() {
   // hides itself again. Android only — iOS/web have no such bar.
   React.useEffect(() => {
     if (Platform.OS !== 'android') return;
-    NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => {});
+    // setBehaviorAsync only warns on Android 15+ (edge-to-edge is enforced there),
+    // so call it on older versions only.
+    if (typeof Platform.Version === 'number' && Platform.Version < 35) {
+      NavigationBar.setBehaviorAsync('overlay-swipe').catch(() => {});
+    }
     NavigationBar.setVisibilityAsync('hidden').catch(() => {});
   }, []);
 
