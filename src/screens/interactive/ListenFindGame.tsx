@@ -72,11 +72,15 @@ const SCENE_SLOTS: Record<SceneBg, { fx: number; fb: number }[]> = {
     { fx: 0.135, fb: 0.25 },
     { fx: 0.25, fb: 0.1 },
   ],
+  // Dress-up bedroom (the variant the picker actually serves): open
+  // wardrobe 0.05-0.45, window 0.51-0.72, shelf 0.79-0.94, bed
+  // 0.50-0.96 with the blanket top at fb 0.44, rug 0.49-0.84 top fb
+  // 0.22. Objects only where furniture is, at every aspect.
   bedroom: [
-    { fx: 0.44, fb: 0.43 },
-    { fx: 0.6, fb: 0.43 },
-    { fx: 0.76, fb: 0.43 },
-    { fx: 0.53, fb: 0.22 },
+    { fx: 0.55, fb: 0.44 },
+    { fx: 0.66, fb: 0.44 },
+    { fx: 0.77, fb: 0.44 },
+    { fx: 0.58, fb: 0.22 },
     { fx: 0.72, fb: 0.22 },
   ],
 };
