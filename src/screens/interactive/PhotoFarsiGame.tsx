@@ -28,6 +28,7 @@ import {
   CandyButton,
   GameBg,
   GameCard,
+  SoftShadow,
   PLAY_ACCENTS,
   PLAY_INK,
   WORD_ART,
@@ -268,9 +269,10 @@ export default function PhotoFarsiGame() {
   };
 
   const mood: BuddyMood = asking ? 'thinking' : result && result.known ? 'happy' : 'idle';
-  // Scene: buddy stands big on the floor, bubble right over her head, the
-  // big yellow camera square bottom-center. One line of text, never wrapped.
-  const buddyS = Math.min(190 * k, height * 0.4);
+  // Scene: buddy stands big on the floor (bottom-anchored, never mid-air),
+  // bubble right over her head, the big yellow camera square bottom-center.
+  // One line of text, never wrapped.
+  const buddyS = Math.min(200 * k, height * 0.44);
   const camS = Math.min(height * 0.3, 150 * k);
   const miniS = Math.max(56, 60 * k);
   const closeS = Math.max(48, 52 * k);
@@ -289,7 +291,7 @@ export default function PhotoFarsiGame() {
         <Image source={neliWorldAssets.ui.close} style={{ width: closeS * 0.55, height: closeS * 0.55 }} resizeMode="contain" />
       </TouchableOpacity>
       <View style={[s.body, { paddingBottom: camS + 20 * k }]}>
-        {/* Buddy on the floor, bubble over her head. */}
+        {/* Buddy stands on the floor (bottom-anchored), bubble over her head. */}
         <View style={s.left}>
           {bubbleFa ? (
             <View style={s.bubble}>
@@ -300,7 +302,7 @@ export default function PhotoFarsiGame() {
           <TouchableOpacity onPress={speakTakePhoto} activeOpacity={0.85} accessibilityRole="button">
             <BuddyGuide mood={bookOpen ? 'idle' : mood} size={buddyS} />
           </TouchableOpacity>
-          <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]}>عکس‌ها از دستگاه بیرون نمی‌رود</Text>
+          <SoftShadow width={buddyS * 0.7} />
         </View>
 
         {/* Right: polaroid / thinking / answer */}
@@ -390,6 +392,11 @@ export default function PhotoFarsiGame() {
         </TouchableOpacity>
       </View>
 
+      {/* Privacy: small cream pill pinned bottom-left, never over the wardrobe. */}
+      <View style={[s.privacyPill, { bottom: 10 * k, left: 12 }]} pointerEvents="none">
+        <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>عکس‌ها از دستگاه بیرون نمی‌رود</Text>
+      </View>
+
       {/* Sticker book overlay (in-screen, never a Modal — iOS crash rule). */}
       {bookOpen ? (
         <View style={s.bookOverlay}>
@@ -449,7 +456,7 @@ const styles = (k: number) =>
       zIndex: 10,
     },
     body: { flex: 1, flexDirection: 'row', paddingHorizontal: 14 * k, columnGap: 12 * k },
-    left: { width: '34%', alignItems: 'center', justifyContent: 'center', rowGap: 8 * k },
+    left: { width: '34%', alignItems: 'center', justifyContent: 'flex-end', rowGap: 6 * k },
     bubble: {
       backgroundColor: '#FFFFFF',
       borderRadius: 16 * k,
@@ -505,7 +512,15 @@ const styles = (k: number) =>
     },
     heardBadge: { position: 'absolute', bottom: -8 * k, backgroundColor: '#FFB800', borderRadius: 10 * k, paddingHorizontal: 6 * k },
     heardText: { fontSize: 11 * k, fontFamily: ff('en', 'black'), color: PLAY_INK },
-    privacy: { fontFamily: ff('fa', 'regular'), color: '#FFFFFF', fontSize: 12 * k, opacity: 0.9 },
+    privacyPill: {
+      position: 'absolute',
+      backgroundColor: 'rgba(255,253,245,0.95)',
+      borderRadius: 999,
+      paddingHorizontal: 12 * k,
+      paddingVertical: 4 * k,
+      maxWidth: '30%',
+    },
+    privacy: { fontFamily: ff('fa', 'regular'), color: PLAY_INK, fontSize: 11 * k },
     right: { flex: 1, rowGap: 8 * k, minHeight: 0, alignItems: 'center', justifyContent: 'center' },
     thinkCard: { width: '100%', paddingVertical: 30 * k, alignItems: 'center' },
     answerCard: { width: '100%', alignItems: 'center', paddingVertical: 12 * k, rowGap: 6 * k },
