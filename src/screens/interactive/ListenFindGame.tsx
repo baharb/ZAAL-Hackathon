@@ -66,18 +66,18 @@ const BY_ID: Record<string, PhotoFarsiWord> = Object.fromEntries(VOICED_WORDS.ma
 // Three random slots per round, across the room from the buddy (left).
 const SCENE_SLOTS: Record<SceneBg, { fx: number; fb: number }[]> = {
   kitchenCheerful: [
-    { fx: 0.38, fb: 0.457 },
-    { fx: 0.56, fb: 0.457 },
-    { fx: 0.68, fb: 0.457 },
-    { fx: 0.135, fb: 0.165 },
-    { fx: 0.25, fb: 0.02 },
+    { fx: 0.38, fb: 0.465 },
+    { fx: 0.55, fb: 0.465 },
+    { fx: 0.7, fb: 0.465 },
+    { fx: 0.135, fb: 0.25 },
+    { fx: 0.25, fb: 0.1 },
   ],
   bedroom: [
-    { fx: 0.52, fb: 0.39 },
-    { fx: 0.6, fb: 0.39 },
-    { fx: 0.68, fb: 0.39 },
-    { fx: 0.55, fb: 0.16 },
-    { fx: 0.66, fb: 0.16 },
+    { fx: 0.44, fb: 0.43 },
+    { fx: 0.6, fb: 0.43 },
+    { fx: 0.76, fb: 0.43 },
+    { fx: 0.55, fb: 0.22 },
+    { fx: 0.7, fb: 0.22 },
   ],
 };
 
@@ -197,16 +197,55 @@ export default function ListenFindGame() {
     // a safety net (wide counter/bed, so clamped spots stay on furniture).
     const objS = H * 0.22;
     const cover = bgCover(scene.bg, W, H, W, H * 1.25);
-    const inBand = SCENE_SLOTS[scene.bg].filter(
-      slot => {
-        const cx = surfX(slot.fx, cover.imgW, cover.s, cover.offX);
-        return cx > objS * 0.75 && cx < W - objS * 0.75;
-      },
-    );
-    const slots = shuffle([...(inBand.length >= 3 ? inBand : SCENE_SLOTS[scene.bg])]).slice(0, 3);
+    const sizes = choices.map(c => objS * (ART_ZOOM[c.id] ?? 1));
+    const maxSize = Math.max(...sizes);
+    const inBand = SCENE_SLOTS[scene.bg].filter(slot => {
+      const cx = surfX(slot.fx, cover.imgW, cover.s, cover.offX);
+      return cx > maxSize * 0.75 && cx < W - maxSize * 0.75;
+    });
+    const pool = inBand.length >= 3 ? inBand : SCENE_SLOTS[scene.bg];
+    const rectOf = (slot: { fx: number; fb: number }, size: number) => {
+      const left = surfX(slot.fx, cover.imgW, cover.s, cover.offX) - size / 2;
+      const top = surfTop(slot.fb, cover.imgH, cover.s, H, cover.offYBelow) - size;
+      return { left, top, right: left + size, bottom: top + size };
+    };
+    const overlaps = (a: { left: number; top: number; right: number; bottom: number }, b: { left: number; top: number; right: number; bottom: number }) =>
+      a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    // Debug-checked deal: prefer a one-object-width gap between rects;
+    // any true overlap always repicks. First pass wants the full gap,
+    // second pass accepts strict non-overlap, then the first shuffle wins.
+    const clearBy = (rects: { left: number; top: number; right: number; bottom: number }[], pad: number) =>
+      !rects.some((r, i) =>
+        rects
+          .slice(i + 1)
+          .some(o => r.left - pad < o.right && o.left - pad < r.right && r.top - pad < o.bottom && o.top - pad < r.bottom),
+      );
+    let slots = shuffle([...pool]).slice(0, 3);
+    let settled = false;
+    for (const wantGap of [true, false]) {
+      for (let t = 0; t < 12 && !settled; t++) {
+        const cand = shuffle([...pool]).slice(0, 3);
+        const rects = cand.map((s, i) => rectOf(s, sizes[i]!));
+        const pad = wantGap ? Math.min(...sizes) : 0;
+        if (t === 0 && wantGap) slots = cand;
+        if (clearBy(rects, pad)) {
+          slots = cand;
+          settled = true;
+        }
+      }
+      if (settled) break;
+    }
+    if (__DEV__) {
+      const rects = slots.map((s, i) => rectOf(s, sizes[i]!));
+      rects.forEach((r, i) => {
+        rects.slice(i + 1).forEach((o, j) => {
+          if (overlaps(r, o)) console.warn(`[ListenFind] overlapping slots: ${scene.bg} #${i} vs #${i + j + 1}`);
+        });
+      });
+    }
     const spots = choices.map((c, i) => {
       const slot = slots[i]!;
-      const size = objS * (ART_ZOOM[c.id] ?? 1);
+      const size = sizes[i]!;
       return {
         left: Math.min(Math.max(surfX(slot.fx, cover.imgW, cover.s, cover.offX) - size / 2, 8), W - size - 8),
         top: surfTop(slot.fb, cover.imgH, cover.s, H, cover.offYBelow) - size,
