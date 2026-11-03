@@ -33,6 +33,23 @@ export type CartoonResult = { base64: string } | { error: string };
 
 const BASE64_RE = /^[A-Za-z0-9+/=\s]+$/;
 
+/** Dev-terminal only: the exact server failure (HTTP status + body) so
+ * Bahar can read WHY a call failed. Never shown to the child. */
+function devLogHttpError(prefix: string, error: any) {
+  if (typeof __DEV__ === 'undefined' || !__DEV__) return;
+  const ctx = (error as any)?.context;
+  const status = ctx?.status ?? (error as any)?.status ?? 'unknown';
+  if (ctx && typeof ctx.clone === 'function') {
+    ctx
+      .clone()
+      .text()
+      .then((body: string) => console.warn(`${prefix} HTTP ${status}:`, body))
+      .catch(() => console.warn(`${prefix} HTTP ${status}:`, error?.message ?? error));
+  } else {
+    console.warn(`${prefix} HTTP ${status}:`, error?.message ?? error);
+  }
+}
+
 export async function askMeta(req: MetaRequest, retries = 1): Promise<MetaResult> {
   if (!supabaseConfigured) {
     return { error: 'Supabase is not configured (.env is missing EXPO_PUBLIC_SUPABASE_URL / ANON_KEY).' };
@@ -44,10 +61,12 @@ export async function askMeta(req: MetaRequest, retries = 1): Promise<MetaResult
     try {
       const { data, error } = await supabase.functions.invoke('meta-ai', { body: req });
       if (error) {
+        devLogHttpError('[story]', error);
         last = { error: error.message ?? 'Request failed' };
         continue;
       }
       if (data?.error) {
+        if (typeof __DEV__ !== 'undefined' && __DEV__) console.warn('[story] function error:', data.error);
         last = { error: String(data.error) };
         continue;
       }
@@ -82,17 +101,14 @@ export async function askCartoon(req: CartoonRequest, retries = 1): Promise<Cart
         body: { imageBase64: clean, kind: req.kind },
       });
       if (error) {
-        // Visible only in the dev terminal (never to the child): the real
-        // reason the cartoon failed — function missing, Meta error, etc.
-        if (typeof __DEV__ !== 'undefined' && __DEV__) {
-          console.warn('[cartoon] invoke failed:', error);
-        }
+        // Dev terminal only (never to the child): HTTP status + body.
+        devLogHttpError('[cartoon]', error);
         last = { error: error.message ?? 'Request failed' };
         continue;
       }
       if (data?.error) {
         if (typeof __DEV__ !== 'undefined' && __DEV__) {
-          console.warn('[cartoon] function said:', data.error);
+          console.warn('[cartoon] function error:', data.error);
         }
         last = { error: String(data.error) };
         continue;

@@ -127,7 +127,7 @@ function parseStory(text: string): StoryText | null {
       const title = typeof obj.title === 'string' ? obj.title.slice(0, 50).trim() : '';
       const recap = typeof obj.recap === 'string' ? obj.recap.slice(0, 140).trim() : '';
       const lesson = typeof obj.lesson === 'string' ? obj.lesson.slice(0, 90).trim() : '';
-      // The gate: exactly 6 short clean lines plus a real title, recap
+      // The gate: exactly 8 clean lines plus a real title, recap
       // and lesson — anything else goes back for one retry, then fallback.
       if (validStoryLines(ls) && title && recap && lesson) return { title, lines: ls, recap, lesson };
       return null;
@@ -141,7 +141,7 @@ function parseStory(text: string): StoryText | null {
     .map(l => l.replace(/^[\s*#\-–—\d.)\]]+/, '').replace(/["*]/g, '').trim())
     .filter(l => l.length > 0 && l.length <= 80 && faRange.test(l))
     .filter(l => (seen.has(l) ? false : (seen.add(l), true)))
-    .slice(0, 6);
+    .slice(0, 8);
   if (!validStoryLines(ls)) return null;
   return { title: '', lines: ls, recap: '', lesson: '' };
 }
@@ -666,17 +666,23 @@ export default function MagicStoryGame() {
     setError(null);
     setCartoonUri(null);
     void playFaAudio('story/make-magic');
+    const b64 = drawingToPngBase64(dstrokes, 384);
     try {
-      const b64 = drawingToPngBase64(dstrokes, 384);
       const res = await askCartoon({ imageBase64: b64, kind: 'drawing' });
       if ('error' in res) {
-        setError('نلی الان نمی‌تونه، دوباره امتحان کن');
+        // Never stuck: the child's own drawing becomes the hero sticker
+        // (same die-cut frame) and the story goes on without the cartoon.
+        if (__DEV__) console.warn('[cartoon] cartoon failed, keeping the drawing as the sticker:', res.error);
+        setCartoonUri(`data:image/png;base64,${b64}`);
+        setCelebrate(true);
         return;
       }
       setCartoonUri(`data:image/png;base64,${res.base64}`);
       setCelebrate(true);
-    } catch {
-      setError('نلی الان نمی‌تونه، دوباره امتحان کن');
+    } catch (e) {
+      if (__DEV__) console.warn('[cartoon] cartoon threw, keeping the drawing as the sticker:', e);
+      setCartoonUri(`data:image/png;base64,${b64}`);
+      setCelebrate(true);
     } finally {
       setConjuring(false);
     }
@@ -734,34 +740,42 @@ export default function MagicStoryGame() {
               .join(' and ')}. Mention each at most once, in passing. `
           : '';
       const buildPrompt = () =>
-        `Write a picture-book story in Farsi for a 4-year-old: EXACTLY 6 very short lines, ` +
+        `Write a picture-book story in Farsi for a 4-to-6-year-old: EXACTLY 8 lines, ` +
         `plus a title, a one-line recap and a one-line sweet lesson. ` +
         `Hero: ${buddy.fa} (${buddy.en}) — the child's best friend. ` +
         `Friend: ${friend.fa} (${friend.en}). ` +
         objLine +
         `Setting: a cozy home day. ` +
-        `Everyday spoken Farsi, like a mom talking to a 4-year-old. One simple sentence per line, max 8 words. ` +
+        `Everyday spoken Farsi, the way a mom tells a story to her 5-year-old. ` +
+        `Each line is ONE natural full sentence of 6 to 12 words — real storytelling, not baby talk. ` +
+        `Give the characters ONE short line of spoken dialogue inside «» (like گفت: «...»). ` +
+        `Show one feeling with one of these words: خوشحال، تعجب کرد، ذوق کرد. ` +
         `No poetry, no rhyme, no refrain. ` +
-        `Plot: who and where → one small happy problem → solve it together → happy ending. ` +
-        `Each line follows from the one before. ` +
+        `Plot: who and where → a clear small problem → the two friends think of a clever, kind fix TOGETHER → they do it → happy ending. ` +
+        `Each line must follow from the one before; cause and effect, like a real little story. ` +
+        `Slip in 1–2 slightly new words a child can guess from the sentence around them. ` +
         `The story MUST include the word "${nextFocus.fa}" (${nextFocus.en}) once, as part of the tale, never announced. ` +
         `NEVER write about fear, the dark, monsters, nightmares, falling asleep or crying. ` +
         `Do NOT list names like a roll call. ` +
-        `Example to follow (same shape, a NEW story, not this one): ` +
-        `{"title":"نلی و توپ قرمز","lines":["نلی یه توپ قرمز داشت.","توپ قل خورد و رفت زیر میز.","نلی گفت: توپ جونی کجایی","آیدین اومد و زیر میز رو نگاه کرد.","توپ اونجا بود! نلی خندید.","نلی و آیدین با هم توپبازی کردن."],"recap":"نلی توپش رو پیدا کرد.","lesson":"دوستا به هم کمک میکنن."} ` +
+        `Example to follow (same shape and level, a NEW story, not this one): ` +
+        `{"title":"نلی و بادبادک آبی","lines":["نلی و آیدین توی باغ قشنگ خونه‌ی مادربزرگ بازی می‌کردن.","بادبادک آبی آیدین یهو پرواز کرد و رفت روی شاخه‌ی بلند درخت نشست.","باد هرچی زور زد، بادبادک از رو شاخه تکون نخورد و همونجا موند.","آیدین گفت: «بادبادکم اون بالا گیر کرده، چیکار کنیم حالا؟»","نلی یه نگاه به جاروی بلند کنار درخت کرد و لبخند زد.","نلی گفت: «جارو رو بده به من، تو هم صداش کن!»","آیدین جارو رو نگه داشت و نلی آروم نوک شاخه رو تکون داد.","بادبادک افتاد پایین و هر دو ذوق کردن و دور باغ دویدن."],"recap":"نلی با یه فکر خوب بادبادک آیدین رو نجات داد.","lesson":"با فکر کردن و کمک هم، مشکل حل می‌شه."} ` +
         `Reply with ONLY this JSON and no other text: ` +
-        `{"title": "...", "lines": ["...", ...6 total...], "recap": "...", "lesson": "..."}`;
+        `{"title": "...", "lines": ["...", ...8 total...], "recap": "...", "lesson": "..."}`;
       const system =
-        'Title plus exactly six lines plus recap plus lesson. Mom-talking Farsi, no poetry, no fear, no roll call. ' +
-        'One event per line, each line follows the last. JSON only, never any other text.';
+        'Title plus exactly eight lines plus recap plus lesson. Natural mom-telling Farsi for a 4-to-6-year-old, one full sentence (6–12 words) per line, one «» dialogue, one feeling word, no poetry, no fear, no roll call. ' +
+        'One event per line, each line follows the last: problem, clever kind fix together, happy ending. JSON only, never any other text.';
       // Ask at most twice; a hand-written fallback guarantees the child
       // always gets a real story, never an error screen.
       let filled = null as null | { title: string; lines: string[]; recap: string; lesson: string };
       for (let attempt = 0; attempt < 2 && !filled; attempt++) {
-        const res = await askMeta({ prompt: buildPrompt(), system, maxTokens: 600, temperature: 0.7 });
-        if ('error' in res || !res.text || !res.text.trim()) continue;
+        const res = await askMeta({ prompt: buildPrompt(), system, maxTokens: 900, temperature: 0.7 });
+        if ('error' in res || !res.text || !res.text.trim()) {
+          if (__DEV__) console.warn('[story] story request failed:', 'error' in res ? res.error : 'empty reply');
+          continue;
+        }
         const parsed = parseStory(res.text);
         if (parsed && parsed.title && parsed.recap && parsed.lesson) filled = parsed;
+        else if (__DEV__) console.warn('[story] reply failed the story gate, attempt', attempt + 1);
       }
       if (!filled) {
         filled = fallbackStory(
