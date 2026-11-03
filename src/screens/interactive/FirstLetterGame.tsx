@@ -11,7 +11,7 @@ import * as Haptics from 'expo-haptics';
 import { useWindowDimensions } from '../../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNav } from '../../store/NavContext';
-import { BuddyGuide, GameBg, WORD_ART, WordArt } from '../../ui/playKit';
+import { BuddyGuide, GameBg, SoftShadow, WORD_ART, WordArt } from '../../ui/playKit';
 import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAssets';
 import { IdleHand, useIdleHint } from '../../quest/IdleHand';
 import { dir, ff } from '../../theme/fonts';
@@ -168,7 +168,9 @@ export default function FirstLetterGame() {
   // text — the spoken word is the question.
   const picS = Math.min(height * 0.32, W * 0.22);
   const blockS = Math.min(height * 0.19, W * 0.1);
-  const buddyS = Math.min(height * 0.46, W * 0.16);
+  const buddyS = Math.min(height * 0.55, W * 0.2);
+  const blankW = picS * 1.5;
+  const blankH = Math.max(26, picS * 0.3);
   const closeS = Math.max(48, 52 * k);
   const answerIdx = deal.choices.findIndex(c => c.id === deal.answer.id);
   const s = styles(k);
@@ -219,13 +221,27 @@ export default function FirstLetterGame() {
           <>
             <View style={s.buddyCol}>
               <BuddyGuide mood={prompting ? 'thinking' : rightId ? 'happy' : 'idle'} size={buddyS} />
+              <SoftShadow width={buddyS * 0.5} />
             </View>
             <View style={s.midCol}>
-              <TouchableOpacity style={s.speaker} onPress={replay} disabled={prompting} activeOpacity={0.85}>
-                <Image source={neliWorldAssets.ui.voice} style={{ width: 30 * k, height: 30 * k }} resizeMode="contain" />
-              </TouchableOpacity>
-              <WordArt art={WORD_ART[deal.word.id] ?? null} emoji={deal.word.emoji} size={picS} />
-              <View style={s.shadowDot} />
+              {/* The word's picture picnics on a blanket on the grass — tap
+                  it to hear the word again. Speaker badge on its corner. */}
+              <View style={s.objWrap}>
+                <TouchableOpacity onPress={replay} disabled={prompting || done} activeOpacity={0.85} accessibilityRole="button">
+                  <WordArt art={WORD_ART[deal.word.id] ?? null} emoji={deal.word.emoji} size={picS} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[s.speakerBadge, { width: 46 * k, height: 46 * k, borderRadius: 23 * k }]}
+                  onPress={replay}
+                  disabled={prompting || done}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                >
+                  <Image source={neliWorldAssets.ui.voice} style={{ width: 24 * k, height: 24 * k }} resizeMode="contain" />
+                </TouchableOpacity>
+              </View>
+              <View style={[s.blanket, { width: blankW, height: blankH, marginTop: -picS * 0.16, borderRadius: 14 * k }]} />
+              <SoftShadow width={blankW * 0.9} />
               {showName ? (
                 <View style={s.namePill}>
                   <Text style={[s.nameFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{deal.word.fa}</Text>
@@ -283,22 +299,26 @@ const styles = (k: number) =>
     },
     starsWrap: { position: 'absolute', alignSelf: 'center', zIndex: 30, elevation: 30 },
     body: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 * k, columnGap: 12 * k },
-    buddyCol: { width: '24%', alignItems: 'center', justifyContent: 'flex-end', alignSelf: 'stretch', paddingBottom: 18 * k },
+    buddyCol: { width: '28%', alignItems: 'center', justifyContent: 'flex-end', alignSelf: 'stretch', paddingBottom: 18 * k },
     midCol: { flex: 1, alignItems: 'center', justifyContent: 'center', rowGap: 6 * k },
-    speaker: {
-      width: 56 * k,
-      height: 56 * k,
-      borderRadius: 28 * k,
+    objWrap: { position: 'relative', alignItems: 'center' },
+    speakerBadge: {
+      position: 'absolute',
+      right: 6 * k,
+      bottom: 10 * k,
       backgroundColor: '#FFB800',
+      borderWidth: 2,
+      borderColor: '#FFFFFF',
       alignItems: 'center',
       justifyContent: 'center',
       ...CARD_SHADOW,
     },
-    shadowDot: {
-      width: 120 * k,
-      height: 12 * k,
-      borderRadius: 999,
-      backgroundColor: 'rgba(30,20,60,0.14)',
+    blanket: {
+      backgroundColor: '#FFF6E5',
+      borderWidth: 3 * k,
+      borderColor: '#E63B3B',
+      borderBottomWidth: 6 * k,
+      borderBottomColor: '#B91C1C',
     },
     namePill: {
       backgroundColor: 'rgba(255,253,245,0.95)',
