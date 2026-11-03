@@ -192,15 +192,24 @@ export default function ListenFindGame() {
     const choices = shuffle([...shuffle(words.filter(w => w.id !== answer.id)).slice(0, 2), answer]);
     // Three random standing spots, bottom-anchored to the drawn surface
     // through the artwork fractions (same furniture on phone + tablet).
+    // Cover crops the artwork sides on narrow screens, so slots outside the
+    // visible band are dropped for the round; positions clamp on-screen as
+    // a safety net (wide counter/bed, so clamped spots stay on furniture).
     const objS = H * 0.22;
     const cover = bgCover(scene.bg, W, H, W, H * 1.25);
-    const slots = shuffle([...SCENE_SLOTS[scene.bg]]).slice(0, 3);
+    const inBand = SCENE_SLOTS[scene.bg].filter(
+      slot => {
+        const cx = surfX(slot.fx, cover.imgW, cover.s, cover.offX);
+        return cx > objS * 0.75 && cx < W - objS * 0.75;
+      },
+    );
+    const slots = shuffle([...(inBand.length >= 3 ? inBand : SCENE_SLOTS[scene.bg])]).slice(0, 3);
     const spots = choices.map((c, i) => {
       const slot = slots[i]!;
       const size = objS * (ART_ZOOM[c.id] ?? 1);
       return {
-        left: surfX(slot.fx, cover.imgW, cover.s) - size / 2,
-        top: surfTop(slot.fb, cover.imgH, cover.s, H) - size,
+        left: Math.min(Math.max(surfX(slot.fx, cover.imgW, cover.s, cover.offX) - size / 2, 8), W - size - 8),
+        top: surfTop(slot.fb, cover.imgH, cover.s, H, cover.offYBelow) - size,
       };
     });
     return { answer, choices, scene: scene.bg, spots };

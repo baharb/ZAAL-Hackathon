@@ -1,10 +1,11 @@
 // Background surface math (quality pass). Every scene background is drawn
-// bottom-anchored with cover(): the artwork's bottom edge sits at the box
-// bottom, its left edge at the box left, and cover() crops the top and the
-// right. So a surface line lives at fixed fractions OF THE ARTWORK —
-// fx from the left, fb above the bottom — and lands on the same drawn
-// furniture at EVERY aspect ratio. Screen fractions drift (that's what the
-// old slots did); artwork fractions don't.
+// bottom-anchored with cover(): the box bottom sits on the screen bottom
+// and React Native centers the artwork inside the box, so any overflow is
+// cropped SYMMETRICALLY (never left-aligned). A surface line lives at fixed
+// fractions OF THE ARTWORK — fx from the left, fb above the bottom — minus
+// the centering offsets, and lands on the same drawn furniture at EVERY
+// aspect ratio. Screen fractions drift (that's what the old slots did);
+// artwork fractions don't.
 
 export type BgKind = 'kitchenCheerful' | 'bedroom' | 'playground';
 
@@ -28,27 +29,37 @@ const DIMS: Record<BgKind, { phone: Dims; universal: Dims }> = {
   },
 };
 
-/** Cover scale + artwork size for a bottom-anchored box of (boxW, boxH). */
+/** Cover scale + artwork size for a bottom-anchored box of (boxW, boxH),
+ * plus the centering offsets: cover() centers, so half the overflow hides
+ * on each side (offX), and half of any vertical overflow hides below the
+ * box bottom (offYBelow). In all our scenes the box is taller than the art
+ * (box aspect < art aspect), so height binds and offYBelow is 0. */
 export function bgCover(
   kind: BgKind,
   screenW: number,
   screenH: number,
   boxW: number,
   boxH: number,
-): { s: number; imgW: number; imgH: number } {
+): { s: number; imgW: number; imgH: number; offX: number; offYBelow: number } {
   const v = screenW / screenH >= 1.95 ? DIMS[kind].phone : DIMS[kind].universal;
-  return { s: Math.max(boxW / v.w, boxH / v.h), imgW: v.w, imgH: v.h };
+  const s = Math.max(boxW / v.w, boxH / v.h);
+  return {
+    s,
+    imgW: v.w,
+    imgH: v.h,
+    offX: Math.max(0, (v.w * s - boxW) / 2),
+    offYBelow: Math.max(0, (v.h * s - boxH) / 2),
+  };
 }
 
-/** Screen x (from left) of artwork fraction fx. Left-aligned: artwork
- * fractions past the box width are cropped, never squeezed. */
-export function surfX(fx: number, imgW: number, s: number): number {
-  return fx * imgW * s;
+/** Screen x (from left) of artwork fraction fx, minus the centered crop. */
+export function surfX(fx: number, imgW: number, s: number, offX = 0): number {
+  return fx * imgW * s - offX;
 }
 
 /** Screen y (from top) of a surface fb above the artwork bottom, when the
  * box bottom sits exactly on the screen bottom (both our background
  * renderers do this). */
-export function surfTop(fb: number, imgH: number, s: number, screenH: number): number {
-  return screenH - fb * imgH * s;
+export function surfTop(fb: number, imgH: number, s: number, screenH: number, offYBelow = 0): number {
+  return screenH + offYBelow - fb * imgH * s;
 }
