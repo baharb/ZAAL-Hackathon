@@ -14,6 +14,8 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Svg, Rect, Circle, Path } from 'react-native-svg';
 import { useWindowDimensions } from '../../layout/PortraitFallback';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNav } from '../../store/NavContext';
 import { dir, ff } from '../../theme/fonts';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../../assets/faTestAudio.generated';
 import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
@@ -26,7 +28,6 @@ import {
   CandyButton,
   GameBg,
   GameCard,
-  GameTopBar,
   PLAY_ACCENTS,
   PLAY_INK,
   WORD_ART,
@@ -141,6 +142,8 @@ function OpenBookIcon({ size }: { size: number }) {
 
 export default function PhotoFarsiGame() {
   const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { navigate } = useNav();
   const k = height / REFERENCE_H;
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [asking, setAsking] = useState(false);
@@ -174,11 +177,11 @@ export default function PhotoFarsiGame() {
 
   const handlePicked = (uri: string | undefined, base64: string | undefined | null) => {
     if (!uri || !base64) {
-      setError('That photo did not work. Try another one.');
+      setError('این عکس نشد، یه عکس دیگه بگیر');
       return;
     }
     if (base64.length > MAX_IMAGE_BASE64_CHARS) {
-      setError('That photo is too big. Try the camera instead.');
+      setError('این عکس خیلی بزرگه، با دوربین بگیر');
       return;
     }
     setPhoto({ uri, base64 });
@@ -192,13 +195,13 @@ export default function PhotoFarsiGame() {
     try {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (!perm.granted) {
-        setError('Camera is off. You can still tap the word cards.');
+        setError('دوربین خاموشه، کلمات رو بزن');
         return;
       }
       const res = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.5, base64: true, exif: false });
       if (!res.canceled) handlePicked(res.assets[0]?.uri, res.assets[0]?.base64);
     } catch {
-      setError('Camera did not open. You can still tap the word cards.');
+      setError('دوربین باز نشد، کلمات رو بزن');
     }
   };
 
@@ -208,13 +211,13 @@ export default function PhotoFarsiGame() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        setError('Photo library is off. You can still tap the word cards.');
+        setError('گالری خاموشه، کلمات رو بزن');
         return;
       }
       const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: false, quality: 0.5, base64: true, exif: false });
       if (!res.canceled) handlePicked(res.assets[0]?.uri, res.assets[0]?.base64);
     } catch {
-      setError('Library did not open. You can still tap the word cards.');
+      setError('گالری باز نشد، کلمات رو بزن');
     }
   };
 
@@ -226,7 +229,7 @@ export default function PhotoFarsiGame() {
     try {
       const res = await askMeta({ prompt: ASK_PROMPT, imageBase64: photo.base64, system: askSystem(), maxTokens: 1000 });
       if ('error' in res || !res.text || !res.text.trim()) {
-        setError('Neli is busy. Try again.');
+        setError('نلی الان نمی‌تونه، دوباره امتحان کن');
         return;
       }
       const parsed = parseAnswer(res.text);
@@ -248,51 +251,36 @@ export default function PhotoFarsiGame() {
   };
 
   const mood: BuddyMood = asking ? 'thinking' : result && result.known ? 'happy' : 'idle';
-  const bigBtnH = Math.max(64, 76 * k);
-  const smallBtnH = Math.max(64, 68 * k);
+  // Scene: buddy stands big on the floor, bubble right over her head, the
+  // big yellow camera square bottom-center. One line of text, never wrapped.
+  const buddyS = Math.min(190 * k, height * 0.4);
+  const camS = Math.min(height * 0.3, 150 * k);
+  const miniS = Math.max(56, 60 * k);
+  const closeS = Math.max(48, 52 * k);
+  const bubbleFa = !photo ? 'از اتاقت عکس بگیر' : (!result ? 'بزن نلی بگه!' : null);
   const s = styles(k);
   return (
     <View style={s.root}>
       <GameBg pick={roomBackgroundPickers.bedroom} />
-      <View style={s.topWrap}>
-        <GameTopBar title="Photo Farsi" titleFa="فارسی با عکس" />
-      </View>
-      <View style={s.body}>
-        {/* Left: speech bubble, then buddy standing on the floor with the buttons beside them */}
+      {/* Floating navy close only — no title bar. */}
+      <TouchableOpacity
+        onPress={() => navigate({ name: 'MagicGames' })}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        style={[s.closeBtn, { top: insets.top + 8, left: 12, width: closeS, height: closeS, borderRadius: closeS / 2 }]}
+      >
+        <Image source={neliWorldAssets.ui.close} style={{ width: closeS * 0.55, height: closeS * 0.55 }} resizeMode="contain" />
+      </TouchableOpacity>
+      <View style={[s.body, { paddingBottom: camS + 20 * k }]}>
+        {/* Buddy on the floor, bubble over her head. */}
         <View style={s.left}>
-          {!photo ? (
+          {bubbleFa ? (
             <View style={s.bubble}>
-              <Text style={[s.bubbleText, dir('fa'), { textAlign: 'center' }]}>از اتاقت عکس بگیر</Text>
+              <Text style={[s.bubbleText, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{bubbleFa}</Text>
               <View style={s.bubbleTail} />
             </View>
           ) : null}
-          <View style={{ flex: 1, minHeight: 0 }} />
-          <View style={s.buddyRow}>
-            <BuddyGuide mood={bookOpen ? 'idle' : mood} size={Math.min(170 * k, height * 0.38)} />
-            <View style={s.btnCol}>
-              {!photo ? (
-                <CandyButton color={PLAY_ACCENTS.photo.color} edge={PLAY_ACCENTS.photo.edge} onPress={takePhoto} height={bigBtnH}>
-                  <Image source={neliWorldAssets.ui.camera} style={{ width: bigBtnH * 0.5, height: bigBtnH * 0.5 }} resizeMode="contain" />
-                  <Text style={[s.bigBtnText, dir('fa')]}>عکس بگیر</Text>
-                </CandyButton>
-              ) : (
-                <CandyButton color={PLAY_ACCENTS.green.color} edge={PLAY_ACCENTS.green.edge} onPress={askNeli} disabled={asking} height={bigBtnH}>
-                  <Text style={[s.bigBtnText, dir('fa')]}>{asking ? '…' : 'نلی بگو'}</Text>
-                </CandyButton>
-              )}
-              <View style={s.smallRow}>
-                <TouchableOpacity style={s.smallBtn} onPress={() => { tap(); void choosePhoto(); }} activeOpacity={0.85} accessibilityRole="button">
-                  <PictureIcon size={34 * k} />
-                </TouchableOpacity>
-                <TouchableOpacity style={s.smallBtn} onPress={() => { tap(); setBookOpen(true); }} activeOpacity={0.85} accessibilityRole="button">
-                  <OpenBookIcon size={44 * k} />
-                  <View style={s.heardBadge}>
-                    <Text style={s.heardText}>⭐ {heard.length}/15</Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+          <BuddyGuide mood={bookOpen ? 'idle' : mood} size={buddyS} />
           <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]}>عکس‌ها از دستگاه بیرون نمی‌رود</Text>
         </View>
 
@@ -304,7 +292,11 @@ export default function PhotoFarsiGame() {
             </GameCard>
           ) : result ? (
             <GameCard radius={22 * k} style={s.answerCard}>
-              <WordArt art={result.word ? WORD_ART[result.word.id] : null} emoji={result.word?.emoji ?? '📷'} size={Math.min(110 * k, height * 0.26)} />
+              {result.word ? (
+                <WordArt art={WORD_ART[result.word.id]} emoji={result.word.emoji} size={Math.min(110 * k, height * 0.26)} />
+              ) : (
+                <PictureIcon size={Math.min(110 * k, height * 0.26)} />
+              )}
               <Text style={[s.answerFa, dir('fa'), { textAlign: 'center' }]}>{result.fa || '؟'}</Text>
               {result.known ? (
                 <TouchableOpacity
@@ -324,13 +316,59 @@ export default function PhotoFarsiGame() {
               <Image source={{ uri: photo.uri }} style={s.polaroidPhoto} resizeMode="cover" />
             </View>
           )}
-          {error ? <Text style={s.error}>{error}</Text> : null}
-          {photo ? (
-            <TouchableOpacity style={s.newPhotoBtn} onPress={() => { tap(); setPhoto(null); setResult(null); }} activeOpacity={0.85}>
-              <Image source={neliWorldAssets.ui.camera} style={{ width: 34 * k, height: 34 * k }} resizeMode="contain" />
-            </TouchableOpacity>
-          ) : null}
         </View>
+      </View>
+      {error ? (
+        <View style={[s.errorWrap, { bottom: camS + 26 * k }]} pointerEvents="none">
+          <Text style={[s.error, dir('fa'), { textAlign: 'center' }]}>{error}</Text>
+        </View>
+      ) : null}
+      {/* Bottom-center controls: big yellow camera square, flanked by gallery and book. */}
+      <View style={[s.controls, { bottom: 10 * k, columnGap: 12 * k }]} pointerEvents="box-none">
+        <TouchableOpacity
+          style={[s.smallBtn, { width: miniS, height: miniS, borderRadius: 18 * k }]}
+          onPress={() => { tap(); photo ? (setPhoto(null), setResult(null)) : void choosePhoto(); }}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+        >
+          {photo ? (
+            <Image source={neliWorldAssets.ui.camera} style={{ width: 32 * k, height: 32 * k }} resizeMode="contain" />
+          ) : (
+            <PictureIcon size={32 * k} />
+          )}
+        </TouchableOpacity>
+        {!photo ? (
+          <TouchableOpacity
+            style={[s.camBtn, { width: camS, height: camS, borderRadius: 22 * k }]}
+            onPress={takePhoto}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+          >
+            <Image source={neliWorldAssets.ui.camera} style={{ width: camS * 0.44, height: camS * 0.44 }} resizeMode="contain" />
+            <Text style={[s.camText, dir('fa')]} numberOfLines={1}>عکس بگیر</Text>
+          </TouchableOpacity>
+        ) : (
+          <CandyButton
+            color={PLAY_ACCENTS.green.color}
+            edge={PLAY_ACCENTS.green.edge}
+            onPress={askNeli}
+            disabled={asking}
+            height={camS * 0.72}
+          >
+            <Text style={[s.bigBtnText, dir('fa')]} numberOfLines={1}>{asking ? '…' : 'نلی بگو'}</Text>
+          </CandyButton>
+        )}
+        <TouchableOpacity
+          style={[s.smallBtn, { width: miniS, height: miniS, borderRadius: 18 * k }]}
+          onPress={() => { tap(); setBookOpen(true); }}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+        >
+          <OpenBookIcon size={40 * k} />
+          <View style={s.heardBadge}>
+            <Text style={s.heardText}>⭐ {heard.length}/15</Text>
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Sticker book overlay (in-screen, never a Modal — iOS crash rule). */}
@@ -370,8 +408,8 @@ export default function PhotoFarsiGame() {
               })}
             </ScrollView>
             {missing.length > 0 ? (
-              <Text style={s.missing} numberOfLines={1}>
-                For mom &amp; dad 🌱 to record: {missing.join('، ')}
+              <Text style={[s.missing, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>
+                🌱 مامان و بابا اینا رو ضبط کنن: {missing.join('، ')}
               </Text>
             ) : null}
           </GameCard>
@@ -384,9 +422,15 @@ export default function PhotoFarsiGame() {
 const styles = (k: number) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: PLAY_INK },
-    topWrap: { position: 'relative', zIndex: 10, elevation: 10 },
-    body: { flex: 1, flexDirection: 'row', paddingHorizontal: 14 * k, paddingBottom: 12 * k, columnGap: 12 * k },
-    left: { width: '36%', alignItems: 'center', justifyContent: 'flex-end', rowGap: 8 * k },
+    closeBtn: {
+      position: 'absolute',
+      backgroundColor: 'rgba(20,16,60,0.85)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 10,
+    },
+    body: { flex: 1, flexDirection: 'row', paddingHorizontal: 14 * k, columnGap: 12 * k },
+    left: { width: '34%', alignItems: 'center', justifyContent: 'center', rowGap: 8 * k },
     bubble: {
       backgroundColor: '#FFFFFF',
       borderRadius: 16 * k,
@@ -403,20 +447,34 @@ const styles = (k: number) =>
     bubbleTail: {
       position: 'absolute',
       bottom: -7 * k,
-      left: '30%',
+      left: '46%',
       width: 14 * k,
       height: 14 * k,
       backgroundColor: '#FFFFFF',
       transform: [{ rotate: '45deg' }],
     },
-    buddyRow: { flexDirection: 'row', alignItems: 'flex-end', columnGap: 8 * k, width: '100%' },
-    btnCol: { flex: 1, minWidth: 0, rowGap: 8 * k, justifyContent: 'flex-end' },
     bigBtnText: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', fontSize: 22 * k },
-    smallRow: { flexDirection: 'row', gap: 10 * k },
+    controls: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    camBtn: {
+      backgroundColor: '#FFB800',
+      alignItems: 'center',
+      justifyContent: 'center',
+      rowGap: 2 * k,
+      shadowColor: 'rgba(45,27,105,0.30)',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 6,
+      elevation: 5,
+    },
+    camText: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 18 * k },
     smallBtn: {
-      width: Math.max(64, 68 * k),
-      height: Math.max(64, 68 * k),
-      borderRadius: 20 * k,
       backgroundColor: '#FFFFFF',
       alignItems: 'center',
       justifyContent: 'center',
@@ -458,14 +516,7 @@ const styles = (k: number) =>
     },
     polaroidPhoto: { width: '100%', flex: 1, minHeight: 0, borderRadius: 4 * k },
     error: { color: '#DC2626', backgroundColor: '#FFFFFF', borderRadius: 10 * k, paddingHorizontal: 10 * k, paddingVertical: 4 * k, fontSize: 12 * k, overflow: 'hidden' },
-    newPhotoBtn: {
-      width: Math.max(64, 64 * k),
-      height: Math.max(64, 64 * k),
-      borderRadius: 20 * k,
-      backgroundColor: '#FFFFFF',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
+    errorWrap: { position: 'absolute', alignSelf: 'center', maxWidth: '86%' },
     bookOverlay: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: 'rgba(46,26,107,0.55)',
