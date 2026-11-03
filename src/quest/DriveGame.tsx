@@ -207,17 +207,38 @@ function OptionArt({ word, kind, size }: { word: DisplayWord; kind: PickKind; si
   );
 }
 
+/** One question pill: the text plus a small speaker INSIDE it — the whole
+ * pill replays the question. No stray icons beside it. */
+function QuestionPill({ text, replayKey, fontSize }: { text: string; replayKey: FaTestAudioKey; fontSize: number }) {
+  const { lang } = useContext(AppContext);
+  const isFa = lang === 'fa' || lang === 'ar';
+  return (
+    <TouchableOpacity
+      onPress={() => questPlay(replayKey)}
+      activeOpacity={0.8}
+      accessibilityLabel={isFa ? 'دوباره بشنو' : 'Hear it again'}
+      accessibilityRole="button"
+      style={styles.pillBox}
+    >
+      <Text style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize }, dir(lang)]} numberOfLines={1}>{text}</Text>
+      <Image source={neliWorldAssets.ui.voice} style={{ width: fontSize * 1.15, height: fontSize * 1.15 }} resizeMode="contain" />
+    </TouchableOpacity>
+  );
+}
+
 function QuestionView({
   round,
   choices,
   optSize,
   lift,
+  replayKey,
   onCorrect,
 }: {
   round: DriveRound;
   choices: DisplayWord[];
   optSize: number;
   lift: number;
+  replayKey: FaTestAudioKey;
   onCorrect: (firstTry: boolean) => void;
 }) {
   const { lang } = useContext(AppContext);
@@ -244,22 +265,11 @@ function QuestionView({
 
   return (
     <View style={[styles.question, { paddingBottom: lift }]} pointerEvents="box-none">
-      <View style={styles.promptRow}>
-        <Image source={neliWorldAssets.ui.point} style={{ width: optSize * 0.34, height: optSize * 0.34 }} resizeMode="contain" />
-        <Text
-          style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize: Math.max(16, optSize * 0.24) }, dir(lang)]}
-        >
-          {isFa ? `${round.answer.fa} کدومه؟` : `Which one is ${round.answer.fa}?`}
-        </Text>
-        <TouchableOpacity
-          onPress={() => questPlay(round.answer.audioKey)}
-          activeOpacity={0.8}
-          accessibilityLabel={isFa ? 'دوباره بشنو' : 'Hear it again'}
-          accessibilityRole="button"
-        >
-          <Image source={neliWorldAssets.ui.voice} style={{ width: optSize * 0.34, height: optSize * 0.34 }} resizeMode="contain" />
-        </TouchableOpacity>
-      </View>
+      <QuestionPill
+        text={isFa ? `${round.answer.fa} کدومه؟` : `Which one is ${round.answer.fa}?`}
+        replayKey={replayKey}
+        fontSize={Math.max(16, optSize * 0.24)}
+      />
       <View style={[styles.qRow, isFa && { flexDirection: 'row-reverse' }]}>
         {choices.map(word => {
           const isTarget = word.id === round.answer.id;
@@ -303,6 +313,7 @@ function CountingView({
   fruitSize,
   numSize,
   lift,
+  replayKey,
   onCorrect,
 }: {
   fruit: DisplayWord;
@@ -311,6 +322,7 @@ function CountingView({
   fruitSize: number;
   numSize: number;
   lift: number;
+  replayKey: FaTestAudioKey;
   onCorrect: (firstTry: boolean) => void;
 }) {
   const { lang } = useContext(AppContext);
@@ -340,11 +352,11 @@ function CountingView({
 
   return (
     <View style={[styles.question, { paddingBottom: lift, justifyContent: 'flex-end' }]} pointerEvents="box-none">
-      <Text
-        style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize: Math.max(16, numSize * 0.2) }, dir(lang)]}
-      >
-        {isFa ? 'چندتا می‌بینی؟' : 'How many do you see?'}
-      </Text>
+      <QuestionPill
+        text={isFa ? 'چندتا می‌بینی؟' : 'How many do you see?'}
+        replayKey={replayKey}
+        fontSize={Math.max(16, numSize * 0.2)}
+      />
       <View style={[styles.fruitRow, { gap: 6, marginTop: 6 }]}>
         {Array.from({ length: count }).map((_, i) => (
           <WordArt key={i} word={fruit} size={fruitSize} />
@@ -394,6 +406,7 @@ function BalloonView({
   optSize,
   lift,
   riseDist,
+  replayKey,
   onCorrect,
 }: {
   round: DriveRound;
@@ -401,6 +414,7 @@ function BalloonView({
   optSize: number;
   lift: number;
   riseDist: number;
+  replayKey: FaTestAudioKey;
   onCorrect: (firstTry: boolean) => void;
 }) {
   const { lang } = useContext(AppContext);
@@ -433,22 +447,11 @@ function BalloonView({
 
   return (
     <View style={[styles.question, { paddingBottom: lift }]} pointerEvents="box-none">
-      <View style={styles.promptRow}>
-        <Image source={neliWorldAssets.ui.point} style={{ width: optSize * 0.34, height: optSize * 0.34 }} resizeMode="contain" />
-        <Text
-          style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize: Math.max(16, optSize * 0.24) }, dir(lang)]}
-        >
-          {isFa ? `${round.answer.fa} کدومه؟` : `Which one is ${round.answer.fa}?`}
-        </Text>
-        <TouchableOpacity
-          onPress={() => questPlay(round.answer.audioKey)}
-          activeOpacity={0.8}
-          accessibilityLabel={isFa ? 'دوباره بشنو' : 'Hear it again'}
-          accessibilityRole="button"
-        >
-          <Image source={neliWorldAssets.ui.voice} style={{ width: optSize * 0.34, height: optSize * 0.34 }} resizeMode="contain" />
-        </TouchableOpacity>
-      </View>
+      <QuestionPill
+        text={isFa ? `${round.answer.fa} کدومه؟` : `Which one is ${round.answer.fa}?`}
+        replayKey={replayKey}
+        fontSize={Math.max(16, optSize * 0.24)}
+      />
       <View style={[styles.qRow, isFa && { flexDirection: 'row-reverse' }]}>
         {choices.map(word => {
           const isTarget = word.id === round.answer.id;
@@ -1192,6 +1195,7 @@ export default function DriveGame({
               fruitSize={countingSizes(optSize, gw, carTop, countQ.count).fruitSize}
               numSize={countingSizes(optSize, gw, carTop, countQ.count).numSize}
               lift={questionLift}
+              replayKey={'quest/how-many' as FaTestAudioKey}
               onCorrect={answerCorrect}
             />
           ) : rounds[leg]!.kind === 'color' ? (
@@ -1202,6 +1206,7 @@ export default function DriveGame({
               optSize={optSize * fitFor(1.55)}
               lift={questionLift}
               riseDist={gh * 0.25}
+              replayKey={questionClip(rounds[legIndex]!)}
               onCorrect={answerCorrect}
             />
           ) : (
@@ -1211,6 +1216,7 @@ export default function DriveGame({
               choices={choices}
               optSize={optSize * fitFor(1.15)}
               lift={questionLift}
+              replayKey={questionClip(rounds[legIndex]!)}
               onCorrect={answerCorrect}
             />
           )}
@@ -1224,15 +1230,19 @@ const styles = StyleSheet.create({
   root: { flex: 1, overflow: 'hidden' },
   bgRow: { position: 'absolute', left: 0, top: 0 },
   question: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', zIndex: 10 },
-  promptRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  prompt: {
-    color: '#FFFFFF',
-    textAlign: 'center',
+  pillBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
     backgroundColor: 'rgba(45,27,105,0.72)',
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 999,
-    overflow: 'hidden',
+  },
+  prompt: {
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   qRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18 },
   qOption: {
