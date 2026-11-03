@@ -56,7 +56,7 @@ Deno.serve(async (req: Request) => {
   const apiKey = Deno.env.get('MODEL_API_KEY');
   if (!apiKey) return json({ error: 'MODEL_API_KEY secret is not set on the server' }, 500);
 
-  let body: { prompt?: string; imageBase64?: string; system?: string; maxTokens?: number };
+  let body: { prompt?: string; imageBase64?: string; system?: string; maxTokens?: number; temperature?: number };
   try {
     body = await req.json();
   } catch {
@@ -82,6 +82,11 @@ Deno.serve(async (req: Request) => {
 
   const maxTokens = Math.min(Math.max(Number(body.maxTokens) || 800, 1), MAX_TOKENS_CAP);
 
+  // Optional 0..2 knob (e.g. warmer tales). Omitted when unset so the
+  // model default — and every existing caller — behaves exactly as before.
+  const t = Number(body.temperature);
+  const temperature = body.temperature === undefined ? undefined : Math.min(Math.max(isNaN(t) ? 0.7 : t, 0), 2);
+
   try {
     const res = await fetch(`${META_BASE_URL}/chat/completions`, {
       method: 'POST',
@@ -92,6 +97,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         model: MODEL,
         max_tokens: maxTokens,
+        ...(temperature === undefined ? {} : { temperature }),
         // Muse Spark always reasons silently and hidden reasoning tokens
         // count toward max_tokens. 'minimal' keeps short kids' answers
         // from being starved of visible output tokens.

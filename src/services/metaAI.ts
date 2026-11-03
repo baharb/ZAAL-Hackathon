@@ -16,6 +16,8 @@ export type MetaRequest = {
   /** Extra instructions; the server always prepends ZAAL's child-safety rules. */
   system?: string;
   maxTokens?: number;
+  /** 0..2, forwarded only when set (the server omits it otherwise). */
+  temperature?: number;
 };
 
 export type MetaResult = { text: string } | { error: string };
