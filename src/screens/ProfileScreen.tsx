@@ -101,10 +101,14 @@ export default function ProfileScreen() {
   // That day's picnic (Daily Quest), by date — Daily-Quest-day notes get
   // its thumbnail next to the note; other days stay text-only.
   const [picnics, setPicnics] = useState<Record<string, MyDayEntry>>({});
+  // Picnic day whose photo is enlarged in the center overlay, if any.
+  const [bigPicnic, setBigPicnic] = useState<MyDayEntry | null>(null);
   React.useEffect(() => {
     let alive = true;
     void (async () => {
-      await ensureTodayParentNote();
+      // Re-runs when the parent changes language: today's note is
+      // rewritten in the new language inside ensureTodayParentNote.
+      await ensureTodayParentNote(lang);
       const notes = await loadParentNotes();
       const days = await loadMyDays();
       const byDay: Record<string, MyDayEntry> = {};
@@ -116,7 +120,8 @@ export default function ProfileScreen() {
     return () => {
       alive = false;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   const handlePasswordChange = async () => {
     if (!/^\d{4}$/.test(newPassword)) {
@@ -339,7 +344,11 @@ export default function ProfileScreen() {
               <View key={note.day} style={{ marginBottom: Math.max(10, Math.round(12 * ui)) }}>
                 <Text style={[styles.noteDay, { fontFamily: ff(lang, 'bold') }]}>{note.day}</Text>
                 <View style={{ flexDirection: isFa ? 'row-reverse' : 'row', gap: Math.max(8, Math.round(10 * ui)), alignItems: 'flex-start' }}>
-                  {picnics[note.day] ? <NotePhoto day={picnics[note.day]!} size={Math.min(150, Math.max(96, Math.round(120 * ui)))} /> : null}
+                  {picnics[note.day] ? (
+                    <TouchableOpacity onPress={() => setBigPicnic(picnics[note.day]!)} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Picnic photo">
+                      <NotePhoto day={picnics[note.day]!} size={Math.min(150, Math.max(96, Math.round(120 * ui)))} />
+                    </TouchableOpacity>
+                  ) : null}
                   <Text style={[styles.noteText, { fontFamily: ff(lang, 'regular'), flex: 1 }]}>{note.text}</Text>
                 </View>
               </View>
@@ -376,6 +385,16 @@ export default function ProfileScreen() {
         )}
 
       </ScrollView>
+      {/* Enlarged picnic photo: tap anywhere (or the ×) to close. Plain
+          overlay, not a Modal — no orientation crash risk on iPhone. */}
+      {bigPicnic ? (
+        <TouchableOpacity style={styles.bigOverlay} activeOpacity={1} onPress={() => setBigPicnic(null)} accessibilityRole="button" accessibilityLabel="Close photo">
+          <NotePhoto day={bigPicnic} size={Math.min(width * 0.8, (height * 0.78) / 0.52, 560)} />
+          <TouchableOpacity style={styles.bigClose} onPress={() => setBigPicnic(null)} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel="Close">
+            <Text style={styles.bigCloseText}>×</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -397,6 +416,9 @@ const styles = StyleSheet.create({
   sectionTitle: { color: '#221044', marginBottom: 12 },
   noteDay: { color: '#6B5A89', fontSize: 12, marginBottom: 4 },
   noteText: { color: '#221044', fontSize: 15, lineHeight: 22 },
+  bigOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(20,10,50,0.82)', alignItems: 'center', justifyContent: 'center', zIndex: 90, elevation: 90 },
+  bigClose: { position: 'absolute', top: 18, right: 18, width: 46, height: 46, borderRadius: 23, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  bigCloseText: { color: '#221044', fontSize: 28, lineHeight: 30, fontWeight: '700' },
   languageRow: { flexDirection: 'row', gap: 8, paddingVertical: 2, paddingHorizontal: 1 },
   languageRowRtl: { flexDirection: 'row-reverse' },
   languageButton: { height: 42, borderRadius: 21, paddingHorizontal: 16, backgroundColor: '#F0EBFF', alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: 'transparent' },

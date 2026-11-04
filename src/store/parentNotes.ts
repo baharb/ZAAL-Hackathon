@@ -13,7 +13,7 @@ import type { Lang } from './AppContext';
 const STORAGE_KEY = 'parent_notes_v1';
 const KEEP_NOTES = 14;
 
-export type ParentNote = { day: string; text: string };
+export type ParentNote = { day: string; text: string; lang?: Lang };
 
 export async function loadParentNotes(): Promise<ParentNote[]> {
   try {
@@ -61,18 +61,25 @@ let making = false;
 
 /** Make today's note once (after a session). Safe to call often: it does
  * nothing when today has no practiced words or already has a note. */
-export async function ensureTodayParentNote(): Promise<void> {
+export async function ensureTodayParentNote(preferredLang?: Lang): Promise<void> {
   if (making) return;
   making = true;
   try {
     const day = todayKey();
     const notes = await loadParentNotes();
-    if (notes.some(n => n.day === day)) return;
+    const lang = preferredLang ?? (await readParentLang());
+    const existing = notes.find(n => n.day === day);
+    // Same language as the settings: today's note is already right.
+    if (existing && existing.lang === lang) return;
     const words = await getTodayPractice();
     if (words.length === 0) return;
-    const lang = await readParentLang();
     const text = (await askParentNote(words, lang)) ?? templateParentNote(words, faNameOf, lang);
-    await saveParentNotes([{ day, text }, ...notes]);
+    if (existing) {
+      // Language changed since this note was written: rewrite it.
+      await saveParentNotes(notes.map(n => (n.day === day ? { day, text, lang } : n)));
+    } else {
+      await saveParentNotes([{ day, text, lang }, ...notes]);
+    }
   } catch {
     // Offline / storage failure: no note today, never an error.
   } finally {
