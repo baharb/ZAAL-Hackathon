@@ -615,7 +615,7 @@ export default function Finale({
         <View
           style={[
             styles.buddySide,
-            { left: buddyCx - matCharW / 2, bottom: blanketBottom + blanketH * 0.5, alignItems: 'center' },
+            { left: buddyCx - matCharW / 2, bottom: blanketBottom + blanketH * 0.76, alignItems: 'center' },
           ]}
           pointerEvents="none"
         >
@@ -632,7 +632,7 @@ export default function Finale({
         <View
           style={[
             styles.grandmaSide,
-            { left: grandmaCx - matCharW / 2, bottom: blanketBottom + blanketH * 0.72, alignItems: 'center' },
+            { left: grandmaCx - matCharW / 2, bottom: blanketBottom + blanketH * 0.76, alignItems: 'center' },
           ]}
           pointerEvents="none"
         >
@@ -695,24 +695,27 @@ export default function Finale({
           After the photo, تمام! takes the same spot. */}
       {camReady && photoPhase === 'none' && (
         <View pointerEvents="box-none" style={styles.camCenter}>
-          {camIdle && (
-            <View pointerEvents="none" style={styles.camHint}>
-              <IdleHand size={camS * 0.6} />
-            </View>
-          )}
-          <TouchableOpacity
-            onPress={takePhoto}
-            activeOpacity={0.85}
-            accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
-            accessibilityRole="button"
-          >
-            <Image
-              source={QUEST_CAMERA}
-              style={{ width: camS * 3, height: camS * 3 }}
-              resizeMode="contain"
+          <View>
+            <TouchableOpacity
+              onPress={takePhoto}
+              activeOpacity={0.85}
               accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
-            />
-          </TouchableOpacity>
+              accessibilityRole="button"
+            >
+              <Image
+                source={QUEST_CAMERA}
+                style={{ width: camS * 3, height: camS * 3 }}
+                resizeMode="contain"
+                accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
+              />
+            </TouchableOpacity>
+            {/* The direction hand sits right over the camera. */}
+            {camIdle && (
+              <View pointerEvents="none" style={styles.camHandOver}>
+                <IdleHand size={camS * 0.9} />
+              </View>
+            )}
+          </View>
         </View>
       )}
       {/* Game over, like the other games: a white card with the happy
@@ -793,7 +796,8 @@ const styles = StyleSheet.create({
   polaroid: {
     position: 'absolute',
     alignSelf: 'center',
-    top: '12%',
+    // Over the ground in front of the mat, never up at the top.
+    bottom: '5%',
     backgroundColor: '#FFFFFF',
     shadowColor: '#170736',
     shadowOffset: { width: 0, height: 8 },
@@ -872,6 +876,17 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   endTitle: { color: '#221044', textAlign: 'center' },
+  camHandOver: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 6,
+    elevation: 6,
+  },
   camHint: {
     position: 'absolute',
     alignItems: 'center',
