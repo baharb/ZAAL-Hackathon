@@ -9,7 +9,7 @@
 // No Modal here on purpose: every Modal needs a landscape prop on iPhone.
 
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { Animated, Image, LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, DimensionValue, Image, LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { createAudioPlayer } from 'expo-audio';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,7 +31,7 @@ import WordArt from './WordArt';
 import { SoftShadow } from '../ui/playKit';
 import { grandmaArtFor } from './grandmaArt';
 import TopBar from '../components/TopBar';
-import PicnicPhoto from './PicnicPhoto';
+import PicnicPhoto, { Sun, Flower } from './PicnicPhoto';
 import GameEndOverlay from '../components/GameEndOverlay';
 import SimpleBall from './SimpleBall';
 
@@ -120,7 +120,6 @@ export default function Finale({
 
   const [celebrating, setCelebrating] = useState(false);
   const [photoPhase, setPhotoPhase] = useState<PhotoPhase>('none');
-  const [showCeleb, setShowCeleb] = useState(false);
   const pops = useRef(words.map(() => new Animated.Value(0))).current;
   const buddyBounce = useRef(new Animated.Value(1)).current;
   const flashAnim = useRef(new Animated.Value(0)).current;
@@ -414,10 +413,9 @@ export default function Finale({
       Animated.timing(flashAnim, { toValue: 0, duration: 320, useNativeDriver: true }),
     ]).start(() => {
       setPhotoPhase('card');
-      // The moment the captured photo shows: yay + celebration together.
-      // The ball stays on the ground beside the mat.
-      setShowCeleb(true);
-      playYay();
+      // Just the photo here — no celebration mount in this frame (180
+      // animated particles in the same frame as the polaroid caused a
+      // visible freeze). Yay + celebration happen once, at the end.
       cardAnim.setValue(0);
       Animated.timing(cardAnim, { toValue: 1, duration: 450, useNativeDriver: true }).start(() => {
         // Let the child look at the captured photo briefly, then fly it
@@ -493,6 +491,18 @@ export default function Finale({
           resizeMode="cover"
           accessibilityLabel={isFa ? 'باغ' : 'Garden'}
         />
+        {/* Warm sunny lift over the garden (never white): full color underneath. */}
+        <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(255,174,66,0.10)' }} />
+        <View pointerEvents="none" style={{ position: 'absolute', top: 6, left: 8 }}>
+          <Sun size={Math.round(64 * k)} />
+        </View>
+        <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0 }}>
+          {([{ l: '4%', b: 6, c: '#FF5D8F' }, { l: '15%', b: 14, c: '#FF8A3D' }, { l: '84%', b: 8, c: '#B388FF' }, { l: '93%', b: 16, c: '#4FC3F7' }] as { l: DimensionValue; b: number; c: string }[]).map((f, i) => (
+            <View key={i} style={{ position: 'absolute', left: f.l, bottom: f.b }}>
+              <Flower size={Math.round(26 * k)} petal={f.c} />
+            </View>
+          ))}
+        </View>
       </View>
       {/* Absolute overlay: it must never take layout space, or the whole
           scene shifts when it appears. */}
@@ -603,7 +613,7 @@ export default function Finale({
                 style={{
                   width: cell,
                   height: blanketH / rows,
-                  backgroundColor: (Math.floor(i / cols) + i) % 2 === 0 ? blanketColor : 'rgba(255,255,255,0.88)',
+                  backgroundColor: (Math.floor(i / cols) + i) % 2 === 0 ? blanketColor : '#FFFFFF',
                 }}
               />
             ))}
@@ -736,7 +746,6 @@ export default function Finale({
       )}
       {/* The celebration bursts OVER the end overlay, with the yay. */}
       {showTamam && photoPhase === 'saved' && <PopperCelebration visible />}
-      {showCeleb && <PopperCelebration visible />}
     </View>
   );
 }
@@ -776,7 +785,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: 'rgba(31,61,31,0.60)',
   },
   cells: { position: 'absolute', left: 0, top: 0, flexDirection: 'row', flexWrap: 'wrap' },
   items: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
@@ -788,7 +797,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     // Over the ground in front of the mat, never up at the top.
     bottom: '5%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFC93C',
     shadowColor: '#170736',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
