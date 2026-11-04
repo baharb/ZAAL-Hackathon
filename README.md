@@ -54,3 +54,9 @@ Demo video: _link coming with the submission_
 Expo SDK 54 · React Native 0.81 · TypeScript · Supabase · Meta Model API.
 See [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) and [`CLAUDE.md`](CLAUDE.md)
 for the codebase details.
+
+## License
+
+The source code is released under the [MIT License](LICENSE).
+ZAAL's artwork, character designs, illustrations and voice recordings are
+© Bahareh Bahreman, all rights reserved, and are not covered by the MIT License.
