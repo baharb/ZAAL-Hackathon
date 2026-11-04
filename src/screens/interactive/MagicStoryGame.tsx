@@ -1026,29 +1026,43 @@ export default function MagicStoryGame() {
                   on the right. The voice still says what to do. */}
               <View style={s.entryRow}>
                 <TouchableOpacity
-                  style={[s.entryBtn, { width: wandH * 1.15, height: wandH * 1.15, borderRadius: 20 * k }]}
+                  style={[s.entryBtn, { width: wandH * 2.05, height: wandH * 2.05, borderRadius: 26 * k }]}
                   onPress={takeRoomPhoto}
                   disabled={analyzing}
                   activeOpacity={0.85}
                   accessibilityRole="button"
                   accessibilityLabel="عکس بگیر"
                 >
-                  <Image source={QUEST_CAMERA} style={{ width: wandH * 0.85, height: wandH * 0.85 }} resizeMode="contain" />
+                  <Image source={QUEST_CAMERA} style={{ width: wandH * 1.7, height: wandH * 1.7 }} resizeMode="contain" />
                 </TouchableOpacity>
                 <View style={{ alignItems: 'center' }}>
                   <BuddyGuide mood={mood} size={entryBuddyH} />
                   <SoftShadow width={entryBuddyH} />
                 </View>
                 <TouchableOpacity
-                  style={[s.entryBtn, { width: wandH * 1.15, height: wandH * 1.15, borderRadius: 20 * k }]}
+                  style={[s.entryBtn, { width: wandH * 2.05, height: wandH * 2.05, borderRadius: 26 * k }]}
                   onPress={openDrawing}
                   disabled={analyzing}
                   activeOpacity={0.85}
                   accessibilityRole="button"
                   accessibilityLabel="نقاشی بکش"
                 >
-                  <Image source={CRAYON_ART} style={{ width: wandH * 0.6, height: wandH * 0.6 }} resizeMode="contain" />
-                  <View style={{ width: wandH * 0.55, height: Math.max(4, 5 * k), borderRadius: 99, backgroundColor: '#E63B3B', marginTop: 4 * k }} />
+                  {/* The crayon leans like it is drawing, over a wavy
+                      hand-drawn squiggle — not a straight bar. */}
+                  <Image
+                    source={CRAYON_ART}
+                    style={{ width: wandH * 1.15, height: wandH * 1.15, transform: [{ rotate: '-28deg' }] }}
+                    resizeMode="contain"
+                  />
+                  <Svg width={wandH * 1.1} height={wandH * 0.32} viewBox="0 0 100 28">
+                    <Path
+                      d="M4 18 C 16 8, 26 24, 38 14 S 62 8, 74 16 S 90 22, 96 12"
+                      stroke="#E63B3B"
+                      strokeWidth={5}
+                      strokeLinecap="round"
+                      fill="none"
+                    />
+                  </Svg>
                 </TouchableOpacity>
               </View>
             </>
@@ -1474,7 +1488,7 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
   errorRow: { alignItems: 'center', rowGap: 8 * k, maxWidth: '92%' },
   retryBtn: { backgroundColor: '#FFB800', borderRadius: 999, paddingHorizontal: 26 * k, paddingVertical: 10 * k },
   retryText: { fontFamily: ff('fa', 'black'), color: '#1E1B4B', fontSize: 16 * k },
-  entryRow: { flexDirection: 'row', gap: 18 * k, width: '100%', maxWidth: 560, justifyContent: 'center', alignItems: 'flex-end' },
+  entryRow: { flexDirection: 'row', gap: 18 * k, width: '100%', maxWidth: 640, justifyContent: 'center', alignItems: 'center' },
   entryBtn: {
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
