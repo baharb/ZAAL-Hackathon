@@ -242,8 +242,8 @@ export default function Finale({
   // 360pt-tall phone as well as a tablet.
   const levelFont = Math.min(15, Math.max(11, 12.5 * k));
 
-  // Yellow square camera, bottom-center on its own strip below the
-  // blanket — never on top of the food.
+  // Yellow camera, 3x size, centered over the whole scene (the parent
+  // asked for it big and in the middle, on top of everything).
   const camS = Math.min(gh * 0.2, 110);
   const [showTamam, setShowTamam] = useState(false);
   // Finishing the photo exactly once: the saved voice plays unless the
@@ -732,7 +732,7 @@ export default function Finale({
             >
               <Image
                 source={QUEST_CAMERA}
-                style={{ width: camS, height: camS }}
+                style={{ width: camS * 3, height: camS * 3 }}
                 resizeMode="contain"
                 accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
               />
@@ -834,8 +834,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: 4,
+    justifyContent: 'center',
     zIndex: 45,
     elevation: 45,
   },
