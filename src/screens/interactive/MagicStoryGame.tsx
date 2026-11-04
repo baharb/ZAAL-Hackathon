@@ -27,7 +27,7 @@ import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
 import { askCartoon, askIllustration, askMeta } from '../../services/metaAI';
 import { DrawStroke, drawingToPngBase64 } from '../../utils/drawingPng';
 import { roomBackgroundPickers, neliWorldAssets } from '../../assets/neliWorldAssets';
-import { STORY_FOCUS_WORDS, StoryFocus, fallbackStory, validStoryLines } from '../../data/magicStory';
+import { STORY_FOCUS_WORDS, STORY_PLACES, StoryFocus, fallbackStory, validStoryLines } from '../../data/magicStory';
 import { ROOM_ITEMS, RecognizedWord, RoomItem, matchRoomItem } from '../../data/roomItems';
 import { BUDDIES, BuddyId, loadBuddy } from '../../quest/buddyStore';
 import { buddyPose } from '../../quest/questTheme';
@@ -398,6 +398,30 @@ function IdleHand({ size }: { size: number }) {
   );
 }
 
+/** The only error a child ever sees — Farsi, short, with a retry. */
+const ERR_FA = 'نلی الان نمی‌تونه، دوباره امتحان کن';
+
+/** A real little sea for the «دریا» place: sky, layered waves and the
+ * app's own boat art sailing on top — not a lone squiggle. */
+function SeaScene({ width, height }: { width: number; height: number }) {
+  const boat = ROOM_ITEMS.find(i => i.id === 'boat');
+  const boatS = Math.min(width, height) * 0.24;
+  return (
+    <View style={{ position: 'absolute', width, height }} pointerEvents="none">
+      <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+        <Rect x={0} y={0} width={width} height={height} fill="#BDEBFF" />
+        <Circle cx={width * 0.85} cy={height * 0.16} r={height * 0.07} fill="#FFD93D" />
+        <Path d={`M0 ${height * 0.62} Q ${width * 0.25} ${height * 0.56} ${width * 0.5} ${height * 0.62} T ${width} ${height * 0.62} L ${width} ${height} L 0 ${height} Z`} fill="#38BDF8" />
+        <Path d={`M0 ${height * 0.72} Q ${width * 0.25} ${height * 0.66} ${width * 0.5} ${height * 0.72} T ${width} ${height * 0.72} L ${width} ${height} L 0 ${height} Z`} fill="#0284C7" />
+        <Path d={`M0 ${height * 0.84} Q ${width * 0.25} ${height * 0.79} ${width * 0.5} ${height * 0.84} T ${width} ${height * 0.84} L ${width} ${height} L 0 ${height} Z`} fill="#0369A1" />
+      </Svg>
+      {boat ? (
+        <Image source={boat.art} style={{ position: 'absolute', width: boatS, height: boatS, left: width * 0.58, top: height * 0.47 }} resizeMode="contain" />
+      ) : null}
+    </View>
+  );
+}
+
 export default function MagicStoryGame() {
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -421,6 +445,10 @@ export default function MagicStoryGame() {
     };
   }, []);
   const [focus, setFocus] = useState<StoryFocus | null>(null);
+  // Where the tale happens — chosen by the child («کجا؟» chips). The
+  // storybook stage behind the cast follows this place.
+  const [placeId, setPlaceId] = useState('garden');
+  const place = STORY_PLACES.find(p => p.id === placeId) ?? STORY_PLACES[1]!;
   const [lines, setLines] = useState<string[] | null>(null);
   // Picture-book pages: one generated illustration per line, produced in
   // the background after the story lands. Until a page's picture arrives
@@ -497,14 +525,14 @@ export default function MagicStoryGame() {
     try {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (!perm.granted) {
-        setError('Camera is off. Neli cannot see the room.');
+        setError(ERR_FA);
         return;
       }
       const res = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.5, base64: true, exif: false });
       const asset = res.canceled ? undefined : res.assets?.[0];
       if (!asset?.uri || !asset.base64) return;
       if (asset.base64.length > MAX_PHOTO_BASE64_CHARS) {
-        setError('That photo is too big. Try again.');
+        setError(ERR_FA);
         return;
       }
       // A new photo means a new story: clear everything downstream.
@@ -531,13 +559,13 @@ export default function MagicStoryGame() {
         maxTokens: 300,
       });
       if ('error' in named || !named.text.trim()) {
-        setError('نلی الان نمی‌تونه، دوباره امتحان کن');
+        setError(ERR_FA);
         setPhoto(null);
         return;
       }
       const found = parseItems(named.text);
       if (!found) {
-        setError('نلی چیزی نشناخت، یه عکس دیگه بگیر');
+        setError(ERR_FA);
         setPhoto(null);
         return;
       }
@@ -552,7 +580,7 @@ export default function MagicStoryGame() {
       }
       setUnmatched(found.map(w => w.fa).filter(fa => !used.has(fa)).slice(0, 2));
       if (matched.length === 0) {
-        setError('نلی چیزی نشناخت، یه عکس دیگه بگیر');
+        setError(ERR_FA);
         setPhoto(null);
         return;
       }
@@ -579,7 +607,7 @@ export default function MagicStoryGame() {
         if ('base64' in res) setRoomCartoon(`data:image/png;base64,${res.base64}`);
       });
     } catch {
-      setError('Camera did not open. Try again.');
+      setError(ERR_FA);
     } finally {
       setAnalyzing(false);
     }
@@ -700,7 +728,7 @@ export default function MagicStoryGame() {
     tap();
     if (dstrokes.length === 0) {
       // The button never stays silent: empty paper gets a gentle hint.
-      setError('اول یه چیزی بکش، بعد جادویی‌اش کن!');
+      setError(ERR_FA);
       return;
     }
     setConjuring(true);
@@ -727,7 +755,7 @@ export default function MagicStoryGame() {
         setCartoonUri(`data:image/png;base64,${b64}`);
         setCelebrate(true);
       } else {
-        setError('نلی الان نمی‌تونه، دوباره امتحان کن');
+        setError(ERR_FA);
       }
     } finally {
       setConjuring(false);
@@ -791,7 +819,7 @@ export default function MagicStoryGame() {
         `Hero: ${buddy.fa} (${buddy.en}) — the child's best friend. ` +
         `Friend: ${friend.fa} (${friend.en}). ` +
         objLine +
-        `Setting: a cozy home day. ` +
+        `Setting: ${place.fa} (${place.en}) — the whole story happens there. ` +
         `Everyday spoken Farsi, the way a mom tells a story to her 5-year-old. ` +
         `Each line is ONE natural full sentence of 6 to 12 words — real storytelling, not baby talk. ` +
         `Give the characters ONE short line of spoken dialogue inside «» (like گفت: «...»). ` +
@@ -878,15 +906,20 @@ export default function MagicStoryGame() {
   const buddyArt = buddyPose(buddyId, 'base');
   return (
     <View style={s.root}>
-      <GameBg pick={roomBackgroundPickers.garden} />
+      {placeId === 'sea' ? (
+        <SeaScene width={W} height={H} />
+      ) : (
+        <GameBg pick={placeId === 'home' ? roomBackgroundPickers.bedroom : roomBackgroundPickers.garden} />
+      )}
 
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
         <TopBar title="قصه جادویی" titleFa="قصه جادویی" dark showClose onBack={() => navigate({ name: 'MagicGames' })} />
       </View>
 
-      {/* Center stage: camera → cast → story. */}
+      {/* Center stage: camera → cast → story. Top padding keeps every
+          label («کی؟» / «کجا؟») fully below the purple TopBar. */}
       {!showingNote ? (
-        <View style={s.stage}>
+        <View style={[s.stage, { paddingTop: topBarHeight(H, insets.top) + 10 * k }]}>
           {!photo && cast.length === 0 ? (
             <>
               <View style={s.bubble}>
@@ -924,18 +957,25 @@ export default function MagicStoryGame() {
             </>
           ) : (
             <>
-              <View style={s.roomRow}>
-                {roomCartoon ? (
-                  <CartoonSticker uri={roomCartoon} size={Math.min(110 * k, H * 0.24)} tilt={-6} />
+              {/* Storybook before the story: the chosen hero stands big
+                  in the chosen place, the buddy beside it, and the
+                  «قصه بساز!» bubble over them. No white card. */}
+              <View style={s.bookStage}>
+                <BuddyGuide mood={mood} size={Math.min(120 * k, H * 0.3)} />
+                {selected[0] ? (
+                  <CastSticker m={selected[0]} size={Math.min(130 * k, H * 0.32)} tilt={-4} />
+                ) : roomCartoon ? (
+                  <CartoonSticker uri={roomCartoon} size={Math.min(110 * k, H * 0.26)} tilt={-6} />
                 ) : photo ? (
-                  <StickerFrame size={Math.min(110 * k, H * 0.24)} tilt={-6}>
-                    <ToonPhoto uri={photo.uri} size={Math.min(110 * k, H * 0.24) * 0.78} />
+                  <StickerFrame size={Math.min(110 * k, H * 0.26)} tilt={-6}>
+                    <ToonPhoto uri={photo.uri} size={Math.min(110 * k, H * 0.26) * 0.78} />
                   </StickerFrame>
                 ) : null}
                 <View style={s.bubbleSmall}>
-                  <Text style={[s.bubbleSmallText, dir('fa'), { textAlign: 'center' }]}>کدوم دوست توی قصه باشه؟</Text>
+                  <Text style={[s.bubbleSmallText, dir('fa'), { textAlign: 'center' }]}>{selected[0] ? 'قصه بساز!' : 'کدوم دوست توی قصه باشه؟'}</Text>
                 </View>
               </View>
+              <View style={s.qPill}><Text style={[s.qPillText, dir('fa')]}>کی؟</Text></View>
               <View style={s.castRow}>
                 {cast.map(m => {
                   const on = selectedIds.includes(m.item.id);
@@ -952,6 +992,35 @@ export default function MagicStoryGame() {
                       </ChoiceFigure>
                       <Text style={[s.castFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{m.fa}</Text>
                     </View>
+                  );
+                })}
+              </View>
+              <View style={s.qPill}><Text style={[s.qPillText, dir('fa')]}>کجا؟</Text></View>
+              <View style={s.placeRow}>
+                {STORY_PLACES.map(p => {
+                  const on = placeId === p.id;
+                  const boatArt = ROOM_ITEMS.find(i => i.id === 'boat')?.art;
+                  return (
+                    <TouchableOpacity
+                      key={p.id}
+                      onPress={() => { tap(); setPlaceId(p.id); }}
+                      activeOpacity={0.85}
+                      accessibilityRole="button"
+                      style={[s.placeChip, on && s.placeChipOn, { width: 76 * k, height: 62 * k }]}
+                    >
+                      {p.id === 'sea' ? (
+                        <View style={s.seaChip}>
+                          {boatArt ? <Image source={boatArt} style={{ width: 44 * k, height: 44 * k }} resizeMode="contain" /> : null}
+                        </View>
+                      ) : (
+                        <Image
+                          source={p.id === 'home' ? roomBackgroundPickers.bedroom(W, H) : roomBackgroundPickers.garden(W, H)}
+                          style={s.placeChipImg}
+                          resizeMode="cover"
+                        />
+                      )}
+                      <Text style={[s.placeChipText, dir('fa')]} numberOfLines={1}>{p.fa}</Text>
+                    </TouchableOpacity>
                   );
                 })}
               </View>
@@ -981,7 +1050,19 @@ export default function MagicStoryGame() {
               )}
             </>
           )}
-          {error ? <Text style={s.error}>{error}</Text> : null}
+          {error ? (
+            <View style={s.errorRow}>
+              <Text style={[s.error, dir('fa')]}>{error}</Text>
+              <TouchableOpacity
+                style={s.retryBtn}
+                onPress={() => { tap(); setError(null); if (selected.length > 0) void tellStory(); }}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+              >
+                <Text style={[s.retryText, dir('fa')]}>دوباره</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </View>
       ) : null}
 
@@ -1098,8 +1179,16 @@ export default function MagicStoryGame() {
       ) : null}
 
       {error && showingNote ? (
-        <View style={s.errorWrap} pointerEvents="none">
-          <Text style={s.error}>{error}</Text>
+        <View style={s.errorWrap}>
+          <Text style={[s.error, dir('fa')]}>{error}</Text>
+          <TouchableOpacity
+            style={s.retryBtn}
+            onPress={() => { tap(); setError(null); if (selected.length > 0) void tellStory(); }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+          >
+            <Text style={[s.retryText, dir('fa')]}>دوباره</Text>
+          </TouchableOpacity>
         </View>
       ) : null}
 
@@ -1277,12 +1366,24 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
     paddingVertical: 3 * k,
   },
   roomRow: { flexDirection: 'row', alignItems: 'center', gap: 10 * k },
+  bookStage: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 14 * k },
+  qPill: { backgroundColor: '#FFF9E8', borderRadius: 999, paddingHorizontal: 16 * k, paddingVertical: 5 * k },
+  qPillText: { fontFamily: ff('fa', 'black'), color: '#1E1B4B', fontSize: 15 * k },
+  placeRow: { flexDirection: 'row', justifyContent: 'center', gap: 10 * k },
+  placeChip: { borderRadius: 16 * k, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: 'transparent', alignItems: 'center', justifyContent: 'flex-end' },
+  placeChipOn: { borderColor: '#FFB800' },
+  placeChipImg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
+  placeChipText: { fontFamily: ff('fa', 'black'), color: '#1E1B4B', fontSize: 12 * k, backgroundColor: 'rgba(255,249,232,0.92)', paddingHorizontal: 8 * k, borderRadius: 999, marginBottom: 4 * k, overflow: 'hidden' },
+  seaChip: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#38BDF8', alignItems: 'center', justifyContent: 'center' },
   castRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 * k, maxWidth: 560 },
   castFa: { color: '#FFFFFF', fontSize: 13 * k, fontFamily: ff('fa', 'black'), textShadowColor: 'rgba(46,26,107,0.7)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3, marginTop: 2 * k, maxWidth: 84 * k },
   extraFa: { color: '#FFFFFF', fontSize: 12 * k, fontFamily: ff('fa', 'regular'), textShadowColor: 'rgba(46,26,107,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   retake: { color: '#FFFFFF', fontSize: 13 * k, fontFamily: ff('fa', 'black'), textDecorationLine: 'underline', textShadowColor: 'rgba(46,26,107,0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   error: { color: '#DC2626', backgroundColor: 'rgba(255,255,255,0.94)', borderRadius: 10 * k, paddingHorizontal: 12 * k, paddingVertical: 6 * k, fontSize: 13 * k, overflow: 'hidden', textAlign: 'center' as const },
-  errorWrap: { position: 'absolute', bottom: 12 * k, alignSelf: 'center', maxWidth: '86%' },
+  errorWrap: { position: 'absolute', bottom: 12 * k, alignSelf: 'center', maxWidth: '86%', alignItems: 'center', rowGap: 8 * k },
+  errorRow: { alignItems: 'center', rowGap: 8 * k, maxWidth: '92%' },
+  retryBtn: { backgroundColor: '#FFB800', borderRadius: 999, paddingHorizontal: 26 * k, paddingVertical: 10 * k },
+  retryText: { fontFamily: ff('fa', 'black'), color: '#1E1B4B', fontSize: 16 * k },
   entryRow: { flexDirection: 'row', gap: 10 * k, width: '100%', maxWidth: 480, justifyContent: 'center' },
   entryHalf: { flex: 1 },
   drawCard: {
