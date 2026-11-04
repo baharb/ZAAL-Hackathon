@@ -28,13 +28,14 @@ const MAX_IMAGE_BASE64_CHARS = 6_000_000; // ~4.5 MB
 // drawing/photo pixels come from the app — so the output cannot be
 // steered into anything but a kind kids' sticker.
 const CARTOON_STYLE =
-  'Repaint as a cute ZAAL picture-book style cartoon sticker: soft rounded shapes, ' +
-  'big simple shapes, thick outlines, bright flat colors, happy and kind, ' +
-  'big friendly eyes if it is a creature, plain white background. ' +
-  'No text, no words, no letters, no watermark. Safe for a 3-year-old.';
+  'A cute, polished children\'s picture-book character INSPIRED by this child\'s drawing: ' +
+  'same subject and main colors, but redrawn beautifully — soft rounded shapes, ' +
+  'big friendly eyes if it is a creature, clean outlines, bright colors, ' +
+  'plain white background, no text. Do not copy or trace the drawing itself; ' +
+  're-imagine it as a finished picture-book character. Safe and kind for a 3-year-old.';
 const KIND_INSTRUCTION = {
-  drawing: 'This is a young child\'s finger drawing. Keep the same subject, colors and composition, just polished and beautiful.',
-  photo: "This is a photo of a child's toy or room. Keep the same main subject and colors, just as a cute cartoon sticker.",
+  drawing: 'The source is a young child\'s finger drawing — take only its subject and main colors as inspiration.',
+  photo: "The source is a photo of a child's toy or room — redraw its main subject in the same polished picture-book way.",
 } as const;
 
 const corsHeaders = {

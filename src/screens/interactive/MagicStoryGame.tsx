@@ -30,6 +30,7 @@ import { roomBackgroundPickers, neliWorldAssets } from '../../assets/neliWorldAs
 import { STORY_FOCUS_WORDS, STORY_PLACES, StoryFocus, fallbackStory, validStoryLines } from '../../data/magicStory';
 import { ROOM_ITEMS, RecognizedWord, RoomItem, matchRoomItem } from '../../data/roomItems';
 import { BUDDIES, BuddyId, loadBuddy } from '../../quest/buddyStore';
+import { saveMyDay } from '../../quest/myDaysStore';
 import { buddyPose } from '../../quest/questTheme';
 import {
   BuddyGuide,
@@ -457,6 +458,30 @@ export default function MagicStoryGame() {
   const [pageArt, setPageArt] = useState<(string | null)[]>([]);
   const pageArtRef = useRef<(string | null)[]>([]);
   const [storyTitle, setStoryTitle] = useState('');
+  const [storySaved, setStorySaved] = useState(false);
+  // The page picture gently pops in when it (or the page) arrives.
+  const pagePop = useRef(new Animated.Value(1)).current;
+    tap();
+    try {
+      const b = (await loadBuddy()) ?? 'neli';
+      await saveMyDay({
+        id: `magicstory-${Date.now()}`,
+        dateISO: new Date().toISOString().slice(0, 10),
+        buddy: b,
+        storyId: 'game_magicstory',
+        picks: [],
+        colorHex: '#FFFFFF',
+        game: {
+          fa: 'قصه جادویی',
+          en: 'Magic Story',
+          words: selected.map(m => ({ id: m.item.id, fa: (Array.isArray(m.item.fa) ? m.item.fa[0] : m.item.fa) ?? '', emoji: '' })),
+        },
+      });
+    } catch {
+      // Saving must never break the book.
+    }
+    setStorySaved(true);
+  };
   const [recap, setRecap] = useState('');
   const [lesson, setLesson] = useState('');
   const [unmatched, setUnmatched] = useState<string[]>([]);
@@ -464,6 +489,14 @@ export default function MagicStoryGame() {
   const [error, setError] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState(false);
   const [pageIdx, setPageIdx] = useState(0);
+  useEffect(() => {
+    pagePop.setValue(0.85);
+    Animated.spring(pagePop, { toValue: 1, friction: 5, tension: 90, useNativeDriver: true }).start();
+  }, [pageIdx, pageArt, pagePop]);
+  useEffect(() => {
+    pagePop.setValue(0.85);
+    Animated.spring(pagePop, { toValue: 1, friction: 5, tension: 90, useNativeDriver: true }).start();
+  }, [pageIdx, pageArt, pagePop]);
   const [idleHint, setIdleHint] = useState(false);
   // Drawing mode: finger painting on the tablet, repainted as a cartoon.
   const [drawing, setDrawing] = useState(false);
@@ -494,9 +527,13 @@ export default function MagicStoryGame() {
     void stopFaAudio();
   }, []);
 
-  // The entry instruction speaks on open, once its recording ships.
+  // The entry instruction speaks on open. The small delay matters: the
+  // previous screen's unmount stopFaAudio bumps playFaAudio's token and
+  // would silently drop a play started in the same instant. Tapping the
+  // bubble below replays it for a child who missed it.
   useEffect(() => {
-    void playFaAudio('story/draw-or-photo');
+    const t = setTimeout(() => { void playFaAudio('story/draw-or-photo'); }, 450);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -860,6 +897,7 @@ export default function MagicStoryGame() {
         );
       }
       setFocus(nextFocus);
+      setStorySaved(false);
       setStoryTitle(filled.title || `قصه‌ی ${friend.fa}`);
       pageArtRef.current = filled.lines.map(() => null);
       setPageArt([...pageArtRef.current]);
@@ -922,9 +960,9 @@ export default function MagicStoryGame() {
         <View style={[s.stage, { paddingTop: topBarHeight(H, insets.top) + 10 * k }]}>
           {!photo && cast.length === 0 ? (
             <>
-              <View style={s.bubble}>
+              <TouchableOpacity style={s.bubble} activeOpacity={0.9} onPress={() => { tap(); void playFaAudio('story/draw-or-photo'); }} accessibilityRole="button" accessibilityLabel="از اتاقت عکس بگیر یا نقاشی بکش!">
                 <Text style={[s.bubbleText, dir('fa'), { textAlign: 'center' }]}>از اتاقت عکس بگیر یا نقاشی بکش!</Text>
-              </View>
+              </TouchableOpacity>
               <View style={s.tail} />
               <BuddyGuide mood={mood} size={entryBuddyH} />
               <SoftShadow width={entryBuddyH} />
@@ -1066,97 +1104,77 @@ export default function MagicStoryGame() {
         </View>
       ) : null}
 
-      {/* Story paper note: one picture page at a time, recap last. */}
+      {/* The picture book: one calm open-book page at a time, full
+          screen. Left half = big illustration, right half = the line.
+          Nothing else on the page but round arrows and page dots. */}
       {showingNote ? (
-        <View style={s.noteWrap} pointerEvents="box-none">
-          <View style={[s.note, { width: Math.min(W * 0.62, 620), maxHeight: H * 0.9 }]}>
-            <View style={s.tapeLeft} />
-            <View style={s.tapeRight} />
+        <View style={[s.noteWrap, { top: topBarHeight(H, insets.top) }]} pointerEvents="box-none">
+          <View style={[s.book, { width: Math.min(W * 0.9, 920 * k), height: Math.min(H * 0.82, 560 * k) }]}>
             {asking || !lines ? (
               <View style={s.noteThinking}>
                 <BuddyGuide mood="thinking" size={64 * k} />
                 <ThinkingDots size={12 * k} />
               </View>
             ) : (
-              <View style={s.page}>
-                {isTitle ? (
-                  <>
-                    <View style={s.recapCast}>
-                      <Image
-                        source={buddyArt}
-                        style={{ width: Math.min(72 * k, H * 0.16), height: Math.min(72 * k, H * 0.16) }}
-                        resizeMode="contain"
-                      />
-                      {friend ? <CastSticker m={friend} size={Math.min(72 * k, H * 0.16)} tilt={-6} /> : null}
-                    </View>
-                    <Text style={[s.titleFa, dir('fa'), { textAlign: 'center' }]}>{storyTitle}</Text>
-                  </>
-                ) : !isRecap ? (
-                  <>
-                    {pageArt[storyIdx] ? (
-                      <Image
-                        source={{ uri: pageArt[storyIdx]! }}
-                        style={[s.pageIllustration, { height: artH }]}
-                        resizeMode="cover"
-                      />
+              <>
+                <View style={s.openPages}>
+                  {/* Left half: the picture, gently popping in. */}
+                  <Animated.View style={[s.halfArt, { transform: [{ scale: pagePop }] }]}>
+                    {isRecap ? (
+                      friend ? <CastSticker m={friend} size={Math.min(170 * k, H * 0.34)} tilt={-4} /> : null
+                    ) : pageArt[storyIdx] && !isTitle ? (
+                      <Image source={{ uri: pageArt[storyIdx]! }} style={s.bookIllustration} resizeMode="cover" />
                     ) : (
-                    <View style={[s.pageArt, { height: artH }]}>
-                      {roomCartoon ? (
-                        <CartoonSticker uri={roomCartoon} size={artH * 0.9} tilt={-6} />
-                      ) : photo ? (
-                        <ToonPhoto uri={photo.uri} size={artH} />
-                      ) : friend?.heroUri ? (
-                        <CartoonSticker uri={friend.heroUri} size={artH * 0.9} tilt={-6} />
-                      ) : null}
-                      <View style={s.pageFigure}>
+                      <View style={s.bookFallback}>
+                        {roomCartoon ? (
+                          <CartoonSticker uri={roomCartoon} size={Math.min(150 * k, H * 0.3)} tilt={-6} />
+                        ) : photo ? (
+                          <ToonPhoto uri={photo.uri} size={Math.min(150 * k, H * 0.3)} />
+                        ) : friend ? (
+                          <CastSticker m={friend} size={Math.min(150 * k, H * 0.3)} tilt={-6} />
+                        ) : null}
                         <Image
                           source={buddyArt}
-                          style={{ width: artH * 0.44, height: artH * 0.44 }}
+                          style={{ width: Math.min(90 * k, H * 0.18), height: Math.min(90 * k, H * 0.18), alignSelf: 'flex-end' }}
                           resizeMode="contain"
                         />
                       </View>
-                      {friend ? (
-                        <View style={s.pageFriend}>
-                          <CastSticker m={friend} size={artH * 0.44} tilt={-6} />
-                        </View>
-                      ) : null}
-                    </View>
                     )}
-                    <Text style={[s.line, dir('fa'), { textAlign: 'center' }]}>{lines[storyIdx]}</Text>
-                  </>
-                ) : (
-                  <>
-                    <View style={s.recapCast}>
-                      <Image
-                        source={buddyArt}
-                        style={{ width: Math.min(64 * k, H * 0.14), height: Math.min(64 * k, H * 0.14) }}
-                        resizeMode="contain"
-                      />
-                      {friend ? <CastSticker m={friend} size={Math.min(64 * k, H * 0.14)} tilt={-6} /> : null}
-                    </View>
-                    {recap ? <Text style={[s.line, dir('fa'), { textAlign: 'center' }]}>{recap}</Text> : null}
-                    {lesson ? (
-                      <View style={s.lessonCard}>
-                        <Text style={[s.lessonFa, dir('fa'), { textAlign: 'center' }]}>یاد گرفتیم: {lesson}</Text>
-                      </View>
-                    ) : null}
-                    {focus ? (
-                      <TouchableOpacity style={s.focusChip} onPress={speakFocus} activeOpacity={0.85}>
-                        <WordArt art={WORD_ART[focus.id] ?? null} emoji={focus.emoji} size={30 * k} />
-                        <Text style={[s.focusFa, dir('fa')]}>{focus.fa}</Text>
-                        <Image source={neliWorldAssets.ui.voice} style={{ width: 30 * k, height: 30 * k }} resizeMode="contain" />
-                      </TouchableOpacity>
-                    ) : null}
-                  </>
-                )}
+                  </Animated.View>
+                  {/* Right half: the words, big, with lots of air. */}
+                  <View style={s.halfText}>
+                    {isTitle ? (
+                      <Text style={[s.titleFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.6}>{storyTitle}</Text>
+                    ) : isRecap ? (
+                      <>
+                        <Text style={[s.titleFa, dir('fa'), { textAlign: 'center' }]}>پایان قصه</Text>
+                        <TouchableOpacity
+                          style={[s.saveBtn, storySaved && s.saveBtnDone, { width: 76 * k, height: 76 * k, borderRadius: 38 * k }]}
+                          onPress={() => void saveStory()}
+                          disabled={storySaved}
+                          activeOpacity={0.85}
+                          accessibilityRole="button"
+                          accessibilityLabel="ذخیره در روزهای من"
+                        >
+                          <Image source={neliWorldAssets.ui.camera} style={{ width: 40 * k, height: 40 * k }} resizeMode="contain" />
+                        </TouchableOpacity>
+                        {storySaved ? <Text style={[s.savedFa, dir('fa')]}>ذخیره شد</Text> : null}
+                      </>
+                    ) : (
+                      <Text style={[s.line, dir('fa'), { textAlign: 'center' }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.6}>{lines[storyIdx]}</Text>
+                    )}
+                  </View>
+                </View>
                 <View style={s.pageControls}>
                   <TouchableOpacity
-                    style={[s.pageBtn, safeIdx === 0 && s.pageBtnOff]}
-                    disabled={safeIdx === 0}
-                    onPress={() => { tap(); setPageIdx(safeIdx - 1); }}
+                    style={[s.arrowBtn, { width: 56 * k, height: 56 * k, borderRadius: 28 * k }, safeIdx >= totalSlides - 1 && s.pageBtnOff]}
+                    disabled={safeIdx >= totalSlides - 1}
+                    onPress={() => { tap(); setPageIdx(safeIdx + 1); }}
                     activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel="صفحه بعد"
                   >
-                    <Text style={s.pageBtnText}>قبلی</Text>
+                    <Text style={[s.arrowText, { fontSize: 30 * k }]}>‹</Text>
                   </TouchableOpacity>
                   <View style={s.dots}>
                     {Array.from({ length: totalSlides }).map((_, i) => (
@@ -1165,14 +1183,17 @@ export default function MagicStoryGame() {
                   </View>
                   {idleHint && !isRecap ? <IdleHand size={26 * k} /> : null}
                   <TouchableOpacity
-                    style={s.pageBtn}
-                    onPress={() => { tap(); setPageIdx(safeIdx >= totalSlides - 1 ? 0 : safeIdx + 1); }}
+                    style={[s.arrowBtn, { width: 56 * k, height: 56 * k, borderRadius: 28 * k }, safeIdx === 0 && s.pageBtnOff]}
+                    disabled={safeIdx === 0}
+                    onPress={() => { tap(); setPageIdx(safeIdx - 1); }}
                     activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel="صفحه قبل"
                   >
-                    <Text style={s.pageBtnText}>{safeIdx >= totalSlides - 1 ? 'از اول' : 'بعدی'}</Text>
+                    <Text style={[s.arrowText, { fontSize: 30 * k }]}>›</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
+              </>
             )}
           </View>
         </View>
@@ -1457,6 +1478,28 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  // The open picture book: cream paper, soft shadow, rounded corners.
+  book: {
+    backgroundColor: '#FFF9E8',
+    borderRadius: 28 * k,
+    paddingHorizontal: 18 * k,
+    paddingVertical: 16 * k,
+    shadowColor: 'rgba(45,27,105,0.35)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 14,
+    elevation: 10,
+  },
+  openPages: { flex: 1, flexDirection: 'row', alignItems: 'stretch', columnGap: 18 * k },
+  halfArt: { flex: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 18 * k },
+  halfText: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 * k, rowGap: 14 * k },
+  bookIllustration: { width: '100%', height: '100%', borderRadius: 18 * k },
+  bookFallback: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  arrowBtn: { backgroundColor: '#2D1B69', alignItems: 'center', justifyContent: 'center' },
+  arrowText: { color: '#FFFFFF', fontFamily: ff('fa', 'black'), lineHeight: 34 * k },
+  saveBtn: { backgroundColor: '#FFB800', alignItems: 'center', justifyContent: 'center' },
+  saveBtnDone: { backgroundColor: '#22C55E' },
+  savedFa: { fontFamily: ff('fa', 'black'), color: '#15803D', fontSize: 15 * k },
   tapeLeft: { position: 'absolute', top: -8 * k, left: 26 * k, width: 64 * k, height: 20 * k, backgroundColor: 'rgba(255,255,255,0.75)', transform: [{ rotate: '-8deg' }] },
   tapeRight: { position: 'absolute', top: -8 * k, right: 26 * k, width: 64 * k, height: 20 * k, backgroundColor: 'rgba(255,255,255,0.75)', transform: [{ rotate: '8deg' }] },
   noteThinking: { alignItems: 'center', rowGap: 10 * k, paddingVertical: 20 * k },

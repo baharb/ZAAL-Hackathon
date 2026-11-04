@@ -8,7 +8,7 @@ import { BuddyId, isBuddyId } from './buddyStore';
 import { StoryId } from './stories';
 
 /** Game recap entries (Listen & Find, First Letter) saved from the recap card. */
-export type GameStoryId = 'game_listenfind' | 'game_firstletter';
+export type GameStoryId = 'game_listenfind' | 'game_firstletter' | 'game_magicstory';
 
 const STORAGE_KEY = 'quest_my_days_v1';
 
@@ -45,7 +45,7 @@ function isMyDayEntry(value: unknown): value is MyDayEntry {
   const v = value as Record<string, unknown>;
   if (typeof v.id !== 'string' || typeof v.dateISO !== 'string') return false;
   if (!isBuddyId(typeof v.buddy === 'string' ? v.buddy : null)) return false;
-  const isGameEntry = v.storyId === 'game_listenfind' || v.storyId === 'game_firstletter';
+  const isGameEntry = v.storyId === 'game_listenfind' || v.storyId === 'game_firstletter' || v.storyId === 'game_magicstory';
   if (v.storyId !== 'picnic_grandma' && !isGameEntry) return false;
   if (isGameEntry) {
     const g = v.game as { fa?: unknown; en?: unknown; words?: unknown } | undefined;
