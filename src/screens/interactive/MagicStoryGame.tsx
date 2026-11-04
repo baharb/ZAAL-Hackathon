@@ -553,6 +553,19 @@ export default function MagicStoryGame() {
   const [cartoonUri, setCartoonUri] = useState<string | null>(null);
   // What Spark says the drawing IS (گربه, خونه…) — the friend's name.
   const [drawingSubject, setDrawingSubject] = useState<DrawingSubject>(DRAWING_FALLBACK);
+  // Start-screen guide hand: over the camera first, then the crayon,
+  // then gone.
+  const [entryGuide, setEntryGuide] = useState(0);
+  useEffect(() => {
+    if (photo || cast.length > 0) return;
+    setEntryGuide(0);
+    const t1 = setTimeout(() => setEntryGuide(1), 1700);
+    const t2 = setTimeout(() => setEntryGuide(2), 3400);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [photo, cast.length]);
   // The room photo repainted as a real cartoon (kind "photo") — the same
   // sticker treatment as drawings. Requested in the background once the
   // cast is known; the photo stays until it arrives (or forever on error).
@@ -1025,45 +1038,61 @@ export default function MagicStoryGame() {
                   (the picnic camera) on the left, crayon + drawn line
                   on the right. The voice still says what to do. */}
               <View style={s.entryRow}>
-                <TouchableOpacity
-                  style={[s.entryBtn, { width: wandH * 2.05, height: wandH * 2.05, borderRadius: 26 * k }]}
-                  onPress={takeRoomPhoto}
-                  disabled={analyzing}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  accessibilityLabel="عکس بگیر"
-                >
-                  <Image source={QUEST_CAMERA} style={{ width: wandH * 1.7, height: wandH * 1.7 }} resizeMode="contain" />
-                </TouchableOpacity>
+                <View>
+                  <TouchableOpacity
+                    style={[s.entryBtn, { width: wandH * 2.05, height: wandH * 2.05, borderRadius: 26 * k }]}
+                    onPress={takeRoomPhoto}
+                    disabled={analyzing}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel="عکس بگیر"
+                  >
+                    <Image source={QUEST_CAMERA} style={{ width: wandH * 1.7, height: wandH * 1.7 }} resizeMode="contain" />
+                  </TouchableOpacity>
+                  {entryGuide === 0 ? (
+                    <View pointerEvents="none" style={s.entryHandOver}>
+                      <IdleHand size={wandH * 0.85} />
+                    </View>
+                  ) : null}
+                </View>
                 <View style={{ alignItems: 'center' }}>
                   <BuddyGuide mood={mood} size={entryBuddyH} />
                   <SoftShadow width={entryBuddyH} />
                 </View>
-                <TouchableOpacity
-                  style={[s.entryBtn, { width: wandH * 2.05, height: wandH * 2.05, borderRadius: 26 * k }]}
-                  onPress={openDrawing}
-                  disabled={analyzing}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  accessibilityLabel="نقاشی بکش"
-                >
-                  {/* The crayon leans like it is drawing, over a wavy
-                      hand-drawn squiggle — not a straight bar. */}
-                  <Image
-                    source={CRAYON_ART}
-                    style={{ width: wandH * 1.15, height: wandH * 1.15, transform: [{ rotate: '-28deg' }] }}
-                    resizeMode="contain"
-                  />
-                  <Svg width={wandH * 1.1} height={wandH * 0.32} viewBox="0 0 100 28">
-                    <Path
-                      d="M4 18 C 16 8, 26 24, 38 14 S 62 8, 74 16 S 90 22, 96 12"
-                      stroke="#E63B3B"
-                      strokeWidth={5}
-                      strokeLinecap="round"
-                      fill="none"
-                    />
-                  </Svg>
-                </TouchableOpacity>
+                <View>
+                  <TouchableOpacity
+                    style={[s.entryBtn, { width: wandH * 2.05, height: wandH * 2.05, borderRadius: 26 * k }]}
+                    onPress={openDrawing}
+                    disabled={analyzing}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel="نقاشی بکش"
+                  >
+                    {/* The crayon's point sits at the START of the wavy
+                        line, like it is drawing it. */}
+                    <View style={{ width: wandH * 1.15, alignItems: 'flex-start' }}>
+                      <Image
+                        source={CRAYON_ART}
+                        style={{ width: wandH * 1.02, height: wandH * 1.02, marginLeft: wandH * 0.01, marginBottom: -wandH * 0.24, transform: [{ rotate: '-22deg' }], zIndex: 2 }}
+                        resizeMode="contain"
+                      />
+                      <Svg width={wandH * 1.15} height={wandH * 0.32} viewBox="0 0 100 28">
+                        <Path
+                          d="M4 18 C 16 8, 26 24, 38 14 S 62 8, 74 16 S 90 22, 96 12"
+                          stroke="#E63B3B"
+                          strokeWidth={5}
+                          strokeLinecap="round"
+                          fill="none"
+                        />
+                      </Svg>
+                    </View>
+                  </TouchableOpacity>
+                  {entryGuide === 1 ? (
+                    <View pointerEvents="none" style={s.entryHandOver}>
+                      <IdleHand size={wandH * 0.85} />
+                    </View>
+                  ) : null}
+                </View>
               </View>
             </>
           ) : analyzing || cast.length === 0 ? (
@@ -1489,6 +1518,17 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
   retryBtn: { backgroundColor: '#FFB800', borderRadius: 999, paddingHorizontal: 26 * k, paddingVertical: 10 * k },
   retryText: { fontFamily: ff('fa', 'black'), color: '#1E1B4B', fontSize: 16 * k },
   entryRow: { flexDirection: 'row', gap: 18 * k, width: '100%', maxWidth: 640, justifyContent: 'center', alignItems: 'center' },
+  entryHandOver: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 6,
+    elevation: 6,
+  },
   entryBtn: {
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
