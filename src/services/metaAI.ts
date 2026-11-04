@@ -30,6 +30,9 @@ export type CartoonRequest = {
   /** What the drawing/photo shows (e.g. "cat"), so the picture-book
    * character is that subject. Short simple English, server-validated. */
   subject?: string;
+  /** STEP 2: colors/shape of the thing in the photo ("small red ball"),
+   * server-validated, used only for kind "photo". */
+  look?: string;
 };
 
 export type CartoonResult = { base64: string } | { error: string };
@@ -112,7 +115,7 @@ export async function askCartoon(req: CartoonRequest, retries = 1): Promise<Cart
     try {
       const { data, error } = await withTimeout(
         supabase.functions.invoke('cartoon', {
-          body: { imageBase64: clean, kind: req.kind, ...(req.subject ? { subject: req.subject } : {}) },
+          body: { imageBase64: clean, kind: req.kind, ...(req.subject ? { subject: req.subject } : {}), ...(req.look ? { look: req.look } : {}) },
         }),
         INVOKE_TIMEOUT_MS,
       );
@@ -183,6 +186,54 @@ export async function askIllustration(scene: string): Promise<CartoonResult> {
   } catch (e: any) {
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
       console.warn('[illustrate] network threw:', e?.message ?? e);
+    }
+    return { error: e?.message ?? 'Network error' };
+  }
+}
+/** One story-page picture from the cartoon function (kind "page"):
+ * the hero character image (+ the buddy's art when available) as
+ * references, one fixed location, one short scene. The caller retries
+ * with the hero only, then falls back to standing art. */
+export async function askPagePicture(req: {
+  heroBase64: string;
+  buddyBase64?: string | null;
+  location: string;
+  scene: string;
+}): Promise<CartoonResult> {
+  if (!supabaseConfigured) {
+    return { error: 'Supabase is not configured (.env is missing EXPO_PUBLIC_SUPABASE_URL / ANON_KEY).' };
+  }
+  const strip = (s: string) => (s ?? '').replace(/^data:image\/[a-z+]+;base64,/i, '').replace(/\s/g, '');
+  const hero = strip(req.heroBase64 ?? '');
+  if (!hero || !BASE64_RE.test(hero)) return { error: 'Bad hero image' };
+  const buddy = req.buddyBase64 ? strip(req.buddyBase64) : '';
+  try {
+    const { data, error } = await withTimeout(
+      supabase.functions.invoke('cartoon', {
+        body: {
+          kind: 'page',
+          heroBase64: hero,
+          ...(buddy && BASE64_RE.test(buddy) ? { buddyBase64: buddy } : {}),
+          location: req.location,
+          scene: req.scene,
+        },
+      }),
+      INVOKE_TIMEOUT_MS,
+    );
+    if (error) {
+      devLogHttpError('[image]', error);
+      return { error: error.message ?? 'Request failed' };
+    }
+    if (data?.error) {
+      if (typeof __DEV__ !== 'undefined' && __DEV__) console.warn('[image] function error:', data.error);
+      return { error: String(data.error) };
+    }
+    const out = String(data?.imageBase64 ?? '').replace(/\s/g, '');
+    if (!out || !BASE64_RE.test(out)) return { error: 'Empty reply' };
+    return { base64: out };
+  } catch (e: any) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.warn('[image] network threw:', e?.message ?? e);
     }
     return { error: e?.message ?? 'Network error' };
   }

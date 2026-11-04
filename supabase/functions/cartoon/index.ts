@@ -38,11 +38,35 @@ const KIND_INSTRUCTION = {
   photo: "The source is a photo of a child's toy or room — redraw its main subject in the same polished picture-book way.",
 } as const;
 
+// Story page pictures (STEP 5): fixed locations only, short scenes only.
+const PAGE_LOCATIONS = ['garden', 'beach', 'park', 'kitchen', 'forest picnic', 'snowy hill'];
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+
+const MAX_B64_LEN = MAX_IMAGE_BASE64_CHARS;
+const B64 = /^[A-Za-z0-9+/=\s]+$/;
+const cleanB64 = (s: string) => s.replace(/^data:image\/[a-z+]+;base64,/i, '').replace(/\s/g, '');
+const pngDataUrl = (b64: string) => `data:image/png;base64,${b64}`;
+
+/** First image out of a Meta images reply: b64_json, or url fetched here. */
+async function extractImage(data: { data?: { b64_json?: unknown; url?: unknown }[] }): Promise<string | null> {
+  const first = data?.data?.[0];
+  if (first && typeof first.b64_json === 'string' && first.b64_json.length > 0) return first.b64_json;
+  if (first && typeof first.url === 'string' && first.url.length > 0) {
+    const img = await fetch(first.url);
+    if (!img.ok) return null;
+    const buf = new Uint8Array(await img.arrayBuffer());
+    let bin = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < buf.length; i += CHUNK) bin += String.fromCharCode(...buf.subarray(i, i + CHUNK));
+    return btoa(bin);
+  }
+  return null;
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -58,23 +82,87 @@ Deno.serve(async (req: Request) => {
   const apiKey = Deno.env.get('MODEL_API_KEY');
   if (!apiKey) return json({ error: 'MODEL_API_KEY secret is not set on the server' }, 500);
 
-  let body: { imageBase64?: string; kind?: string; subject?: string };
+  let body: {
+    imageBase64?: string;
+    kind?: string;
+    subject?: string;
+    look?: string;
+    heroBase64?: string;
+    buddyBase64?: string;
+    location?: string;
+    scene?: string;
+  };
   try {
     body = await req.json();
   } catch {
     return json({ error: 'Body must be JSON' }, 400);
   }
 
+  const kind =
+    body.kind === 'photo' ? 'photo' : body.kind === 'drawing' ? 'drawing' : body.kind === 'page' ? 'page' : null;
+  if (!kind) return json({ error: 'kind must be "drawing", "photo" or "page"' }, 400);
+
+  // ---- Story page picture: hero (+buddy) references, one fixed location.
+  if (kind === 'page') {
+    const hero = cleanB64(body.heroBase64 ?? '');
+    if (!hero || hero.length < 100 || hero.length > MAX_B64_LEN || !B64.test(hero)) {
+      return json({ error: 'A valid heroBase64 image is required' }, 400);
+    }
+    const buddyRaw = cleanB64(body.buddyBase64 ?? '');
+    const buddy = buddyRaw && buddyRaw.length >= 100 && buddyRaw.length <= MAX_B64_LEN && B64.test(buddyRaw) ? buddyRaw : '';
+    const location = (body.location ?? '').trim().toLowerCase();
+    if (!PAGE_LOCATIONS.includes(location)) return json({ error: 'Unknown location' }, 400);
+    const scene = (body.scene ?? '').replace(/[\u0000-\u001F\u007F]/g, ' ').trim().slice(0, 240);
+    if (!scene) return json({ error: 'scene is required' }, 400);
+    const images: { image_url: string }[] = [{ image_url: pngDataUrl(hero) }];
+    if (buddy) images.push({ image_url: pngDataUrl(buddy) });
+    const prompt =
+      "Children's picture-book illustration. Use EXACTLY these two characters from the reference images — " +
+      'same shapes, colors and faces, do not redesign them. ' +
+      `Setting: ${location} (the same setting on every page). Scene: ${scene}. ` +
+      'Simple, bright, soft shapes, no text, no other characters.';
+    try {
+      const res = await fetch(META_EDIT_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: IMAGE_MODEL, prompt, images, n: 1 }),
+      });
+      if (!res.ok) {
+        const detail = await res.text();
+        console.error('[image] Meta image API error', res.status, detail.slice(0, 500));
+        return json({ error: `Meta image API returned ${res.status}` }, 502);
+      }
+      const out = extractImage(await res.json());
+      if (!out) {
+        console.error('[image] Meta image API returned no image');
+        return json({ error: 'Model returned no image' }, 502);
+      }
+      return json({ imageBase64: out });
+    } catch (err) {
+      console.error('[image] Meta image request failed', err);
+      return json({ error: 'Could not reach the Meta image API' }, 502);
+    }
+  }
   const imageBase64 = (body.imageBase64 ?? '').trim();
   if (!imageBase64) return json({ error: 'imageBase64 is required' }, 400);
   if (imageBase64.length > MAX_IMAGE_BASE64_CHARS) return json({ error: 'image is too large' }, 413);
-  const kind = body.kind === 'photo' ? 'photo' : body.kind === 'drawing' ? 'drawing' : null;
-  if (!kind) return json({ error: 'kind must be "drawing" or "photo"' }, 400);
+
   // Optional subject ("cat", "house"): only short simple English words
   // are let through into the prompt; anything else is dropped.
   const subjectRaw = typeof body.subject === 'string' ? body.subject.trim().toLowerCase() : '';
   const subject = /^[a-z][a-z ]{1,28}$/.test(subjectRaw) ? subjectRaw : '';
   const subjectLine = subject ? ` The main character is a cute picture-book ${subject}, inspired by the source.` : '';
+
+  // STEP 2 (photo flow): one thing from the room photo becomes a character
+  // with a face, arms and legs — same object, same colors.
+  const lookRaw = typeof body.look === 'string' ? body.look.trim().toLowerCase() : '';
+  const look = /^[a-z0-9 ,'-]{4,90}$/.test(lookRaw) ? lookRaw : '';
+  const photoCharPrompt =
+    kind === 'photo' && look
+      ? `A cute children's picture-book character based on a ${look}: same object, same colors, ` +
+        'with a friendly face, small arms and legs, soft rounded shapes, clean outlines, bright colors, ' +
+        'plain white background, no text. Safe and kind for a 3-year-old.'
+      : '';
 
   try {
     const res = await fetch(META_EDIT_URL, {
@@ -85,7 +173,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: IMAGE_MODEL,
-        prompt: `${CARTOON_STYLE} ${KIND_INSTRUCTION[kind]}${subjectLine}`,
+        prompt: photoCharPrompt ? photoCharPrompt : `${CARTOON_STYLE} ${KIND_INSTRUCTION[kind]}${subjectLine}`,
         // The source picture to repaint, as a data URL.
         images: [{ image_url: `data:image/png;base64,${imageBase64}` }],
         n: 1,

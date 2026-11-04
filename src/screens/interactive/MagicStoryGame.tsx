@@ -24,10 +24,11 @@ import { useNav } from '../../store/NavContext';
 import { dir, ff } from '../../theme/fonts';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../../assets/faTestAudio.generated';
 import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
-import { askCartoon, askIllustration, askMeta } from '../../services/metaAI';
+import { askCartoon, askIllustration, askMeta, askPagePicture } from '../../services/metaAI';
+import { Asset } from 'expo-asset';
 import { DrawStroke, drawingToPngBase64 } from '../../utils/drawingPng';
 import { roomBackgroundPickers, neliWorldAssets } from '../../assets/neliWorldAssets';
-import { STORY_FOCUS_WORDS, STORY_PLACES, StoryFocus, fallbackStory, validStoryLines } from '../../data/magicStory';
+import { STORY_BANNED, STORY_FOCUS_WORDS, STORY_PLACES, StoryFocus, fallbackStory, validStoryLines } from '../../data/magicStory';
 import { ROOM_ITEMS, RecognizedWord, RoomItem, matchRoomItem } from '../../data/roomItems';
 import { BUDDIES, BuddyId, loadBuddy } from '../../quest/buddyStore';
 import { saveMyDay } from '../../quest/myDaysStore';
@@ -50,7 +51,7 @@ import {
   WordArt,
 } from '../../ui/playKit';
 import PopperCelebration from '../../components/PopperCelebration';
-import TopBar, { topBarHeight } from '../../components/TopBar';
+import { topBarHeight } from '../../components/TopBar';
 
 // Everything scales from a 400pt-tall reference (a landscape phone is
 // 360–440pt tall). k multiplies every size AND offset — see CLAUDE.md.
@@ -71,6 +72,60 @@ export type StoryCastMember = { item: RoomItem; fa: string; en: string; heroUri?
  * name (گربه, خونه…), never «نقاشی». Validated simple and safe; any
  * doubt falls back to a magic friend. */
 export type DrawingSubject = { fa: string; en: string; isCreature: boolean };
+
+/* ---- Photo story pipeline (STEPS 1-5) -------------------------------
+ * Photo → Spark finds things → Muse Image makes each a character →
+ * child picks ONE hero → + one random buddy → one 6-page story → one
+ * referenced picture per page. Every step validates and falls back
+ * without ever blocking the child. */
+
+export { PHOTO_LOCATIONS, cleanFoundThings, validPhotoStory } from '../../data/photoStory';
+export type { FoundThing, PhotoLocation, PhotoLocationId } from '../../data/photoStory';
+import { PHOTO_LOCATIONS as PHOTO_LOCS, cleanFoundThings, validPhotoStory } from '../../data/photoStory';
+import type { FoundThing, PhotoLocation as PhotoLoc } from '../../data/photoStory';
+
+/** One found thing turned into a sticker character (STEP 2). */
+export type PhotoChar = FoundThing & { id: string; imageBase64?: string; dataUri?: string };
+
+const withSparkTimeout = <T,>(p: Promise<T>, ms = 20000): Promise<T> =>
+  Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error('spark timeout')), ms))]);
+
+const parseJsonObject = (text: string): Record<string, unknown> | null => {
+  const clean = text.replace(/```json|```/g, '');
+  const start = clean.indexOf('{');
+  const end = clean.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try {
+    return JSON.parse(clean.slice(start, end + 1)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
+/** STEP 1: what things are in the room photo (one Spark vision call). */
+export async function findPhotoThings(imageBase64: string): Promise<FoundThing[] | null> {
+  try {
+    const res = await withSparkTimeout(
+      askMeta(
+        {
+          prompt:
+            'Look at this photo of a child\'s room. List the clearly visible objects a 4-year-old knows (toy, doll, ball, plant, vase, cup, lamp and similar). ' +
+            'No people, no faces. Reply with JSON only: {"items":[{"fa":"توپ","en":"ball","look":"small red and white striped ball"}, ...]} — at most 4 items. ' +
+            '"fa" is the simple Farsi name, "en" the English name, "look" a short English description of its colors and shape.',
+          system: 'Reply with JSON only: {"items":[{"fa":"...","en":"...","look":"..."}]}. No other text.',
+          imageBase64,
+          maxTokens: 500,
+        },
+        0,
+      ),
+    );
+    if ('error' in res || !res.text) return null;
+    return cleanFoundThings(parseJsonObject(res.text)?.items);
+  } catch {
+    return null;
+  }
+}
+
 export const DRAWING_FALLBACK: DrawingSubject = { fa: 'یه دوست جادویی', en: 'magic friend', isCreature: true };
 const DRAWING_BANNED = ['ترس', 'ترسناک', 'هیولا', 'غم', 'گریه', 'مرد', 'خون', 'زشت', 'بدجنس', 'scary', 'sad', 'dead', 'blood', 'monster'];
 
@@ -471,6 +526,15 @@ export default function MagicStoryGame() {
   // Where the tale happens — chosen by the child («کجا؟» chips). The
   // storybook stage behind the cast follows this place.
   const [placeId, setPlaceId] = useState('garden');
+  // Photo pipeline (STEPS 1-7): found things -> sticker characters ->
+  // one hero + one random buddy -> 6-page story -> page pictures.
+  const [foundThings, setFoundThings] = useState<PhotoChar[]>([]);
+  const [heroId, setHeroId] = useState<string | null>(null);
+  const [randomBuddy, setRandomBuddy] = useState<BuddyId>('neli');
+  const [photoStep, setPhotoStep] = useState<'find' | 'pick' | 'told'>('find');
+  const [photoLocationId, setPhotoLocationId] = useState<PhotoLoc['id']>('garden');
+  const genRef = useRef(0);
+  const heroRef = useRef<PhotoChar | null>(null);
   const place = STORY_PLACES.find(p => p.id === placeId) ?? STORY_PLACES[1]!;
   const [lines, setLines] = useState<string[] | null>(null);
   // Picture-book pages: one generated illustration per line, produced in
@@ -590,7 +654,7 @@ export default function MagicStoryGame() {
   useEffect(() => {
     setIdleHint(false);
     if (!lines || asking) return;
-    const t = setTimeout(() => setIdleHint(true), 6000);
+    const t = setTimeout(() => setIdleHint(true), photoStep === 'told' ? 4000 : 6000);
     return () => clearTimeout(t);
   }, [pageIdx, lines, asking]);
 
@@ -602,92 +666,49 @@ export default function MagicStoryGame() {
     setError(null);
     try {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) {
-        setError(ERR_FA);
-        return;
-      }
+      if (!perm.granted) { setError(ERR_FA); return; }
       const res = await ImagePicker.launchCameraAsync({ allowsEditing: false, quality: 0.5, base64: true, exif: false });
       const asset = res.canceled ? undefined : res.assets?.[0];
       if (!asset?.uri || !asset.base64) return;
-      if (asset.base64.length > MAX_PHOTO_BASE64_CHARS) {
-        setError(ERR_FA);
-        return;
-      }
+      if (asset.base64.length > MAX_PHOTO_BASE64_CHARS) { setError(ERR_FA); return; }
       // A new photo means a new story: clear everything downstream.
-      setLines(null);
-      setStoryTitle('');
-      setRecap('');
-      setLesson('');
-      setFocus(null);
-      setCelebrate(false);
-      setPageIdx(0);
-      setUnmatched([]);
+      const gen = ++genRef.current;
+      clearStory();
+      setCast([]); setSelectedIds([]); setStoryObjects([]);
+      setFoundThings([]); setHeroId(null); heroRef.current = null;
+      setPhotoStep('find'); setRoomCartoon(null); cartoonSeqRef.current++;
       setPhoto({ uri: asset.uri, base64: asset.base64 });
-      setRoomCartoon(null);
-      setStoryObjects([]);
-      cartoonSeqRef.current++;
       setAnalyzing(true);
-      const named = await askMeta({
-        prompt:
-          'Look at this bedroom photo. List up to 6 objects a young child would know ' +
-          '(toys, furniture, clothes, food, animals). Reply with ONLY this JSON and no other text: ' +
-          '{"items": [{"fa": "<short Farsi name>", "en": "<short English name>"}]}',
-        imageBase64: asset.base64,
-        system: 'JSON only, never any other text. Short simple names a 4-year-old knows.',
-        maxTokens: 300,
-      });
-      if ('error' in named || !named.text.trim()) {
-        setError(ERR_FA);
-        setPhoto(null);
-        return;
+      // STEP 1 — Spark vision finds the things (one call, 20s cap).
+      const things = await findPhotoThings(asset.base64);
+      if (genRef.current !== gen) return;
+      if (!things || things.length === 0) {
+        setAnalyzing(false); setPhoto(null); setError('یه عکس دیگه بگیر'); return;
       }
-      const found = parseItems(named.text);
-      if (!found) {
-        setError(ERR_FA);
-        setPhoto(null);
-        return;
-      }
-      const matched: StoryCastMember[] = [];
-      const used = new Set<string>();
-      for (const w of found) {
-        const item = matchRoomItem(w.fa, w.en);
-        if (item && !matched.some(m => m.item.id === item.id)) {
-          matched.push({ item, fa: item.fa[0]!, en: item.id });
-          used.add(w.fa);
-        }
-      }
-      setUnmatched(found.map(w => w.fa).filter(fa => !used.has(fa)).slice(0, 2));
-      if (matched.length === 0) {
-        setError(ERR_FA);
-        setPhoto(null);
-        return;
-      }
-      // ONE friend: matched animals first; friendly defaults when the room
-      // shows none. Everything else found becomes a silent object (max 2).
-      const animals = matched.filter(m => ANIMAL_IDS.has(m.item.id));
-      const options: StoryCastMember[] =
-        animals.length > 0
-          ? animals
-          : DEFAULT_FRIEND_IDS.map(id => {
-              const item = roomItemById(id)!;
-              return { item, fa: item.fa[0]!, en: item.en[0]! };
-            });
-      setCast(options);
-      setSelectedIds([options[0]!.item.id]);
-      setStoryObjects(matched.filter(m => m.item.id !== options[0]!.item.id).slice(0, 2));
-      // Same sticker magic as drawings, for the room photo too — in the
-      // background, so picking the cast never waits for it. A stale reply
-      // (photo retaken mid-flight) is dropped by the sequence guard.
-      const myPhoto = asset.base64;
-      const seq = ++cartoonSeqRef.current;
-      void askCartoon({ imageBase64: myPhoto, kind: 'photo' }).then(res => {
-        if (cartoonSeqRef.current !== seq) return;
-        if ('base64' in res) setRoomCartoon(`data:image/png;base64,${res.base64}`);
-      });
-    } catch {
-      setError(ERR_FA);
-    } finally {
+      // STEP 2 — each thing becomes a sticker character, in parallel.
+      // Cards appear at once with a sparkle placeholder; each picture
+      // fills in as its Muse Image call lands. A failed call keeps the
+      // child's own photo as that card's picture, so picking a hero is
+      // never blocked.
+      const chars: PhotoChar[] = things.map((th, i) => ({ ...th, id: th.en + '-' + i }));
+      setFoundThings(chars);
+      setPhotoStep('pick');
       setAnalyzing(false);
+      const photoB64 = asset.base64;
+      chars.forEach(ch => {
+        void askCartoon({ imageBase64: photoB64, kind: 'photo', subject: ch.en, look: ch.look }).then(r => {
+          if (genRef.current !== gen) return;
+          if ('base64' in r) {
+            setFoundThings(prev => prev.map(p => (p.id === ch.id ? { ...p, imageBase64: r.base64, dataUri: 'data:image/png;base64,' + r.base64 } : p)));
+          } else {
+            if (__DEV__) console.warn('[image] character call failed for', ch.en, r.error);
+            setFoundThings(prev => prev.map(p => (p.id === ch.id && !p.dataUri ? { ...p, imageBase64: photoB64, dataUri: 'data:image/jpeg;base64,' + photoB64 } : p)));
+          }
+        });
+      });
+    } catch (e) {
+      if (__DEV__) console.warn('[story] photo flow failed:', e);
+      setAnalyzing(false); setError(ERR_FA);
     }
   };
 
@@ -697,25 +718,49 @@ export default function MagicStoryGame() {
   };
 
   // Background picture-book illustrations, one per line, in order. A
-  // failed page simply keeps its buddy+friend art — never an error.
+  // failed page simply keeps its hero+buddy art — never an error.
   useEffect(() => {
     if (!lines || !scenes) return;
     let cancelled = false;
     void (async () => {
+      if (photoStep === 'told' && heroRef.current) {
+        // STEP 5 — one referenced picture per page: hero + buddy art,
+        // the same location on every page, in order, cached in
+        // pageArtRef so going back never regenerates.
+        const gen = genRef.current;
+        const hero = heroRef.current;
+        const heroB64 = hero.imageBase64 ?? '';
+        if (!heroB64) return;
+        const buddyB64 = await buddyBase64(randomBuddy);
+        for (let i = 0; i < lines.length; i++) {
+          if (cancelled || genRef.current !== gen) return;
+          if (pageArtRef.current[i]) continue;
+          const scene = scenes[i]!;
+          let res = await askPagePicture({ heroBase64: heroB64, buddyBase64: buddyB64, location: PHOTO_LOCS.find(l => l.id === photoLocationId)?.en ?? 'garden', scene });
+          if ('error' in res && buddyB64) {
+            if (__DEV__) console.warn('[image] page picture with two references failed, hero only:', res.error);
+            res = await askPagePicture({ heroBase64: heroB64, location: PHOTO_LOCS.find(l => l.id === photoLocationId)?.en ?? 'garden', scene });
+          }
+          if (cancelled || genRef.current !== gen) return;
+          if ('base64' in res) {
+            pageArtRef.current[i] = 'data:image/png;base64,' + res.base64;
+            setPageArt([...pageArtRef.current]);
+          } else if (__DEV__) console.warn('[image] page picture failed, page keeps standing art:', res.error);
+        }
+        return;
+      }
       for (let i = 0; i < lines.length; i++) {
         if (cancelled) return;
         if (pageArtRef.current[i]) continue;
         const res = await askIllustration(scenes[i]!);
         if (cancelled) return;
         if ('base64' in res) {
-          pageArtRef.current[i] = `data:image/png;base64,${res.base64}`;
+          pageArtRef.current[i] = 'data:image/png;base64,' + res.base64;
           setPageArt([...pageArtRef.current]);
         }
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lines, scenes]);
 
@@ -858,6 +903,93 @@ export default function MagicStoryGame() {
     setDrawing(false);
   };
 
+  /** The buddy's base art as base64 for page-picture references.
+   * Best-effort: any failure means the page call goes hero-only. */
+  const buddyBase64 = async (id: BuddyId): Promise<string | null> => {
+    try {
+      const src: any = buddyPose(id, 'base');
+      const a = Asset.fromModule(src);
+      await a.downloadAsync();
+      const uri = a.localUri || a.uri;
+      if (!uri) return null;
+      const r = await fetch(uri);
+      const blob = await r.blob();
+      const FR = (globalThis as any).FileReader;
+      if (!FR) return null;
+      return await new Promise<string | null>(resolve => {
+        const fr = new FR();
+        fr.onload = () => resolve(String(fr.result || '').replace(/^data:[^,]+,/, '') || null);
+        fr.onerror = () => resolve(null);
+        fr.readAsDataURL(blob);
+      });
+    } catch { return null; }
+  };
+
+  /** STEP 3+4: the tapped character is the HERO, plus one random buddy.
+   * One Spark call writes the 6-page story at one random location. */
+  const pickHero = (ch: PhotoChar) => {
+    if (asking) return;
+    tap();
+    const ids: BuddyId[] = ['neli', 'aidin', 'lila', 'dara', 'roboBoombo'];
+    const rb = ids[Math.floor(Math.random() * ids.length)]!;
+    // Tapped before its cartoon landed: the photo itself is the hero
+    // picture, so pages are never stuck on a placeholder.
+    const hero: PhotoChar = ch.dataUri || !photo ? ch : { ...ch, imageBase64: photo.base64, dataUri: 'data:image/jpeg;base64,' + photo.base64 };
+    setHeroId(ch.id); heroRef.current = hero; setRandomBuddy(rb); setBuddyId(rb);
+    void tellPhotoStory(hero, rb);
+  };
+
+  const tellPhotoStory = async (hero: PhotoChar, rb: BuddyId) => {
+    const gen = genRef.current;
+    setAsking(true); setError(null); setPageIdx(0); setStorySaved(false);
+    setPhotoStep('told');
+    const location = PHOTO_LOCS[Math.floor(Math.random() * PHOTO_LOCS.length)]!;
+    setPhotoLocationId(location.id);
+    const buddy = BUDDIES.find(b => b.id === rb) ?? BUDDIES[0]!;
+    // The hero joins the book cast so pages/saving reuse the book code.
+    const item: RoomItem = matchRoomItem(hero.fa, hero.en) ?? { id: 'photo-' + hero.en.replace(/\s+/g, '-'), fa: [hero.fa], en: [hero.en], art: null };
+    const member: StoryCastMember = { item, fa: hero.fa, en: hero.en, heroUri: hero.dataUri };
+    setCast([member]); setSelectedIds([item.id]); setStoryObjects([]);
+    try {
+      const prompt =
+        'Write a 6-page picture-book story in Farsi for a 4-to-6-year-old. Reply with JSON only: ' +
+        '{"title":"...","location":"' + location.en + '","pages":[{"text":"...","scene":"..."}, exactly 6 pages]}. ' +
+        'Hero: ' + hero.fa + ' (' + hero.look + ') — a friendly character from the child\'s photo. ' +
+        'Only other character: ' + buddy.fa + ' (' + buddy.en + '), the child\'s app friend. No other characters ever. ' +
+        'Setting on every page: ' + location.en + '. ' +
+        'Each page text is ONE Farsi sentence of 6-12 words, everyday spoken Farsi like a mom telling a story. ' +
+        'Plot: who and where, one small happy problem, the two solve it together in a clever kind way, happy ending. Each page follows from the one before. ' +
+        'Include one short line of dialogue in \u00AB\u00BB and one feeling word (\u062E\u0648\u0634\u062D\u0627\u0644, \u062A\u0639\u062C\u0628 \u06A9\u0631\u062F, \u0630\u0648\u0642 \u06A9\u0631\u062F). ' +
+        'Each scene is one short English sentence describing the picture for that page (the two characters, the setting, what they do). ' +
+        'Never write about fear, the dark, monsters, sleeping or crying.';
+      const system = 'JSON only: {"title":"...","location":"' + location.en + '","pages":[{"text":"...","scene":"..."} x6]}. Simple kind Farsi for a young child, no scary or sad words.';
+      let story: { title: string; pages: { text: string; scene: string }[] } | null = null;
+      for (let attempt = 0; attempt < 2 && !story; attempt++) {
+        try {
+          const res = await withSparkTimeout(askMeta({ prompt, system, maxTokens: 1400, temperature: 0.7 }, 0));
+          if (genRef.current !== gen) return;
+          if ('error' in res || !res.text) { if (__DEV__) console.warn('[story] photo story request failed:', 'error' in res ? res.error : 'empty'); continue; }
+          story = validPhotoStory(parseJsonObject(res.text), location);
+          if (!story && __DEV__) console.warn('[story] photo story failed the gate, attempt', attempt + 1);
+        } catch (e) { if (__DEV__) console.warn('[story] photo story timed out:', e); }
+      }
+      if (genRef.current !== gen) return;
+      if (!story) {
+        const fb = fallbackStory({ buddy: buddy.fa, friend: hero.fa, obj: hero.fa }, Math.floor(Math.random() * 5));
+        story = { title: fb.title, pages: fb.lines.slice(0, 6).map((text, i) => ({ text, scene: fb.scenes?.[i] ?? 'Two friends play together happily' })) };
+      }
+      pageArtRef.current = story.pages.map(() => null);
+      setPageArt([...pageArtRef.current]);
+      setStoryTitle(story.title);
+      setScenes(story.pages.map(p => p.scene));
+      setLines(story.pages.map(p => p.text));
+      setRecap(''); setLesson(''); setFocus(null); setCelebrate(true);
+      await playFaAudio('story/your-story', { awaitFinish: true });
+    } finally {
+      if (genRef.current === gen) setAsking(false);
+    }
+  };
+
   const speakFocus = async () => {
     if (!focus || !(focus.audioKey in FA_TEST_AUDIO)) return;
     tap();
@@ -967,6 +1099,25 @@ export default function MagicStoryGame() {
     }
   };
 
+  /** STEP 7 — the shared navy CloseButton, at every step. First press
+   * cancels pending AI work and returns to the Magic Story start;
+   * pressed there, it returns to the Magic menu. Never a stuck spinner. */
+  const handleClose = () => {
+    tap();
+    genRef.current++;
+    cartoonSeqRef.current++;
+    setAnalyzing(false); setAsking(false); setConjuring(false);
+    if (drawing) { setDrawing(false); return; }
+    if (lines || photo || cast.length > 0 || foundThings.length > 0) {
+      clearStory();
+      setPhoto(null); setCast([]); setSelectedIds([]); setStoryObjects([]);
+      setFoundThings([]); setHeroId(null); heroRef.current = null;
+      setPhotoStep('find'); setError(null);
+      return;
+    }
+    navigate({ name: 'MagicGames' });
+  };
+
   const mood: BuddyMood = analyzing || asking ? 'thinking' : lines ? 'happy' : 'idle';
   const showingNote = asking || lines !== null;
   // Slides: title page (0), one page per story line, recap page last.
@@ -1012,9 +1163,7 @@ export default function MagicStoryGame() {
         <GameBg pick={placeId === 'home' ? roomBackgroundPickers.bedroom : roomBackgroundPickers.garden} />
       )}
 
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
-        <TopBar title="قصه جادویی" titleFa="قصه جادویی" dark showClose onBack={() => navigate({ name: 'MagicGames' })} />
-      </View>
+
 
       {/* Center stage: camera → cast → story. Top padding keeps every
           label («کی؟» / «کجا؟») fully below the purple TopBar. */}
@@ -1083,6 +1232,33 @@ export default function MagicStoryGame() {
                   ) : null}
                 </View>
               </View>
+            </>
+          ) : photo && photoStep === 'pick' && foundThings.length > 0 ? (
+            <>
+              {/* STEP 2+3 — big sticker cards in a row, Farsi name under
+                  each. Tap one: it becomes the HERO of the story. */}
+              <View style={s.castRow}>
+                {foundThings.map(ch => (
+                  <View key={ch.id} style={{ alignItems: 'center', width: tileS * 1.35 }}>
+                    <ChoiceFigure size={tileS * 1.3} selected={heroId === ch.id} disabled={asking} onPress={() => pickHero(ch)}>
+                      {ch.dataUri ? (
+                        <CartoonSticker uri={ch.dataUri} size={tileS * 1.3} tilt={-4} />
+                      ) : (
+                        <StickerFrame size={tileS * 1.3} tilt={-4}>
+                          <Image source={neliWorldAssets.ui.sparkle} style={{ width: tileS * 0.6, height: tileS * 0.6 }} resizeMode="contain" />
+                        </StickerFrame>
+                      )}
+                    </ChoiceFigure>
+                    <Text style={[s.castFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{ch.fa}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={s.bubbleSmall}>
+                <Text style={[s.bubbleSmallText, dir('fa'), { textAlign: 'center' }]}>کدوم قهرمان قصه باشه؟</Text>
+              </View>
+              <TouchableOpacity onPress={() => { tap(); genRef.current++; setPhoto(null); setFoundThings([]); setPhotoStep('find'); setError(null); }} activeOpacity={0.7}>
+                <Text style={[s.retake, dir('fa'), { textAlign: 'center' }]}>یه عکس دیگه بگیر</Text>
+              </TouchableOpacity>
             </>
           ) : analyzing || cast.length === 0 ? (
             <>
@@ -1195,6 +1371,20 @@ export default function MagicStoryGame() {
                           {friend ? <CastSticker m={friend} size={Math.min(58 * k, H * 0.12)} tilt={-6} /> : null}
                         </View>
                       </>
+                    ) : photoStep === 'told' && !isTitle && !isRecap ? (
+                      <View style={s.bookFallback}>
+                        {photoLocationId === 'beach' ? (
+                          <SeaScene width={Math.min(W * 0.4, 420 * k)} height={Math.min(H * 0.6, 500 * k)} />
+                        ) : photoLocationId === 'snowy hill' ? (
+                          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#DBEAFE' }} />
+                        ) : (
+                          <Image source={roomBackgroundPickers[photoLocationId === 'kitchen' ? 'kitchen' : photoLocationId === 'park' ? 'playground' : 'garden'](W, H)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }} resizeMode="cover" />
+                        )}
+                        <View style={{ position: 'absolute', left: 8 * k, right: 8 * k, bottom: 6 * k, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                          <Image source={buddyArt} style={{ width: Math.min(84 * k, H * 0.17), height: Math.min(84 * k, H * 0.17) }} resizeMode="contain" />
+                          {friend ? <CastSticker m={friend} size={Math.min(84 * k, H * 0.17)} tilt={-6} /> : null}
+                        </View>
+                      </View>
                     ) : (
                       <View style={s.bookFallback}>
                         {roomCartoon ? (
@@ -1245,14 +1435,19 @@ export default function MagicStoryGame() {
                     accessibilityRole="button"
                     accessibilityLabel="صفحه بعد"
                   >
-                    <Text style={[s.arrowText, { fontSize: 30 * k }]}>‹</Text>
+                    <Image source={neliWorldAssets.ui.next} style={{ width: 40 * k, height: 40 * k }} resizeMode="contain" />
                   </TouchableOpacity>
+                  {idleHint && !isRecap ? (
+                    <View pointerEvents="none" style={{ position: 'absolute', left: 6 * k, top: -14 * k, zIndex: 5 }}>
+                      <IdleHand size={30 * k} />
+                    </View>
+                  ) : null}
                   <View style={s.dots}>
                     {Array.from({ length: totalSlides }).map((_, i) => (
                       <View key={i} style={[s.dot, i === safeIdx && s.dotOn]} />
                     ))}
                   </View>
-                  {idleHint && !isRecap ? <IdleHand size={26 * k} /> : null}
+                  
                   <TouchableOpacity
                     style={[s.arrowBtn, { width: 56 * k, height: 56 * k, borderRadius: 28 * k }, safeIdx === 0 && s.pageBtnOff]}
                     disabled={safeIdx === 0}
@@ -1261,7 +1456,7 @@ export default function MagicStoryGame() {
                     accessibilityRole="button"
                     accessibilityLabel="صفحه قبل"
                   >
-                    <Text style={[s.arrowText, { fontSize: 30 * k }]}>›</Text>
+                    <Image source={neliWorldAssets.ui.back} style={{ width: 40 * k, height: 40 * k }} resizeMode="contain" />
                   </TouchableOpacity>
                 </View>
               </>
@@ -1417,6 +1612,7 @@ export default function MagicStoryGame() {
           </View>
         </View>
       ) : null}
+      <CloseButton size={Math.max(44, 48 * k)} onPress={handleClose} />
       {celebrate && (lines || cartoonUri) ? <PopperCelebration visible onComplete={() => {}} /> : null}
     </View>
   );
