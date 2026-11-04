@@ -14,6 +14,10 @@ import { dir, ff } from '../theme/fonts';
 import { useResponsive } from '../theme/responsive';
 import { FARSI_LETTERS } from '../data/farsiLetters';
 
+const MAGIC_BG = require('../../assets/neli-world/quest/garden-background.png');
+const MAGIC_CAR = require('../../assets/neli-world/quest/car-neli.png');
+const MAGIC_GRANDMA = require('../../assets/neli-world/characters/Grandma/grandma_standing.webp');
+
 type BigCard = {
   en: string;
   fa: string;
@@ -246,28 +250,30 @@ function BigCardArt({ art, size }: { art: BigCard['art']; size: number }) {
     );
   }
   if (art === 'magic') {
-    // Magic Games (judges box): buddies around a big open magic book.
+    // Magic Games box: the picnic trip itself — Neli in her car on the
+    // street, Grandma standing on the street waiting for her.
     return (
       <View style={[styles.sceneFill, styles.magicScene]}>
-        <OpenBookIcon size={84 * k} />
+        <Image source={MAGIC_BG} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, width: '100%', height: '125%' }} resizeMode="cover" />
         <Image
-          source={buddyPose('aidin', 'waving')}
-          style={{ position: 'absolute', width: 72 * k, height: 92 * k, bottom: 34 * k, left: 8 * k }}
+          source={MAGIC_GRANDMA}
+          style={{ position: 'absolute', width: 74 * k, height: 118 * k, bottom: 62 * k, left: 14 * k }}
           resizeMode="contain"
         />
         <Image
-          source={buddyPose('mila', 'waving')}
-          style={{ position: 'absolute', width: 60 * k, height: 78 * k, bottom: 100 * k, left: 52 * k }}
+          source={MAGIC_CAR}
+          style={{ position: 'absolute', width: 168 * k, height: 96 * k, bottom: 58 * k, right: 6 * k }}
           resizeMode="contain"
         />
-        <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 18 * k, height: 18 * k, bottom: 60 * k, left: 20 * k }]} resizeMode="contain" />
-        <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 30 * k, height: 30 * k, top: 8 * k, left: 10 * k }]} resizeMode="contain" />
-        <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 24 * k, height: 24 * k, top: 26 * k, right: 12 * k }]} resizeMode="contain" />
-        <Image
-          source={buddyPose('neli', 'waving')}
-          style={{ position: 'absolute', width: 92 * k, height: 116 * k, bottom: 34 * k, right: 6 * k }}
-          resizeMode="contain"
-        />
+        {/* The gray street both of them stand on, just above the title band. */}
+        <View style={[styles.magicStreet, { height: 34 * k, bottom: 54 * k }]}>
+          <View style={styles.magicDashes}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <View key={i} style={[styles.magicDash, { width: 18 * k, height: 4 * k, marginHorizontal: 7 * k }]} />
+            ))}
+          </View>
+        </View>
+        <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 26 * k, height: 26 * k, top: 10 * k, right: 14 * k }]} resizeMode="contain" />
       </View>
     );
   }
@@ -500,8 +506,18 @@ const styles = StyleSheet.create({
   questHill: { position: 'absolute', backgroundColor: '#8FD694' },
   questNew: { position: 'absolute', backgroundColor: '#FF5C8A' },
   questNewText: { color: '#FFFFFF' },
-  magicScene: { backgroundColor: '#7C3AED', alignItems: 'center', justifyContent: 'center' },
+  magicScene: { backgroundColor: '#7ED6F2', alignItems: 'center', justifyContent: 'center' },
   magicSpark: { position: 'absolute' },
+  magicStreet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    backgroundColor: '#5B5B6B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  magicDashes: { flexDirection: 'row', alignItems: 'center' },
+  magicDash: { backgroundColor: '#FFFFFF', borderRadius: 2, opacity: 0.9 },
   cookNeli: { width: 190, height: 248 },
   cookIngredient: { position: 'absolute', width: 46, height: 46 },
   cookIngredientOne: { left: 16, top: 8, transform: [{ rotate: '-16deg' }] },
