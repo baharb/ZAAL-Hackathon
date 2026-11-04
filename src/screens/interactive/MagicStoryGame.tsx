@@ -44,6 +44,7 @@ import {
   WordArt,
 } from '../../ui/playKit';
 import PopperCelebration from '../../components/PopperCelebration';
+import TopBar, { topBarHeight } from '../../components/TopBar';
 
 // Everything scales from a 400pt-tall reference (a landscape phone is
 // 360–440pt tall). k multiplies every size AND offset — see CLAUDE.md.
@@ -879,7 +880,9 @@ export default function MagicStoryGame() {
     <View style={s.root}>
       <GameBg pick={roomBackgroundPickers.garden} />
 
-      <CloseButton onPress={() => navigate({ name: 'MagicGames' })} />
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
+        <TopBar title="قصه جادویی" titleFa="قصه جادویی" dark showClose onBack={() => navigate({ name: 'MagicGames' })} />
+      </View>
 
       {/* Center stage: camera → cast → story. */}
       {!showingNote ? (

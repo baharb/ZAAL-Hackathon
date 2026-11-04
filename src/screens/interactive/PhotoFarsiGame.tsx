@@ -16,6 +16,7 @@ import { Svg, Rect, Circle, Path } from 'react-native-svg';
 import { useWindowDimensions } from '../../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNav } from '../../store/NavContext';
+import TopBar, { topBarHeight } from '../../components/TopBar';
 import { dir, ff } from '../../theme/fonts';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../../assets/faTestAudio.generated';
 import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
@@ -284,7 +285,9 @@ export default function PhotoFarsiGame() {
   return (
     <View style={s.root}>
       <GameBg pick={roomBackgroundPickers.bedroom} />
-      <CloseButton onPress={() => navigate({ name: 'MagicGames' })} />
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
+        <TopBar title="فارسی با عکس" titleFa="فارسی با عکس" dark showClose onBack={() => navigate({ name: 'MagicGames' })} />
+      </View>
       <View style={s.body}>
         {/* Buddy stands on the pink floor, feet at the screen bottom, bubble
             up-right of her head (never under the close button). */}

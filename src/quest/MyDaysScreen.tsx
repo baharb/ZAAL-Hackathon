@@ -12,7 +12,8 @@ import { MyDayEntry, loadMyDays } from './myDaysStore';
 import { STORIES } from './stories';
 import WordArt from './WordArt';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
-import { CloseButton, WordArt as PlayWordArt, WORD_ART } from '../ui/playKit';
+import { WordArt as PlayWordArt, WORD_ART } from '../ui/playKit';
+import TopBar from '../components/TopBar';
 import PicnicPhoto from './PicnicPhoto';
 import { displayWordById } from './questGroups';
 
@@ -108,7 +109,9 @@ export default function MyDaysScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <View style={styles.root}>
-      <CloseButton onPress={onBack} />
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
+        <TopBar title="روزهای من" titleFa="روزهای من" dark showClose onBack={onBack} />
+      </View>
       <View style={[styles.topRow, isFa && { flexDirection: 'row-reverse' }]}>
         <View style={styles.back} />
         <View style={{ flexDirection: isFa ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>

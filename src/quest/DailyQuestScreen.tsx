@@ -24,7 +24,7 @@ import DriveGame, { DriveRound } from './DriveGame';
 import Finale from './Finale';
 import MyDaysScreen from './MyDaysScreen';
 import QuestBackdrop, { QUEST_SKY, gardenDrawnSize, gardenSourceSize } from './QuestBackdrop';
-import { CloseButton } from '../ui/playKit';
+import TopBar, { topBarHeight } from '../components/TopBar';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
 
 // The drive's own garden: the buddy picker happens on the same grass.
@@ -144,7 +144,9 @@ export default function DailyQuestScreen() {
         />
       )}
       {(phase === 'buddy' || phase === 'picks' || phase === 'loading') && (
-        <CloseButton onPress={goBack} />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
+          <TopBar title="بازی امروز من" titleFa="بازی امروز من" dark showClose onBack={goBack} />
+        </View>
       )}
       {(phase === 'picks' || phase === 'drive' || phase === 'arrived') && (
         <TouchableOpacity
@@ -152,7 +154,7 @@ export default function DailyQuestScreen() {
           activeOpacity={0.8}
           accessibilityLabel={isFa ? 'تغییر دوست' : 'Change buddy'}
           accessibilityRole="button"
-          style={[styles.buddyChip, { top: insets.top + 4 }]}
+          style={[styles.buddyChip, { top: topBarHeight(height, insets.top) + 6 }]}
         >
           <Image source={buddyPose(buddy, 'base')} style={{ width: buddyFace, height: buddyFace }} resizeMode="contain" />
         </TouchableOpacity>
@@ -168,7 +170,7 @@ export default function DailyQuestScreen() {
               activeOpacity={0.8}
               accessibilityLabel={isFa ? 'روزهای من' : 'My Days'}
               accessibilityRole="button"
-              style={[styles.albumButton, { top: insets.top + 8, right: 12 }]}
+              style={[styles.albumButton, { top: topBarHeight(height, insets.top) + 8, right: 12 }]}
             >
               <View style={{ flexDirection: isFa ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
                 <Image source={neliWorldAssets.ui.camera} style={{ width: 20, height: 20 }} resizeMode="contain" />

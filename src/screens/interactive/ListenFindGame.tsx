@@ -18,6 +18,7 @@ import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
 import { roomBackgroundPickers, neliWorldAssets } from '../../assets/neliWorldAssets';
 import { PHOTO_FARSI_WORDS, PhotoFarsiWord } from '../../data/photoFarsiWords';
 import { useNav } from '../../store/NavContext';
+import TopBar, { topBarHeight } from '../../components/TopBar';
 import { loadBuddy } from '../../quest/buddyStore';
 import { saveMyDay } from '../../quest/myDaysStore';
 import { IdleHand, useIdleHint } from '../../quest/IdleHand';
@@ -25,7 +26,6 @@ import PopperCelebration from '../../components/PopperCelebration';
 import {
   BuddyGuide,
   BuddyMood,
-  CloseButton,
   PLAY_INK,
   SoftShadow,
   SquareButton,
@@ -430,11 +430,13 @@ export default function ListenFindGame() {
         />
         <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(46,26,107,0.10)' }]} />
       </View>
-      <CloseButton onPress={() => navigate({ name: 'MagicGames' })} />
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
+        <TopBar title="بشنو و پیدا کن" titleFa="بشنو و پیدا کن" dark showClose onBack={() => navigate({ name: 'MagicGames' })} />
+      </View>
 
       {/* Progress stars, top-center: big, bold, gold when filled. No round text. */}
       {!done ? (
-        <View style={[s.starsWrap, { top: insets.top + 12 }]} pointerEvents="none">
+        <View style={[s.starsWrap, { top: topBarHeight(H, insets.top) + 8 }]} pointerEvents="none">
           <View style={{ flexDirection: 'row', gap: 6 * k }}>
             {Array.from({ length: ROUNDS }).map((_, i) => (
               <Text

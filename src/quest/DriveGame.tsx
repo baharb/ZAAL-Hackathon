@@ -11,7 +11,7 @@ import Svg, { Line, Rect } from 'react-native-svg';
 import { createAudioPlayer } from 'expo-audio';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CloseButton } from '../ui/playKit';
+import TopBar from '../components/TopBar';
 import { useNav } from '../store/NavContext';
 import { AppContext } from '../store/AppContext';
 import { dir, ff } from '../theme/fonts';
@@ -895,7 +895,9 @@ export default function DriveGame({
   return (
     <View style={styles.root} onLayout={onGameLayout}>
       {/* Every game gets the same navy X home (unmount stops the engine). */}
-      <CloseButton onPress={() => navigate({ name: 'MagicGames' })} />
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
+        <TopBar title="بازی امروز من" titleFa="بازی امروز من" dark showClose onBack={() => navigate({ name: 'MagicGames' })} />
+      </View>
       {/* Camera: the long world slides past; only the part around the car shows. */}
       <Animated.View
         style={{

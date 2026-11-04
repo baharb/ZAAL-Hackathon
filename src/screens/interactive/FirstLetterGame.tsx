@@ -11,7 +11,8 @@ import * as Haptics from 'expo-haptics';
 import { useWindowDimensions } from '../../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNav } from '../../store/NavContext';
-import { BuddyGuide, CloseButton, GameBg, SoftShadow, WORD_ART, WordArt } from '../../ui/playKit';
+import { BuddyGuide, GameBg, SoftShadow, WORD_ART, WordArt } from '../../ui/playKit';
+import TopBar, { topBarHeight } from '../../components/TopBar';
 import { neliWorldAssets, roomBackgroundPickers } from '../../assets/neliWorldAssets';
 import { IdleHand, useIdleHint } from '../../quest/IdleHand';
 import { dir, ff } from '../../theme/fonts';
@@ -172,10 +173,12 @@ export default function FirstLetterGame() {
   return (
     <View style={s.root}>
       <GameBg pick={roomBackgroundPickers.playground} />
-      <CloseButton onPress={() => navigate({ name: 'MagicGames' })} />
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
+        <TopBar title="حرف اول" titleFa="حرف اول" dark showClose onBack={() => navigate({ name: 'MagicGames' })} />
+      </View>
       {/* Gold progress stars, top-center. */}
       {!done ? (
-        <View style={[s.starsWrap, { top: insets.top + 12 }]} pointerEvents="none">
+        <View style={[s.starsWrap, { top: topBarHeight(height, insets.top) + 8 }]} pointerEvents="none">
           <View style={{ flexDirection: 'row', gap: 6 * k }}>
             {Array.from({ length: ROUNDS }).map((_, i) => (
               <Text

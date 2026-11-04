@@ -11,8 +11,9 @@ import { TouchableOpacity } from 'react-native';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNav } from '../store/NavContext';
+import TopBar, { topBarHeight } from '../components/TopBar';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
-import { CloseButton, OpenBookIcon } from '../ui/playKit';
+import { OpenBookIcon } from '../ui/playKit';
 import { buddyPose } from '../quest/questTheme';
 import { BuddyId } from '../quest/buddyStore';
 import { dir, ff } from '../theme/fonts';
@@ -133,10 +134,9 @@ export default function MagicGamesScreen() {
   const insets = useSafeAreaInsets();
   const { navigate } = useNav();
   const k = H / REFERENCE_H;
-  // Every tile is measured from what is left under the floating header
-  // (close + title pill) — never scrolls, even on a 360pt-tall phone.
-  const headerH = insets.top + 8 + 52 + 10 * k;
-  const availH = Math.max(200, H - headerH - Math.max(12 * k, insets.bottom));
+  // Every tile is measured from what is left under the standard purple
+  // TopBar — never scrolls, even on a 360pt-tall phone.
+  const availH = Math.max(200, H - topBarHeight(H, insets.top) - 8 * k - Math.max(12 * k, insets.bottom));
   const gap = 8 * k;
   const dqH = availH * 0.36;
   const smallH = (availH - dqH - gap) / 2;
@@ -153,11 +153,8 @@ export default function MagicGamesScreen() {
       {dots.map((d, i) => (
         <View key={i} pointerEvents="none" style={{ position: 'absolute', left: d.left, top: d.top, width: d.r * 2, height: d.r * 2, borderRadius: d.r, backgroundColor: d.c }} />
       ))}
-      <CloseButton onPress={() => navigate({ name: 'Home' })} />
-      <View pointerEvents="none" style={[s.titlePill, { top: insets.top + 8, borderRadius: 999 }]}>
-        <Text style={[s.titleText, dir('fa'), { fontSize: 17 * k }]} numberOfLines={1}>بازی‌های جادویی</Text>
-      </View>
-      <View style={[s.col, { paddingTop: headerH, paddingBottom: Math.max(12 * k, insets.bottom), rowGap: gap }]}>
+      <TopBar title="بازی‌های جادویی" titleFa="بازی‌های جادویی" dark showClose onBack={() => navigate({ name: 'Home' })} />
+      <View style={[s.col, { paddingTop: 8 * k, paddingBottom: Math.max(12 * k, insets.bottom), rowGap: gap }]}>
         {/* بازی امروز من — first and biggest: Neli in her red car. */}
         <TouchableOpacity
           style={[s.tile, s.quest, { backgroundColor: QUEST_TILE.color, width: smallW * 2 + gap, height: dqH, borderRadius: 26 * k }]}
@@ -190,16 +187,6 @@ export default function MagicGamesScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#F2EDFF' },
-  titlePill: {
-    position: 'absolute',
-    alignSelf: 'center',
-    backgroundColor: '#FFF9E8',
-    paddingHorizontal: 20,
-    paddingVertical: 9,
-    zIndex: 30,
-    elevation: 30,
-  },
-  titleText: { fontFamily: ff('fa', 'black'), color: '#1E1B4B', textAlign: 'center' },
   col: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
   // Same card as the app's game boxes: bold flat color, big radius,

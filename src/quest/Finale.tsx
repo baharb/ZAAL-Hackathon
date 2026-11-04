@@ -28,7 +28,8 @@ import { gardenDrawnSize, gardenSourceSize } from './QuestBackdrop';
 import { buddyPose } from './questTheme';
 import { saveMyDay } from './myDaysStore';
 import WordArt from './WordArt';
-import { CloseButton, SoftShadow } from '../ui/playKit';
+import { SoftShadow } from '../ui/playKit';
+import TopBar from '../components/TopBar';
 import PicnicPhoto from './PicnicPhoto';
 import Balloon from './Balloon';
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
@@ -475,7 +476,9 @@ export default function Finale({
 
   return (
     <View style={styles.root} onLayout={onGameLayout}>
-      <CloseButton onPress={safeExit} />
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
+        <TopBar title="بازی امروز من" titleFa="بازی امروز من" dark showClose onBack={safeExit} />
+      </View>
       {/* Garden background, pinned to the bottom and oversized so its
           pale cloud band overflows off the top (never a half-cut strip),
           and the grass is always visible. */}
