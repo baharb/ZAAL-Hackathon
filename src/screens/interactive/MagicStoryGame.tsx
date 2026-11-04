@@ -533,7 +533,7 @@ export default function MagicStoryGame() {
   const [cartoonUri, setCartoonUri] = useState<string | null>(null);
   // What Spark says the drawing IS (گربه, خونه…) — the friend's name.
   const [drawingSubject, setDrawingSubject] = useState<DrawingSubject>(DRAWING_FALLBACK);
-  // Start-screen guide hand: over the camera first, then the crayon,
+  // Start-screen guide hand: over the crayon first, then the camera,
   // then gone.
   const [entryGuide, setEntryGuide] = useState(0);
   useEffect(() => {
@@ -1038,7 +1038,7 @@ export default function MagicStoryGame() {
                   >
                     <Image source={QUEST_CAMERA} style={{ width: wandH * 1.7, height: wandH * 1.7 }} resizeMode="contain" />
                   </TouchableOpacity>
-                  {entryGuide === 0 ? (
+                  {entryGuide === 1 ? (
                     <View pointerEvents="none" style={s.entryHandOver}>
                       <IdleHand size={wandH * 0.85} />
                     </View>
@@ -1076,7 +1076,7 @@ export default function MagicStoryGame() {
                       </Svg>
                     </View>
                   </TouchableOpacity>
-                  {entryGuide === 1 ? (
+                  {entryGuide === 0 ? (
                     <View pointerEvents="none" style={s.entryHandOver}>
                       <IdleHand size={wandH * 0.85} />
                     </View>
