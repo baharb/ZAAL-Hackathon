@@ -9,7 +9,9 @@ export type BuddyId = 'neli' | 'aidin' | 'mila' | 'lila' | 'dara' | 'roboBoombo'
 export const BUDDIES: { id: BuddyId; fa: string; en: string }[] = [
   { id: 'neli', fa: 'نلی', en: 'Neli' },
   { id: 'aidin', fa: 'آیدین', en: 'Aidin' },
-  { id: 'mila', fa: 'میلا', en: 'Mila' },
+  // Mila is out of the games for now (her art is being replaced). She is
+  // not offered in any picker, and a saved 'mila' choice no longer
+  // validates in isBuddyId, so old devices fall back to Neli.
   { id: 'lila', fa: 'لیلا', en: 'Lila' },
   { id: 'dara', fa: 'دارا', en: 'Dara' },
   { id: 'roboBoombo', fa: 'ربو بومبو', en: 'Robo Boombo' },

@@ -1,6 +1,6 @@
 // Magic Games — the judges' box. Each tile is its own mini scene with its
 // own buddy: Daily Quest = Neli in her red car on the road; Magic Story =
-// Aidin with an open storybook; Photo Farsi = Mila with the camera;
+// Aidin with an open storybook; Photo Farsi = Robo Boombo with the camera;
 // Listen & Find = Lila listening with objects; First Letter = Dara with
 // toy blocks. Daily Quest goes FIRST and biggest; all 5 tiles fit without
 // scrolling. No emoji, no English.
@@ -32,7 +32,7 @@ type Tile = {
 
 const SMALL_TILES: Tile[] = [
   { route: { name: 'MagicStory' }, color: '#A855F7', edge: '#7C3AED', fa: 'قصه جادویی', buddy: 'aidin' },
-  { route: { name: 'PhotoFarsi' }, color: '#22D3EE', edge: '#0E9BB8', fa: 'فارسی با عکس', buddy: 'mila' },
+  { route: { name: 'PhotoFarsi' }, color: '#22D3EE', edge: '#0E9BB8', fa: 'فارسی با عکس', buddy: 'roboBoombo' },
   { route: { name: 'ListenFind' }, color: '#F472B6', edge: '#DB2777', fa: 'بشنو و پیدا کن', buddy: 'lila' },
   { route: { name: 'FirstLetter' }, color: '#06B6D4', edge: '#0E7490', fa: 'حرف اول', buddy: 'dara' },
 ];
@@ -71,7 +71,7 @@ function TileScene({ t, artS, k }: { t: Tile; artS: number; k: number }) {
     );
   }
   if (t.route.name === 'PhotoFarsi') {
-    // Mila with the camera, bedroom colors behind.
+    // Robo Boombo with the camera, bedroom colors behind.
     return (
       <View style={s.scene}>
         <TileBuddy id={t.buddy} size={buddyS} />
