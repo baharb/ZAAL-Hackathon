@@ -197,6 +197,8 @@ export async function askIllustration(scene: string): Promise<CartoonResult> {
 export async function askPagePicture(req: {
   heroBase64: string;
   buddyBase64?: string | null;
+  /** More item characters from the same photo (all are in the story). */
+  extraBase64?: string[];
   location: string;
   scene: string;
 }): Promise<CartoonResult> {
@@ -214,6 +216,7 @@ export async function askPagePicture(req: {
           kind: 'page',
           heroBase64: hero,
           ...(buddy && BASE64_RE.test(buddy) ? { buddyBase64: buddy } : {}),
+          ...(req.extraBase64?.length ? { extraBase64: req.extraBase64.map(strip).filter(x => x && BASE64_RE.test(x)).slice(0, 3) } : {}),
           location: req.location,
           scene: req.scene,
         },
@@ -229,7 +232,10 @@ export async function askPagePicture(req: {
       return { error: String(data.error) };
     }
     const out = String(data?.imageBase64 ?? '').replace(/\s/g, '');
-    if (!out || !BASE64_RE.test(out)) return { error: 'Empty reply' };
+    if (!out || !BASE64_RE.test(out)) {
+      if (typeof __DEV__ !== 'undefined' && __DEV__) console.warn('[image] reply had no image, keys were:', data ? Object.keys(data) : data);
+      return { error: 'Empty reply' };
+    }
     return { base64: out };
   } catch (e: any) {
     if (typeof __DEV__ !== 'undefined' && __DEV__) {

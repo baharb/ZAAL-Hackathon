@@ -695,17 +695,25 @@ export default function MagicStoryGame() {
       setPhotoStep('pick');
       setAnalyzing(false);
       const photoB64 = asset.base64;
-      chars.forEach(ch => {
-        void askCartoon({ imageBase64: photoB64, kind: 'photo', subject: ch.en, look: ch.look }).then(r => {
-          if (genRef.current !== gen) return;
+      const settled = chars.map(ch =>
+        askCartoon({ imageBase64: photoB64, kind: 'photo', subject: ch.en, look: ch.look }).then(r => {
+          if (genRef.current !== gen) return ch;
           if ('base64' in r) {
-            setFoundThings(prev => prev.map(p => (p.id === ch.id ? { ...p, imageBase64: r.base64, dataUri: 'data:image/png;base64,' + r.base64 } : p)));
-          } else {
-            if (__DEV__) console.warn('[image] character call failed for', ch.en, r.error);
-            setFoundThings(prev => prev.map(p => (p.id === ch.id && !p.dataUri ? { ...p, imageBase64: photoB64, dataUri: 'data:image/jpeg;base64,' + photoB64 } : p)));
+            const done = { ...ch, imageBase64: r.base64, dataUri: 'data:image/png;base64,' + r.base64 };
+            setFoundThings(prev => prev.map(p => (p.id === ch.id ? done : p)));
+            return done;
           }
-        });
-      });
+          if (__DEV__) console.warn('[image] character call failed for', ch.en, r.error);
+          const done = { ...ch, imageBase64: photoB64, dataUri: 'data:image/jpeg;base64,' + photoB64 };
+          setFoundThings(prev => prev.map(p => (p.id === ch.id && !p.dataUri ? done : p)));
+          return done;
+        }),
+      );
+      // No hero picking: the buddy + ALL these cartoon items go into
+      // the story together, as soon as every cartoon is ready.
+      const finalChars = await Promise.all(settled);
+      if (genRef.current !== gen) return;
+      void startPhotoStory(finalChars);
     } catch (e) {
       if (__DEV__) console.warn('[story] photo flow failed:', e);
       setAnalyzing(false); setError(ERR_FA);
@@ -736,9 +744,10 @@ export default function MagicStoryGame() {
           if (cancelled || genRef.current !== gen) return;
           if (pageArtRef.current[i]) continue;
           const scene = scenes[i]!;
-          let res = await askPagePicture({ heroBase64: heroB64, buddyBase64: buddyB64, location: PHOTO_LOCS.find(l => l.id === photoLocationId)?.en ?? 'garden', scene });
+          const extraB64 = foundThings.filter(c => c.id !== hero.id && c.imageBase64).map(c => c.imageBase64!).slice(0, 3);
+          let res = await askPagePicture({ heroBase64: heroB64, buddyBase64: buddyB64, extraBase64: extraB64, location: PHOTO_LOCS.find(l => l.id === photoLocationId)?.en ?? 'garden', scene });
           if ('error' in res && buddyB64) {
-            if (__DEV__) console.warn('[image] page picture with two references failed, hero only:', res.error);
+            if (__DEV__) console.warn('[image] page picture with all references failed, hero only:', res.error);
             res = await askPagePicture({ heroBase64: heroB64, location: PHOTO_LOCS.find(l => l.id === photoLocationId)?.en ?? 'garden', scene });
           }
           if (cancelled || genRef.current !== gen) return;
@@ -925,42 +934,41 @@ export default function MagicStoryGame() {
     } catch { return null; }
   };
 
-  /** STEP 3+4: the tapped character is the HERO, plus one random buddy.
-   * One Spark call writes the 6-page story at one random location. */
-  const pickHero = (ch: PhotoChar) => {
-    if (asking) return;
-    tap();
-    const ids: BuddyId[] = ['neli', 'aidin', 'lila', 'dara', 'roboBoombo'];
-    const rb = ids[Math.floor(Math.random() * ids.length)]!;
-    // Tapped before its cartoon landed: the photo itself is the hero
-    // picture, so pages are never stuck on a placeholder.
-    const hero: PhotoChar = ch.dataUri || !photo ? ch : { ...ch, imageBase64: photo.base64, dataUri: 'data:image/jpeg;base64,' + photo.base64 };
-    setHeroId(ch.id); heroRef.current = hero; setRandomBuddy(rb); setBuddyId(rb);
-    void tellPhotoStory(hero, rb);
-  };
-
-  const tellPhotoStory = async (hero: PhotoChar, rb: BuddyId) => {
+  /** STEP 3+4: no hero picking. The child's buddy + ALL the cartoon
+   * items from the photo are the story cast, and the story starts by
+   * itself. One Spark call, one random fixed location, 6 pages. */
+  const startPhotoStory = async (chars: PhotoChar[]) => {
+    if (chars.length === 0) return;
     const gen = genRef.current;
+    const rb = buddyId;
+    setRandomBuddy(rb);
+    const hero = chars[0]!;
+    heroRef.current = hero;
+    setHeroId(hero.id);
+    const buddy = BUDDIES.find(b => b.id === rb) ?? BUDDIES[0]!;
     setAsking(true); setError(null); setPageIdx(0); setStorySaved(false);
     setPhotoStep('told');
     const location = PHOTO_LOCS[Math.floor(Math.random() * PHOTO_LOCS.length)]!;
     setPhotoLocationId(location.id);
-    const buddy = BUDDIES.find(b => b.id === rb) ?? BUDDIES[0]!;
-    // The hero joins the book cast so pages/saving reuse the book code.
-    const item: RoomItem = matchRoomItem(hero.fa, hero.en) ?? { id: 'photo-' + hero.en.replace(/\s+/g, '-'), fa: [hero.fa], en: [hero.en], art: null };
-    const member: StoryCastMember = { item, fa: hero.fa, en: hero.en, heroUri: hero.dataUri };
-    setCast([member]); setSelectedIds([item.id]); setStoryObjects([]);
+    // Every cartoon item joins the book cast so pages/saving reuse the
+    // book code; the first item is the page-picture main reference.
+    const members: StoryCastMember[] = chars.map(ch => {
+      const item: RoomItem = matchRoomItem(ch.fa, ch.en) ?? { id: 'photo-' + ch.en.replace(/\s+/g, '-'), fa: [ch.fa], en: [ch.en], art: null };
+      return { item, fa: ch.fa, en: ch.en, heroUri: ch.dataUri };
+    });
+    setCast(members); setSelectedIds(members.map(m => m.item.id)); setStoryObjects([]);
     try {
+      const castLine = chars.map(c => c.fa + ' (' + c.look + ')').join(', ');
       const prompt =
         'Write a 6-page picture-book story in Farsi for a 4-to-6-year-old. Reply with JSON only: ' +
         '{"title":"...","location":"' + location.en + '","pages":[{"text":"...","scene":"..."}, exactly 6 pages]}. ' +
-        'Hero: ' + hero.fa + ' (' + hero.look + ') — a friendly character from the child\'s photo. ' +
-        'Only other character: ' + buddy.fa + ' (' + buddy.en + '), the child\'s app friend. No other characters ever. ' +
+        'Characters from the child\'s photo, now friendly cartoon characters: ' + castLine + '. ' +
+        'Plus one app friend: ' + buddy.fa + ' (' + buddy.en + '). No other characters ever. ' +
         'Setting on every page: ' + location.en + '. ' +
         'Each page text is ONE Farsi sentence of 6-12 words, everyday spoken Farsi like a mom telling a story. ' +
-        'Plot: who and where, one small happy problem, the two solve it together in a clever kind way, happy ending. Each page follows from the one before. ' +
+        'Plot: who and where, one small happy problem, they solve it together in a clever kind way, happy ending. Each page follows from the one before. ' +
         'Include one short line of dialogue in \u00AB\u00BB and one feeling word (\u062E\u0648\u0634\u062D\u0627\u0644, \u062A\u0639\u062C\u0628 \u06A9\u0631\u062F, \u0630\u0648\u0642 \u06A9\u0631\u062F). ' +
-        'Each scene is one short English sentence describing the picture for that page (the two characters, the setting, what they do). ' +
+        'Each scene is one short English sentence describing the picture for that page (the characters, the setting, what they do). ' +
         'Never write about fear, the dark, monsters, sleeping or crying.';
       const system = 'JSON only: {"title":"...","location":"' + location.en + '","pages":[{"text":"...","scene":"..."} x6]}. Simple kind Farsi for a young child, no scary or sad words.';
       let story: { title: string; pages: { text: string; scene: string }[] } | null = null;
@@ -975,8 +983,8 @@ export default function MagicStoryGame() {
       }
       if (genRef.current !== gen) return;
       if (!story) {
-        const fb = fallbackStory({ buddy: buddy.fa, friend: hero.fa, obj: hero.fa }, Math.floor(Math.random() * 5));
-        story = { title: fb.title, pages: fb.lines.slice(0, 6).map((text, i) => ({ text, scene: fb.scenes?.[i] ?? 'Two friends play together happily' })) };
+        const fb = fallbackStory({ buddy: buddy.fa, friend: hero.fa, obj: chars[1]?.fa ?? hero.fa }, Math.floor(Math.random() * 5));
+        story = { title: fb.title, pages: fb.lines.slice(0, 6).map((text, i) => ({ text, scene: fb.scenes?.[i] ?? 'Friends play together happily' })) };
       }
       pageArtRef.current = story.pages.map(() => null);
       setPageArt([...pageArtRef.current]);
@@ -1235,28 +1243,27 @@ export default function MagicStoryGame() {
             </>
           ) : photo && photoStep === 'pick' && foundThings.length > 0 ? (
             <>
-              {/* STEP 2+3 — big sticker cards in a row, Farsi name under
-                  each. Tap one: it becomes the HERO of the story. */}
+              {/* STEP 2 — the cartoon items, shown with their names.
+                  No picking: the story starts by itself with all of
+                  them plus the buddy. */}
               <View style={s.castRow}>
                 {foundThings.map(ch => (
                   <View key={ch.id} style={{ alignItems: 'center', width: tileS * 1.35 }}>
-                    <ChoiceFigure size={tileS * 1.3} selected={heroId === ch.id} disabled={asking} onPress={() => pickHero(ch)}>
-                      {ch.dataUri ? (
-                        <CartoonSticker uri={ch.dataUri} size={tileS * 1.3} tilt={-4} />
-                      ) : (
-                        <StickerFrame size={tileS * 1.3} tilt={-4}>
-                          <Image source={neliWorldAssets.ui.sparkle} style={{ width: tileS * 0.6, height: tileS * 0.6 }} resizeMode="contain" />
-                        </StickerFrame>
-                      )}
-                    </ChoiceFigure>
+                    {ch.dataUri ? (
+                      <CartoonSticker uri={ch.dataUri} size={tileS * 1.3} tilt={-4} />
+                    ) : (
+                      <StickerFrame size={tileS * 1.3} tilt={-4}>
+                        <Image source={neliWorldAssets.ui.sparkle} style={{ width: tileS * 0.6, height: tileS * 0.6 }} resizeMode="contain" />
+                      </StickerFrame>
+                    )}
                     <Text style={[s.castFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{ch.fa}</Text>
                   </View>
                 ))}
               </View>
               <View style={s.bubbleSmall}>
-                <Text style={[s.bubbleSmallText, dir('fa'), { textAlign: 'center' }]}>کدوم قهرمان قصه باشه؟</Text>
+                <Text style={[s.bubbleSmallText, dir('fa'), { textAlign: 'center' }]}>اینا اومدن توی قصه!</Text>
               </View>
-              <TouchableOpacity onPress={() => { tap(); genRef.current++; setPhoto(null); setFoundThings([]); setPhotoStep('find'); setError(null); }} activeOpacity={0.7}>
+              <TouchableOpacity onPress={() => { tap(); genRef.current++; setAnalyzing(false); setPhoto(null); setFoundThings([]); setPhotoStep('find'); setError(null); }} activeOpacity={0.7}>
                 <Text style={[s.retake, dir('fa'), { textAlign: 'center' }]}>یه عکس دیگه بگیر</Text>
               </TouchableOpacity>
             </>

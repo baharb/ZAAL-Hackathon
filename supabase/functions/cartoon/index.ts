@@ -89,6 +89,7 @@ Deno.serve(async (req: Request) => {
     look?: string;
     heroBase64?: string;
     buddyBase64?: string;
+    extraBase64?: string[];
     location?: string;
     scene?: string;
   };
@@ -116,8 +117,15 @@ Deno.serve(async (req: Request) => {
     if (!scene) return json({ error: 'scene is required' }, 400);
     const images: { image_url: string }[] = [{ image_url: pngDataUrl(hero) }];
     if (buddy) images.push({ image_url: pngDataUrl(buddy) });
+    // Extra item characters from the same photo (no hero picking: all
+    // of them are in the story), at most 3 more references.
+    const extras = Array.isArray(body.extraBase64) ? body.extraBase64.slice(0, 3) : [];
+    for (const raw of extras) {
+      const ex = cleanB64(typeof raw === 'string' ? raw : '');
+      if (ex && ex.length >= 100 && ex.length <= MAX_B64_LEN && B64.test(ex)) images.push({ image_url: pngDataUrl(ex) });
+    }
     const prompt =
-      "Children's picture-book illustration. Use EXACTLY these two characters from the reference images — " +
+      "Children's picture-book illustration. Use EXACTLY these characters from the reference images — " +
       'same shapes, colors and faces, do not redesign them. ' +
       `Setting: ${location} (the same setting on every page). Scene: ${scene}. ` +
       'Simple, bright, soft shapes, no text, no other characters.';
@@ -132,7 +140,7 @@ Deno.serve(async (req: Request) => {
         console.error('[image] Meta image API error', res.status, detail.slice(0, 500));
         return json({ error: `Meta image API returned ${res.status}` }, 502);
       }
-      const out = extractImage(await res.json());
+      const out = await extractImage(await res.json());
       if (!out) {
         console.error('[image] Meta image API returned no image');
         return json({ error: 'Model returned no image' }, 502);
