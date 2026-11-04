@@ -24,7 +24,7 @@ import { useNav } from '../../store/NavContext';
 import { dir, ff } from '../../theme/fonts';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../../assets/faTestAudio.generated';
 import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
-import { askCartoon, askMeta } from '../../services/metaAI';
+import { askCartoon, askIllustration, askMeta } from '../../services/metaAI';
 import { DrawStroke, drawingToPngBase64 } from '../../utils/drawingPng';
 import { roomBackgroundPickers, neliWorldAssets } from '../../assets/neliWorldAssets';
 import { STORY_FOCUS_WORDS, StoryFocus, fallbackStory, validStoryLines } from '../../data/magicStory';
@@ -113,7 +113,7 @@ function parseItems(text: string): RecognizedWord[] | null {
   return found.length > 0 ? found : null;
 }
 
-export type StoryText = { title: string; lines: string[]; recap: string; lesson: string };
+export type StoryText = { title: string; lines: string[]; recap: string; lesson: string; scenes?: string[] };
 
 function parseStory(text: string): StoryText | null {
   const clean = (text ?? '').replace(/```json|```/g, '');
@@ -127,9 +127,14 @@ function parseStory(text: string): StoryText | null {
       const title = typeof obj.title === 'string' ? obj.title.slice(0, 50).trim() : '';
       const recap = typeof obj.recap === 'string' ? obj.recap.slice(0, 140).trim() : '';
       const lesson = typeof obj.lesson === 'string' ? obj.lesson.slice(0, 90).trim() : '';
+      const scenes = Array.isArray(obj.scenes)
+        ? obj.scenes.filter((s: unknown) => typeof s === 'string').map((s: string) => s.trim().slice(0, 160))
+        : [];
       // The gate: exactly 8 clean lines plus a real title, recap
       // and lesson — anything else goes back for one retry, then fallback.
-      if (validStoryLines(ls) && title && recap && lesson) return { title, lines: ls, recap, lesson };
+      if (validStoryLines(ls) && title && recap && lesson) {
+        return { title, lines: ls, recap, lesson, scenes: scenes.length === ls.length ? scenes : undefined };
+      }
       return null;
     } catch { /* fall through to salvage below */ }
   }
@@ -416,6 +421,12 @@ export default function MagicStoryGame() {
   }, []);
   const [focus, setFocus] = useState<StoryFocus | null>(null);
   const [lines, setLines] = useState<string[] | null>(null);
+  // Picture-book pages: one generated illustration per line, produced in
+  // the background after the story lands. Until a page's picture arrives
+  // (or if generation fails) the page keeps its buddy+friend art.
+  const [scenes, setScenes] = useState<string[] | null>(null);
+  const [pageArt, setPageArt] = useState<(string | null)[]>([]);
+  const pageArtRef = useRef<(string | null)[]>([]);
   const [storyTitle, setStoryTitle] = useState('');
   const [recap, setRecap] = useState('');
   const [lesson, setLesson] = useState('');
@@ -578,9 +589,35 @@ export default function MagicStoryGame() {
     setSelectedIds([id]);
   };
 
+  // Background picture-book illustrations, one per line, in order. A
+  // failed page simply keeps its buddy+friend art — never an error.
+  useEffect(() => {
+    if (!lines || !scenes) return;
+    let cancelled = false;
+    void (async () => {
+      for (let i = 0; i < lines.length; i++) {
+        if (cancelled) return;
+        if (pageArtRef.current[i]) continue;
+        const res = await askIllustration(scenes[i]!);
+        if (cancelled) return;
+        if ('base64' in res) {
+          pageArtRef.current[i] = `data:image/png;base64,${res.base64}`;
+          setPageArt([...pageArtRef.current]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lines, scenes]);
+
   // A new story source means: clear everything downstream.
   const clearStory = () => {
     setLines(null);
+    setScenes(null);
+    pageArtRef.current = [];
+    setPageArt([]);
     setStoryTitle('');
     setRecap('');
     setLesson('');
@@ -767,16 +804,18 @@ export default function MagicStoryGame() {
         `Do NOT list names like a roll call. ` +
         `Example to follow (same shape and level, a NEW story, not this one): ` +
         `{"title":"نلی و بادبادک آبی","lines":["نلی و آیدین توی باغ قشنگ خونه‌ی مادربزرگ بازی می‌کردن.","بادبادک آبی آیدین یهو پرواز کرد و رفت روی شاخه‌ی بلند درخت نشست.","باد هرچی زور زد، بادبادک از رو شاخه تکون نخورد و همونجا موند.","آیدین گفت: «بادبادکم اون بالا گیر کرده، چیکار کنیم حالا؟»","نلی یه نگاه به جاروی بلند کنار درخت کرد و لبخند زد.","نلی گفت: «جارو رو بده به من، تو هم صداش کن!»","آیدین جارو رو نگه داشت و نلی آروم نوک شاخه رو تکون داد.","بادبادک افتاد پایین و هر دو ذوق کردن و دور باغ دویدن."],"recap":"نلی با یه فکر خوب بادبادک آیدین رو نجات داد.","lesson":"با فکر کردن و کمک هم، مشکل حل می‌شه."} ` +
+        `Also write "scenes": for EACH line, one short ENGLISH sentence describing the picture for that page ` +
+        `(who is where, doing what — simple, concrete, drawable). ` +
         `Reply with ONLY this JSON and no other text: ` +
-        `{"title": "...", "lines": ["...", ...8 total...], "recap": "...", "lesson": "..."}`;
+        `{"title": "...", "lines": ["...", ...8 total...], "recap": "...", "lesson": "...", "scenes": ["...", ...8 total...]}`;
       const system =
-        'Title plus exactly eight lines plus recap plus lesson. Natural mom-telling Farsi for a 4-to-6-year-old, one full sentence (6–12 words) per line, one «» dialogue, one feeling word, no poetry, no fear, no roll call. ' +
+        'Title plus exactly eight lines plus recap plus lesson plus 8 English scene descriptions (one per line). Natural mom-telling Farsi for a 4-to-6-year-old, one full sentence (6–12 words) per line, one «» dialogue, one feeling word, no poetry, no fear, no roll call. ' +
         'One event per line, each line follows the last: problem, clever kind fix together, happy ending. JSON only, never any other text.';
       // Ask at most twice; a hand-written fallback guarantees the child
       // always gets a real story, never an error screen.
-      let filled = null as null | { title: string; lines: string[]; recap: string; lesson: string };
+      let filled = null as null | StoryText;
       for (let attempt = 0; attempt < 2 && !filled; attempt++) {
-        const res = await askMeta({ prompt: buildPrompt(), system, maxTokens: 900, temperature: 0.7 });
+        const res = await askMeta({ prompt: buildPrompt(), system, maxTokens: 1200, temperature: 0.7 });
         if ('error' in res || !res.text || !res.text.trim()) {
           if (__DEV__) console.warn('[story] story request failed:', 'error' in res ? res.error : 'empty reply');
           continue;
@@ -793,6 +832,9 @@ export default function MagicStoryGame() {
       }
       setFocus(nextFocus);
       setStoryTitle(filled.title || `قصه‌ی ${friend.fa}`);
+      pageArtRef.current = filled.lines.map(() => null);
+      setPageArt([...pageArtRef.current]);
+      setScenes(filled.scenes ?? null);
       setLines(filled.lines);
       setRecap(filled.recap);
       setLesson(filled.lesson);
@@ -967,6 +1009,13 @@ export default function MagicStoryGame() {
                   </>
                 ) : !isRecap ? (
                   <>
+                    {pageArt[storyIdx] ? (
+                      <Image
+                        source={{ uri: pageArt[storyIdx]! }}
+                        style={[s.pageIllustration, { height: artH }]}
+                        resizeMode="cover"
+                      />
+                    ) : (
                     <View style={[s.pageArt, { height: artH }]}>
                       {roomCartoon ? (
                         <CartoonSticker uri={roomCartoon} size={artH * 0.9} tilt={-6} />
@@ -988,6 +1037,7 @@ export default function MagicStoryGame() {
                         </View>
                       ) : null}
                     </View>
+                    )}
                     <Text style={[s.line, dir('fa'), { textAlign: 'center' }]}>{lines[storyIdx]}</Text>
                   </>
                 ) : (
@@ -1308,6 +1358,7 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
   noteThinking: { alignItems: 'center', rowGap: 10 * k, paddingVertical: 20 * k },
   page: { alignItems: 'center', rowGap: 6 * k },
   pageArt: { width: '100%', alignItems: 'center', justifyContent: 'center' },
+  pageIllustration: { width: '100%', borderRadius: 14 * k },
   pageFigure: { position: 'absolute', right: '6%', bottom: -4 * k },
   pageBuddy: { position: 'absolute', left: '5%', bottom: -2 * k },
   pageFriend: { position: 'absolute', left: '4%', bottom: 0 },

@@ -144,3 +144,43 @@ export async function askCartoon(req: CartoonRequest, retries = 1): Promise<Cart
   }
   return last;
 }
+
+/** One picture-book page illustration from a one-sentence English scene
+ * description, via the Supabase Edge Function `illustrate`. The picture
+ * is generated from model-written text (no child data) and kept in app
+ * memory only — never stored. Failure just leaves the page with its
+ * buddy+friend art; it never blocks the story. */
+export async function askIllustration(scene: string): Promise<CartoonResult> {
+  if (!supabaseConfigured) {
+    return { error: 'Supabase is not configured (.env is missing EXPO_PUBLIC_SUPABASE_URL / ANON_KEY).' };
+  }
+  const prompt = (scene ?? '').trim().slice(0, 500);
+  if (!prompt) return { error: 'Empty scene' };
+  try {
+    const { data, error } = await withTimeout(
+      supabase.functions.invoke('illustrate', { body: { prompt } }),
+      INVOKE_TIMEOUT_MS,
+    );
+    if (error) {
+      devLogHttpError('[illustrate]', error);
+      return { error: error.message ?? 'Request failed' };
+    }
+    if (data?.error) {
+      if (typeof __DEV__ !== 'undefined' && __DEV__) console.warn('[illustrate] function error:', data.error);
+      return { error: String(data.error) };
+    }
+    const out = String(data?.imageBase64 ?? '').replace(/\s/g, '');
+    if (!out || !BASE64_RE.test(out)) {
+      if (typeof __DEV__ !== 'undefined' && __DEV__) {
+        console.warn('[illustrate] reply had no image, keys were:', data ? Object.keys(data) : data);
+      }
+      return { error: 'Empty reply' };
+    }
+    return { base64: out };
+  } catch (e: any) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.warn('[illustrate] network threw:', e?.message ?? e);
+    }
+    return { error: e?.message ?? 'Network error' };
+  }
+}

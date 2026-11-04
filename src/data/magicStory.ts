@@ -44,7 +44,15 @@ export function validStoryLines(lines: unknown, banned: string[] = STORY_BANNED)
   );
 }
 
-export type FilledStory = { title: string; lines: string[]; recap: string; lesson: string };
+export type FilledStory = {
+  title: string;
+  lines: string[];
+  recap: string;
+  lesson: string;
+  /** One short ENGLISH picture description per line — the picture-book
+   * illustration prompt for that page (model-written, no child data). */
+  scenes?: string[];
+};
 export type FallbackNames = { buddy: string; friend: string; obj: string };
 
 // Five hand-written safety nets at the model level (8 mom-told lines
@@ -66,6 +74,16 @@ const FALLBACK_TEMPLATES: ((n: FallbackNames) => FilledStory)[] = [
     ],
     recap: `${n.buddy} و ${n.friend} با هم ${n.obj} رو پیدا کردن.`,
     lesson: `دوستا با هم هر چیزی رو پیدا می‌کنن.`,
+    scenes: [
+      'Two cute friends play with a toy in a cozy living room and laugh',
+      'The toy rolls away and hides under a big soft sofa',
+      'One friend kneels and looks under the sofa, searching',
+      'The other friend smiles and says they will find it together',
+      'One friend shines a small flashlight under the sofa',
+      'The other friend reaches under the sofa and grabs the toy corner',
+      'The toy comes out and both friends cheer happily',
+      'The two friends play together again, joyful and giggling',
+    ],
   }),
   n => ({
     title: `${n.friend} و حلزون کوچولو`,
@@ -81,6 +99,16 @@ const FALLBACK_TEMPLATES: ((n: FallbackNames) => FilledStory)[] = [
     ],
     recap: `${n.buddy} و ${n.friend} به حلزون خسته کمک کردن.`,
     lesson: `مهربونی با حیوونا خیلی قشنگه.`,
+    scenes: [
+      'Two cute friends walk in a sunny garden in the morning',
+      'A tiny snail walks slowly beside red flowers',
+      'The tired snail stops in the middle of the path',
+      'One friend promises the snail a fresh leaf',
+      'The other friend brings a big soft green leaf',
+      'The snail eats the leaf and walks happily again',
+      'The two friends walk beside the snail to its home',
+      'Both friends smile, happy they helped a tiny friend',
+    ],
   }),
   n => ({
     title: `برج بلند ${n.friend}`,
@@ -96,6 +124,16 @@ const FALLBACK_TEMPLATES: ((n: FallbackNames) => FilledStory)[] = [
     ],
     recap: `برج افتاد، ولی با یه فکر خوب دوباره ساختنش.`,
     lesson: `اگه چیزی خراب شد، دوباره و بهتر بسازش.`,
+    scenes: [
+      'Two cute friends sit on a rug stacking colorful blocks',
+      'Their block tower grows taller and taller toward the ceiling',
+      'The tower wobbles and all the blocks tumble down',
+      'One friend laughs and says they will build it stronger',
+      'One friend puts the biggest blocks at the bottom for a wide base',
+      'The other friend gently stacks small blocks on top',
+      'The new tower stands tall and strong',
+      'Both friends clap happily for their beautiful tower',
+    ],
   }),
   n => ({
     title: `تولد ${n.friend}`,
@@ -111,6 +149,16 @@ const FALLBACK_TEMPLATES: ((n: FallbackNames) => FilledStory)[] = [
     ],
     recap: `${n.buddy} برای تولد ${n.friend} یه کیک قشنگ آورد.`,
     lesson: `جشن گرفتن با دوستا خیلی کیف می‌ده.`,
+    scenes: [
+      'A cute birthday table with a small cake for two friends',
+      'Wind from the window blows out the birthday candle',
+      'One friend looks surprised that the candle went out',
+      'The other friend laughs about the naughty wind',
+      'Both friends close the window together',
+      'One friend lights the candle again and shields it with a hand',
+      'The birthday friend closes their eyes, wishes, and blows the candle',
+      'Both friends eat the yummy cake together, laughing',
+    ],
   }),
   n => ({
     title: `قایق‌های کاغذی`,
@@ -126,6 +174,16 @@ const FALLBACK_TEMPLATES: ((n: FallbackNames) => FilledStory)[] = [
     ],
     recap: `قایق ${n.friend} گیر کرده بود، ولی با هم نجاتش دادن.`,
     lesson: `با یه فکر ساده می‌شه مشکل رو حل کرد.`,
+    scenes: [
+      'After rain, two cute friends stand by a little stream',
+      'Each friend holds a colorful paper boat, excited',
+      "One friend's paper boat is stuck on a small rock in the water",
+      'One friend says they will rescue it with a long stick',
+      'The other friend brings a long stick',
+      'One friend gently pushes the boat off the rock with the stick',
+      'The paper boat floats away again, sailing fast',
+      'Both friends wave happily at the little boat',
+    ],
   }),
 ];
 
