@@ -267,7 +267,12 @@ export default function Finale({
     if (!savedSpoken.current) {
       savedSpoken.current = true;
       if (!albumActiveRef.current) {
-        void questPlay('quest/saved' as FaTestAudioKey, { awaitFinish: true });
+        // Saved voice first, then the yay cheer WITH the end celebration
+        // (never overlapping another clip).
+        void (async () => {
+          await questPlay('quest/saved' as FaTestAudioKey, { awaitFinish: true });
+          if (!exitedRef.current) playYay();
+        })();
         armExit();
       } else {
         voicePending.current = true;
@@ -729,6 +734,8 @@ export default function Finale({
           }}
         />
       )}
+      {/* The celebration bursts OVER the end overlay, with the yay. */}
+      {showTamam && photoPhase === 'saved' && <PopperCelebration visible />}
       {showCeleb && <PopperCelebration visible />}
     </View>
   );
