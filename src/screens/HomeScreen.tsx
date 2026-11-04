@@ -255,24 +255,27 @@ function BigCardArt({ art, size }: { art: BigCard['art']; size: number }) {
     return (
       <View style={[styles.sceneFill, styles.magicScene]}>
         <Image source={MAGIC_BG} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, width: '100%', height: '125%' }} resizeMode="cover" />
-        <Image
-          source={MAGIC_GRANDMA}
-          style={{ position: 'absolute', width: 96 * k, height: 150 * k, bottom: 62 * k, left: 10 * k }}
-          resizeMode="contain"
-        />
-        <Image
-          source={MAGIC_CAR}
-          style={{ position: 'absolute', width: 208 * k, height: 120 * k, bottom: 58 * k, right: 2 * k }}
-          resizeMode="contain"
-        />
-        {/* The gray street both of them stand on, just above the title band. */}
-        <View style={[styles.magicStreet, { height: 34 * k, bottom: 54 * k }]}>
+        {/* The gray street FIRST (behind both figures), with clear grass
+            between it and the title band below. */}
+        <View style={[styles.magicStreet, { height: 30 * k, bottom: 72 * k }]}>
           <View style={styles.magicDashes}>
             {Array.from({ length: 6 }).map((_, i) => (
               <View key={i} style={[styles.magicDash, { width: 18 * k, height: 4 * k, marginHorizontal: 7 * k }]} />
             ))}
           </View>
         </View>
+        {/* Grandma on the left of the street, Neli's car on the right —
+            a real gap between them (no overlap at card size 230). */}
+        <Image
+          source={MAGIC_GRANDMA}
+          style={{ position: 'absolute', width: 68 * k, height: 108 * k, bottom: 74 * k, left: 8 * k }}
+          resizeMode="contain"
+        />
+        <Image
+          source={MAGIC_CAR}
+          style={{ position: 'absolute', width: 136 * k, height: 78 * k, bottom: 72 * k, right: 6 * k }}
+          resizeMode="contain"
+        />
         <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 26 * k, height: 26 * k, top: 10 * k, right: 14 * k }]} resizeMode="contain" />
       </View>
     );
