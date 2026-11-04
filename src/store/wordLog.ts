@@ -51,6 +51,11 @@ const LOGGED_PREFIXES = [
   'cooking/name/',
   'alphabet/example/',
   'solar-system/',
+  // Word games (Listen & Find / First Letter / Photo Farsi): their word
+  // clips feed "Neli remembers" and the parent dinner note. Ids + counts
+  // only, same privacy rule as the quest groups above.
+  'fruits/',
+  'conversation/choice/',
 ];
 
 // Non-word clips that live under a vocabulary prefix.

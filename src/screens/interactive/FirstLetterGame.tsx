@@ -19,6 +19,10 @@ import { dir, ff } from '../../theme/fonts';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../../assets/faTestAudio.generated';
 import { playFaAudio, stopFaAudio } from '../../utils/faAudio';
 import { PHOTO_FARSI_WORDS, PhotoFarsiWord } from '../../data/photoFarsiWords';
+import { recordQuestAnswer } from '../../store/wordLog';
+import { ensureTodayParentNote } from '../../store/parentNotes';
+import { askNeliPicks } from '../../services/neliPicks';
+import NeliPicksStrip from '../../ui/NeliPicksStrip';
 import { FIRST_LETTERS, WORD_FIRST_LETTER, FirstLetter, findFirstLetter } from '../../data/firstLetter';
 
 // Everything scales from a 400pt-tall reference (a landscape phone is
@@ -57,10 +61,21 @@ export default function FirstLetterGame() {
   // One deal per round: the answer is always among the shown letters, and
   // the word never repeats twice in a row.
   const lastWordId = useRef<string | null>(null);
+  // "Neli remembers": Muse Spark's 3 picks (pictures on the strip, the
+  // queue deals them as the next rounds' words; null = normal random).
+  const [neliWords, setNeliWords] = useState<PhotoFarsiWord[]>([]);
+  const neliQueue = useRef<string[]>([]);
+  const wrongsRef = useRef(0);
   const freshDeal = (): Deal => {
     let pool = PROMPT_WORDS.filter(w => w.id !== lastWordId.current);
     if (pool.length === 0) pool = PROMPT_WORDS;
-    const word = shuffle(pool)[0]!;
+    let picked: PhotoFarsiWord | null = null;
+    while (neliQueue.current.length > 0 && !picked) {
+      const cand = pool.find(w => w.id === neliQueue.current[0]);
+      neliQueue.current.shift();
+      if (cand) picked = cand;
+    }
+    const word = picked ?? shuffle(pool)[0]!;
     lastWordId.current = word.id;
     const answer = findFirstLetter(WORD_FIRST_LETTER[word.id])!;
     const others = shuffle(FIRST_LETTERS.filter(l => l.id !== answer.id)).slice(0, CHOICES - 1);
@@ -106,6 +121,23 @@ export default function FirstLetterGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // "Neli remembers" (background, never blocks play).
+  useEffect(() => {
+    void (async () => {
+      const ids = await askNeliPicks(PROMPT_WORDS.map(w => ({ id: w.id, audioKey: w.audioKey! })));
+      if (!alive.current || !ids) return;
+      neliQueue.current = ids;
+      const byId = new Map(PROMPT_WORDS.map(w => [w.id, w]));
+      setNeliWords(ids.map(id => byId.get(id)!).filter(Boolean));
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // After a finished session, make today's parent dinner note.
+  useEffect(() => {
+    if (done) void ensureTodayParentNote();
+  }, [done]);
+
   const nextRound = (next: number) => {
     if (next >= ROUNDS) {
       setDone(true);
@@ -115,6 +147,7 @@ export default function FirstLetterGame() {
     setDeal(nextDeal);
     setWrongId(null);
     setRightId(null);
+    wrongsRef.current = 0;
     setRound(next);
     void speakPrompt(nextDeal.word);
   };
@@ -128,6 +161,7 @@ export default function FirstLetterGame() {
     await playFaAudio(letter.audioKey as FaTestAudioKey, { awaitFinish: true });
     if (!alive.current) return;
     if (letter.id === deal.answer.id) {
+      if (deal.word.audioKey) recordQuestAnswer(deal.word.audioKey, wrongsRef.current === 0);
       setRightId(letter.id);
       setTotalRight(t => t + 1);
       await playFaAudio('feedback/afarin');
@@ -135,6 +169,7 @@ export default function FirstLetterGame() {
       setStars(s => s + 1);
       setTimeout(() => alive.current && nextRound(round + 1), 450);
     } else {
+      wrongsRef.current += 1;
       setPrompting(false);
       setWrongId(letter.id);
       await playFaAudio('feedback/try-again');
@@ -195,6 +230,16 @@ export default function FirstLetterGame() {
               </Text>
             ))}
           </View>
+        </View>
+      ) : null}
+      {/* "Neli remembers" strip: Spark's 3 picks, pictures only. */}
+      {!done && neliWords.length === 3 ? (
+        <View style={{ position: 'absolute', top: topBarHeight(height, insets.top) + 44 * k, alignSelf: 'center', zIndex: 40, elevation: 40 }}>
+          <NeliPicksStrip>
+            {neliWords.map(w => (
+              <WordArt key={w.id} art={WORD_ART[w.id] ?? null} emoji={w.emoji} size={30 * k} />
+            ))}
+          </NeliPicksStrip>
         </View>
       ) : null}
       <View style={s.body}>

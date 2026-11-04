@@ -15,7 +15,12 @@ import { questPlay } from './questSound';
 import { recordQuestResult } from '../store/questLevel';
 import { BuddyId, loadBuddy, saveBuddy } from './buddyStore';
 import { DisplayWord } from './questGroups';
-import { PickKind, pickPool, sampleOptions } from './pickLists';
+import { PickKind, colorsFarApart, pickPool, sampleOptions } from './pickLists';
+import { ensureTodayParentNote } from '../store/parentNotes';
+import { askNeliPicks } from '../services/neliPicks';
+import NeliPicksStrip from '../ui/NeliPicksStrip';
+import ColorDot from './ColorDot';
+import WordArt from './WordArt';
 import { STORIES } from './stories';
 import { buddyPose } from './questTheme';
 import BuddyPicker from './BuddyPicker';
@@ -57,6 +62,10 @@ export default function DailyQuestScreen() {
   const [leveledUp, setLeveledUp] = useState(false);
   const picksRef = useRef<DisplayWord[]>([]);
   const usedRef = useRef<Set<string>>(new Set());
+  // "Neli remembers": Muse Spark's 3 picks across the pick pools
+  // (pictures on the strip; the queue nudges one into its step's options).
+  const [neliPicks, setNeliPicks] = useState<{ word: DisplayWord; kind: PickKind }[]>([]);
+  const neliQueue = useRef<string[]>([]);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -76,12 +85,30 @@ export default function DailyQuestScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Deal one step's options, nudging a queued Spark pick into its own
+  // step when it fits (colors must stay far apart, like every deal).
+  const dealOptions = (kind: PickKind, used: Set<string>): DisplayWord[] => {
+    const pool = pickPool(kind);
+    const opts = sampleOptions(pool, 3, used);
+    const qi = neliQueue.current.findIndex(
+      id => pool.some(w => w.id === id) && !used.has(id) && !opts.some(o => o.id === id),
+    );
+    if (qi >= 0) {
+      const w = pool.find(p => p.id === neliQueue.current[qi])!;
+      if (kind !== 'color' || opts.slice(0, 2).every(o => colorsFarApart(o.id, w.id))) {
+        opts[opts.length - 1] = w;
+        neliQueue.current.splice(qi, 1);
+      }
+    }
+    return opts;
+  };
+
   const startPicks = () => {
     picksRef.current = [];
     setPicks([]);
     usedRef.current = new Set();
     setStepIndex(0);
-    setOptions(sampleOptions(pickPool(PICK_STEPS[0]!), 3, usedRef.current));
+    setOptions(dealOptions(PICK_STEPS[0]!, usedRef.current));
     setPhase('picks');
   };
 
@@ -89,6 +116,37 @@ export default function DailyQuestScreen() {
   useEffect(() => {
     if (phase === 'buddy') void questPlay('quest/pick-buddy' as FaTestAudioKey);
     else if (phase === 'album') void questPlay('quest/my-days' as FaTestAudioKey);
+  }, [phase]);
+
+  // "Neli remembers" (background, never blocks play): Muse Spark picks
+  // 3 words across the fruit/color/dish pools from recent results.
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const pools = PICK_STEPS.map(kind => ({ kind, pool: pickPool(kind) }));
+      const allowed = pools.flatMap(({ pool }) => pool).map(w => ({ id: w.id, audioKey: w.audioKey as string }));
+      const ids = await askNeliPicks(allowed);
+      if (!alive || !ids) return;
+      neliQueue.current = ids;
+      setNeliPicks(
+        ids
+          .map(id => {
+            const hit = pools.find(({ pool }) => pool.some(w => w.id === id));
+            const word = hit?.pool.find(w => w.id === id);
+            return hit && word ? { word, kind: hit.kind } : null;
+          })
+          .filter((p): p is { word: DisplayWord; kind: PickKind } => p !== null),
+      );
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // At the picnic, the session is done: make today's parent dinner note.
+  useEffect(() => {
+    if (phase === 'arrived') void ensureTodayParentNote();
   }, [phase]);
 
   const chooseBuddy = (id: BuddyId) => {
@@ -113,7 +171,7 @@ export default function DailyQuestScreen() {
       }
       const next = stepIndex + 1;
       setStepIndex(next);
-      setOptions(sampleOptions(pickPool(PICK_STEPS[next]!), 3, used));
+      setOptions(dealOptions(PICK_STEPS[next]!, used));
     }, 600);
   };
 
@@ -184,6 +242,20 @@ export default function DailyQuestScreen() {
             </View>
           </View>
         )}
+        {/* "Neli remembers" strip on the first pick: Spark's 3 words. */}
+        {phase === 'picks' && stepIndex === 0 && neliPicks.length === 3 ? (
+          <View style={{ position: 'absolute', top: topBarHeight(height, insets.top) + 8, alignSelf: 'center', zIndex: 40, elevation: 40 }}>
+            <NeliPicksStrip>
+              {neliPicks.map(({ word, kind }) =>
+                kind === 'color' ? (
+                  <ColorDot key={word.id} id={word.id} size={26} />
+                ) : (
+                  <WordArt key={word.id} word={word} size={30} />
+                ),
+              )}
+            </NeliPicksStrip>
+          </View>
+        ) : null}
         {phase === 'picks' && options.length === 3 && (
           <PicksScreen
             key={stepIndex}

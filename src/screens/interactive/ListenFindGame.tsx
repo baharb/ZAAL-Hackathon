@@ -20,6 +20,10 @@ import { PHOTO_FARSI_WORDS, PhotoFarsiWord } from '../../data/photoFarsiWords';
 import { useNav } from '../../store/NavContext';
 import TopBar, { topBarHeight } from '../../components/TopBar';
 import { loadBuddy } from '../../quest/buddyStore';
+import { recordQuestAnswer } from '../../store/wordLog';
+import { ensureTodayParentNote } from '../../store/parentNotes';
+import { askNeliPicks } from '../../services/neliPicks';
+import NeliPicksStrip from '../../ui/NeliPicksStrip';
 import { saveMyDay } from '../../quest/myDaysStore';
 import { IdleHand, useIdleHint } from '../../quest/IdleHand';
 import PopperCelebration from '../../components/PopperCelebration';
@@ -159,6 +163,11 @@ export default function ListenFindGame() {
   const { navigate } = useNav();
   const k = H / REFERENCE_H;
   const [round, setRound] = useState(0);
+  // "Neli remembers": Muse Spark's 3 picks for today (null = random).
+  // The queue feeds the NEXT rounds; the strip just shows the pictures.
+  const [neliWords, setNeliWords] = useState<PhotoFarsiWord[]>([]);
+  const neliQueue = useRef<string[]>([]);
+  const wrongsRef = useRef(0);
   const lastWordId = useRef<string | null>(null);
   const lastSceneBg = useRef<SceneBg | null>(null);
   const freshCards = (): {
@@ -167,16 +176,32 @@ export default function ListenFindGame() {
     scene: SceneBg;
     spots: { left: number; top: number }[];
   } => {
+    // "Neli remembers": a queued pick becomes this round's answer in its
+    // own scene when possible; otherwise today's random deal, unchanged.
+    let picked: PhotoFarsiWord | null = null;
+    let pickedScene: (typeof SCENES)[number] | null = null;
+    while (neliQueue.current.length > 0 && !picked) {
+      const id = neliQueue.current[0]!;
+      const sc = SCENES.find(s => (s.words as readonly string[]).includes(id));
+      const w = BY_ID[id];
+      if (sc && w && id !== lastWordId.current) {
+        picked = w;
+        pickedScene = sc;
+        neliQueue.current.shift();
+      } else {
+        neliQueue.current.shift();
+      }
+    }
     // A new scene every round (never the same twice in a row).
     let scenes = SCENES.filter(s => s.bg !== lastSceneBg.current);
     if (scenes.length === 0) scenes = [...SCENES];
-    const scene = scenes[Math.floor(Math.random() * scenes.length)]!;
+    const scene = pickedScene ?? scenes[Math.floor(Math.random() * scenes.length)]!;
     lastSceneBg.current = scene.bg;
     // Answer + distractors all belong to this scene.
     const words = scene.words.map(id => BY_ID[id]!).filter(Boolean);
     let pool = words.filter(w => w.id !== lastWordId.current);
     if (pool.length === 0) pool = words;
-    const answer = shuffle(pool)[0]!;
+    const answer = picked ?? shuffle(pool)[0]!;
     lastWordId.current = answer.id;
     const choices = shuffle([...shuffle(words.filter(w => w.id !== answer.id)).slice(0, 2), answer]);
     // Three standing spots on the floor band: bottoms between 80% and
@@ -311,6 +336,24 @@ export default function ListenFindGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // "Neli remembers" (background, never blocks play): Muse Spark picks
+  // 3 of this game's words from the child's recent results; offline or
+  // invalid falls back to the normal random rounds with no sign shown.
+  useEffect(() => {
+    void (async () => {
+      const ids = await askNeliPicks(VOICED_WORDS.map(w => ({ id: w.id, audioKey: w.audioKey! })));
+      if (!alive.current || !ids) return;
+      neliQueue.current = ids;
+      setNeliWords(ids.map(id => BY_ID[id]!).filter(Boolean));
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // After a finished session, make today's parent dinner note.
+  useEffect(() => {
+    if (done) void ensureTodayParentNote();
+  }, [done]);
+
   const nextRound = (next: number) => {
     if (next >= ROUNDS) {
       setDone(true);
@@ -321,6 +364,7 @@ export default function ListenFindGame() {
     setWrongIdx(null);
     setRound(next);
     setMood('idle');
+    wrongsRef.current = 0;
     setTaps(0);
     resetAnims();
     void speakPrompt(deal.answer);
@@ -332,6 +376,7 @@ export default function ListenFindGame() {
     tap();
     setTaps(t => t + 1);
     if (word.id === cards.answer.id) {
+      if (cards.answer.audioKey) recordQuestAnswer(cards.answer.audioKey, wrongsRef.current === 0);
       setPrompting(true);
       setMood('happy');
       const a = anims[index]!;
@@ -351,6 +396,7 @@ export default function ListenFindGame() {
       setFound(prev => [...prev, word]);
       setTimeout(() => alive.current && nextRound(round + 1), 250);
     } else {
+      wrongsRef.current += 1;
       setWrongIdx(index);
       setMood('thinking');
       const a = anims[index]!;
@@ -453,6 +499,17 @@ export default function ListenFindGame() {
               </Text>
             ))}
           </View>
+        </View>
+      ) : null}
+
+      {/* "Neli remembers" strip: Spark's 3 picks, pictures only. */}
+      {!done && neliWords.length === 3 ? (
+        <View style={{ position: 'absolute', top: topBarHeight(H, insets.top) + 44 * k, alignSelf: 'center', zIndex: 40, elevation: 40 }}>
+          <NeliPicksStrip>
+            {neliWords.map(w => (
+              <WordArt key={w.id} art={WORD_ART[w.id] ?? null} emoji={w.emoji} size={30 * k} />
+            ))}
+          </NeliPicksStrip>
         </View>
       ) : null}
 

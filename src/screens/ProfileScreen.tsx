@@ -7,6 +7,7 @@ import CharacterAvatar from '../components/CharacterAvatar';
 import DailyLimitCard from '../components/DailyLimitCard';
 import DeleteAccountCard from '../components/DeleteAccountCard';
 import PremiumCard from '../components/PremiumCard';
+import { loadParentNotes, ensureTodayParentNote, ParentNote } from '../store/parentNotes';
 import { PREMIUM_ENABLED } from '../config/features';
 import { usePremiumGate } from '../hooks/usePremiumGate';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
@@ -67,6 +68,20 @@ export default function ProfileScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  // "Tonight at home" parent notes (device only, newest first). This
+  // screen sits behind the settings password, so notes live here only.
+  const [parentNotes, setParentNotes] = useState<ParentNote[]>([]);
+  React.useEffect(() => {
+    let alive = true;
+    void (async () => {
+      await ensureTodayParentNote();
+      const notes = await loadParentNotes();
+      if (alive) setParentNotes(notes);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const handlePasswordChange = async () => {
     if (!/^\d{4}$/.test(newPassword)) {
@@ -279,6 +294,21 @@ export default function ProfileScreen() {
           onAddBonus={addBonusMinutes}
         />
 
+        {/* Tonight at home — parent dinner notes, newest first */}
+        {parentNotes.length > 0 ? (
+          <View style={[styles.panel, { borderRadius: Math.max(22, Math.round(26 * ui)), padding: Math.max(14, Math.round(16 * ui)) }]}>
+            <Text style={[styles.sectionTitle, { fontFamily: ff(lang, 'black'), fontSize: Math.max(16, Math.round(18 * ui)), marginBottom: Math.max(10, Math.round(12 * ui)) }, dir(lang)]}>
+              {isFa ? 'امشب در خانه' : 'Tonight at home'}
+            </Text>
+            {parentNotes.map(note => (
+              <View key={note.day} style={{ marginBottom: Math.max(10, Math.round(12 * ui)) }}>
+                <Text style={[styles.noteDay, { fontFamily: ff(lang, 'bold') }]}>{note.day}</Text>
+                <Text style={[styles.noteText, { fontFamily: ff(lang, 'regular') }]}>{note.text}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
         {/* Box 6 — Rewards — hidden for now */}
         {SHOW_REWARDS_BOX ? (
         <View style={[styles.panel, { borderRadius: Math.max(22, Math.round(26 * ui)), padding: Math.max(14, Math.round(16 * ui)) }]}>
@@ -327,6 +357,8 @@ const styles = StyleSheet.create({
   statLbl: { color: '#493C63', fontSize: 11 },
   panel: { backgroundColor: 'rgba(255,255,255,0.95)' },
   sectionTitle: { color: '#221044', marginBottom: 12 },
+  noteDay: { color: '#6B5A89', fontSize: 12, marginBottom: 4 },
+  noteText: { color: '#221044', fontSize: 15, lineHeight: 22 },
   languageRow: { flexDirection: 'row', gap: 8, paddingVertical: 2, paddingHorizontal: 1 },
   languageRowRtl: { flexDirection: 'row-reverse' },
   languageButton: { height: 42, borderRadius: 21, paddingHorizontal: 16, backgroundColor: '#F0EBFF', alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: 'transparent' },
