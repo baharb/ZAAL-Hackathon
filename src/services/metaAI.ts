@@ -50,6 +50,16 @@ function devLogHttpError(prefix: string, error: any) {
   }
 }
 
+/** A hung Edge Function must never hang the child: cap every invoke so
+ * the caller's fallback (hand-written story / the drawing itself) fires. */
+const INVOKE_TIMEOUT_MS = 45000;
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('invoke timeout')), ms)),
+  ]);
+}
+
 export async function askMeta(req: MetaRequest, retries = 1): Promise<MetaResult> {
   if (!supabaseConfigured) {
     return { error: 'Supabase is not configured (.env is missing EXPO_PUBLIC_SUPABASE_URL / ANON_KEY).' };
@@ -59,7 +69,7 @@ export async function askMeta(req: MetaRequest, retries = 1): Promise<MetaResult
   let last: MetaResult = { error: 'Request failed' };
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const { data, error } = await supabase.functions.invoke('meta-ai', { body: req });
+      const { data, error } = await withTimeout(supabase.functions.invoke('meta-ai', { body: req }), INVOKE_TIMEOUT_MS);
       if (error) {
         devLogHttpError('[story]', error);
         last = { error: error.message ?? 'Request failed' };
@@ -97,9 +107,12 @@ export async function askCartoon(req: CartoonRequest, retries = 1): Promise<Cart
   let last: CartoonResult = { error: 'Request failed' };
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const { data, error } = await supabase.functions.invoke('cartoon', {
-        body: { imageBase64: clean, kind: req.kind },
-      });
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke('cartoon', {
+          body: { imageBase64: clean, kind: req.kind },
+        }),
+        INVOKE_TIMEOUT_MS,
+      );
       if (error) {
         // Dev terminal only (never to the child): HTTP status + body.
         devLogHttpError('[cartoon]', error);

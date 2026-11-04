@@ -666,8 +666,9 @@ export default function MagicStoryGame() {
     setError(null);
     setCartoonUri(null);
     void playFaAudio('story/make-magic');
-    const b64 = drawingToPngBase64(dstrokes, 384);
+    let b64 = '';
     try {
+      b64 = drawingToPngBase64(dstrokes, 384);
       const res = await askCartoon({ imageBase64: b64, kind: 'drawing' });
       if ('error' in res) {
         // Never stuck: the child's own drawing becomes the hero sticker
@@ -681,8 +682,12 @@ export default function MagicStoryGame() {
       setCelebrate(true);
     } catch (e) {
       if (__DEV__) console.warn('[cartoon] cartoon threw, keeping the drawing as the sticker:', e);
-      setCartoonUri(`data:image/png;base64,${b64}`);
-      setCelebrate(true);
+      if (b64) {
+        setCartoonUri(`data:image/png;base64,${b64}`);
+        setCelebrate(true);
+      } else {
+        setError('نلی الان نمی‌تونه، دوباره امتحان کن');
+      }
     } finally {
       setConjuring(false);
     }
