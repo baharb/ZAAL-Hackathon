@@ -34,6 +34,10 @@ import TopBar from '../components/TopBar';
 import PicnicPhoto from './PicnicPhoto';
 import SimpleBall from './SimpleBall';
 
+// Lila's happy-at-the-end art: the waving lamb in yellow overalls, not
+// the baker pose her shared 'celebration' art uses.
+const LILA_HAPPY_END = require('../../assets/neli-world/characters/Lila/cheerful_lamb_waving_in_yellow_overalls.webp');
+
 const QUEST_CAMERA = require('../../assets/neli-world/quest/camera.png');
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 
@@ -617,7 +621,7 @@ export default function Finale({
         >
           <Animated.View style={{ transform: [{ scale: buddyBounce }], alignItems: 'center' }}>
             <Image
-              source={buddyPose(buddy, celebrating ? 'celebration' : 'base')}
+              source={celebrating && buddy === 'lila' ? LILA_HAPPY_END : buddyPose(buddy, celebrating ? 'celebration' : 'base')}
               style={{ width: matCharW, height: matCharH }}
               resizeMode="contain"
               accessibilityLabel={buddy}
@@ -717,7 +721,7 @@ export default function Finale({
         <View style={styles.endOverlay}>
           <View style={[styles.endCard, { borderRadius: 28 * k, padding: 20 * k }]}>
             <Image
-              source={buddyPose(buddy, 'celebration')}
+              source={buddy === 'lila' ? LILA_HAPPY_END : buddyPose(buddy, 'celebration')}
               style={{ width: 110 * k, height: 110 * k }}
               resizeMode="contain"
               accessibilityLabel={buddy}
