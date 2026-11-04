@@ -1,7 +1,7 @@
 // PicnicPhoto — one real picnic scene, shared by the finished-quest
 // polaroid (Finale) and the album card (MyDaysScreen). Garden background,
 // the tied balloons up top, Grandma and the buddy at the blanket's edges,
-// the counted fruit in a row plus the dish on a mini checker blanket.
+// the counted fruit piled on the plate plus the dish, as in the scene.
 // Both places show the same photo — never an icon strip.
 
 import React from 'react';
@@ -57,6 +57,20 @@ export function Flower({ size, petal }: { size: number; petal: string }) {
   );
 }
 
+const PLATE_SRC = require('../../assets/neli-world/kitchen/plate.webp');
+
+/** Fruit pile spots on the plate (fractions of it), same natural
+ * single-layer pile as the live Finale scene — slight overlaps. */
+function pileSpots(n: number): [number, number, number][] {
+  switch (n) {
+    case 1: return [[0.5, 0.46, 0]];
+    case 2: return [[0.36, 0.47, -8], [0.64, 0.47, 8]];
+    case 3: return [[0.3, 0.48, -8], [0.52, 0.43, 0], [0.72, 0.48, 8]];
+    case 4: return [[0.26, 0.48, -8], [0.43, 0.45, -3], [0.6, 0.45, 3], [0.76, 0.48, 8]];
+    default: return [[0.3, 0.52, -8], [0.5, 0.54, 0], [0.7, 0.52, 8], [0.4, 0.34, -4], [0.61, 0.34, 4]];
+  }
+}
+
 const FLOWERS: { left: DimensionValue; bottom: DimensionValue; color: string }[] = [
   { left: '3%', bottom: '4%', color: '#FF5D8F' },
   { left: '13%', bottom: '1%', color: '#FF8A3D' },
@@ -92,6 +106,19 @@ export default function PicnicPhoto({
   radius?: number;
 }) {
   const castH = h * 0.52;
+  // Served like the real scene: the counted fruit piled ON the plate,
+  // the dish beside it — shrunk together to fit inside the blanket.
+  const blanketW = Math.max(0, w - castH * 1.4);
+  const blanketH = h * 0.36;
+  const foodGap = Math.max(2, h * 0.02);
+  const plateRaw = Math.min(blanketW * 0.42, blanketH);
+  const bigRaw = Math.min(blanketW * 0.34, blanketH * 0.82);
+  const fit = Math.min(1, (blanketW * 0.9) / Math.max(1, plateRaw + bigRaw + foodGap));
+  const plateW = plateRaw * fit;
+  const plateH = plateW * 0.82;
+  const bigPlate = bigRaw * fit;
+  const fruitF = plateW * 0.3;
+  const shown = Math.min(Math.max(fruitCount, 1), 5);
   return (
     <View style={{ width: w, height: h, borderRadius: radius ?? 0, overflow: 'hidden' }}>
       {background ? (
@@ -168,12 +195,18 @@ export default function PicnicPhoto({
             }}
           />
         ))}
-        <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-          {fruitWord &&
-            Array.from({ length: Math.min(Math.max(fruitCount, 1), 5) }).map((_, i) => (
-              <WordArt key={i} word={fruitWord} size={h * 0.15} />
-            ))}
-          {dishWord && <WordArt word={dishWord} size={h * 0.24} />}
+        <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: foodGap }}>
+          {fruitWord && (
+            <View style={{ width: plateW, height: plateH }}>
+              <Image source={PLATE_SRC} style={{ position: 'absolute', left: 0, top: 0, width: plateW, height: plateH }} resizeMode="contain" />
+              {pileSpots(shown).map(([fx, fy, rot], i) => (
+                <View key={i} style={{ position: 'absolute', left: fx * plateW - fruitF / 2, top: fy * plateH - fruitF / 2, transform: [{ rotate: `${rot}deg` }] }}>
+                  <WordArt word={fruitWord} size={fruitF} />
+                </View>
+              ))}
+            </View>
+          )}
+          {dishWord && <WordArt word={dishWord} size={bigPlate} />}
         </View>
       </View>
     </View>
