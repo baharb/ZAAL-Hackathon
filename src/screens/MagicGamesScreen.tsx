@@ -113,13 +113,17 @@ function SmallTile({ t, w, h, k, onPress }: { t: Tile; w: number; h: number; k: 
   const artS = h * 0.44;
   return (
     <TouchableOpacity
-      style={[s.tile, { backgroundColor: t.color, borderBottomColor: t.edge, width: w, height: h, borderRadius: 22 * k }]}
+      style={[s.tile, { backgroundColor: t.color, width: w, height: h, borderRadius: 26 * k }]}
       onPress={onPress}
       activeOpacity={0.88}
       accessibilityRole="button"
     >
       <TileScene t={t} artS={artS} k={k} />
-      <Text style={[s.name, dir('fa'), { fontSize: 16 * k }]} numberOfLines={1}>{t.fa}</Text>
+      {/* Same title format as the app's game boxes: white name centered
+          on the navy shade band at the bottom. */}
+      <View style={[s.shade, { height: Math.max(32, h * 0.3) }]}>
+        <Text style={[s.cardTitle, dir('fa'), { fontSize: Math.max(15, 16 * k) }]} numberOfLines={1}>{t.fa}</Text>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -156,23 +160,22 @@ export default function MagicGamesScreen() {
       <View style={[s.col, { paddingTop: headerH, paddingBottom: Math.max(12 * k, insets.bottom), rowGap: gap }]}>
         {/* بازی امروز من — first and biggest: Neli in her red car. */}
         <TouchableOpacity
-          style={[s.tile, s.quest, { backgroundColor: QUEST_TILE.color, borderBottomColor: QUEST_TILE.edge, width: smallW * 2 + gap, height: dqH, borderRadius: 24 * k }]}
+          style={[s.tile, s.quest, { backgroundColor: QUEST_TILE.color, width: smallW * 2 + gap, height: dqH, borderRadius: 26 * k }]}
           onPress={() => navigate(QUEST_TILE.route)}
           activeOpacity={0.88}
           accessibilityRole="button"
         >
           <Image source={CAR_NELI} style={{ width: dqH * 1.15, height: dqH * 0.66 }} resizeMode="contain" />
-          <View style={s.questText}>
-            <Text style={[s.questName, dir('fa'), { fontSize: 22 * k }]} numberOfLines={1}>{QUEST_TILE.fa}</Text>
-            <Text style={[s.questDesc, dir('fa'), { fontSize: 14 * k }]} numberOfLines={1}>هر روز تازه</Text>
-          </View>
-          {/* Road under the car. */}
-          <View pointerEvents="none" style={[s.road, { height: dqH * 0.2 }]}>
+          {/* Road under the car, just above the title band. */}
+          <View pointerEvents="none" style={[s.road, { height: dqH * 0.14, bottom: Math.max(32, dqH * 0.3) }]}>
             <View style={s.dashes}>
               {Array.from({ length: 8 }).map((_, i) => (
                 <View key={i} style={[s.dash, { width: 14 * k, height: 4 * k, marginHorizontal: 6 * k }]} />
               ))}
             </View>
+          </View>
+          <View style={[s.shade, { height: Math.max(32, dqH * 0.3) }]}>
+            <Text style={[s.cardTitle, dir('fa'), { fontSize: Math.max(16, 19 * k) }]} numberOfLines={1}>{QUEST_TILE.fa}</Text>
           </View>
         </TouchableOpacity>
         <View style={[s.grid, { width: smallW * 2 + gap, gap }]}>
@@ -199,23 +202,35 @@ const s = StyleSheet.create({
   titleText: { fontFamily: ff('fa', 'black'), color: '#1E1B4B', textAlign: 'center' },
   col: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
+  // Same card as the app's game boxes: bold flat color, big radius,
+  // soft shadow, scene art bleeding under the title band.
   tile: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderBottomWidth: 6,
     overflow: 'hidden',
+    shadowColor: '#170736',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    elevation: 8,
   },
   scene: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' },
-  name: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', textAlign: 'center' },
-  quest: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', columnGap: 10 },
-  questText: { alignItems: 'center' },
-  questName: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', textAlign: 'center' },
-  questDesc: { fontFamily: ff('fa', 'regular'), color: '#FFFFFF', textAlign: 'center', opacity: 0.92 },
-  road: {
+  shade: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: 'rgba(37,16,92,0.62)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  cardTitle: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', textAlign: 'center' },
+  quest: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', columnGap: 10 },
+  road: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     backgroundColor: '#5B5B6B',
     alignItems: 'center',
     justifyContent: 'center',
