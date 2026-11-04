@@ -628,7 +628,7 @@ export default function Finale({
         <View
           style={[
             styles.grandmaSide,
-            { left: grandmaCx - matCharW / 2, bottom: blanketBottom + blanketH * 0.5, alignItems: 'center' },
+            { left: grandmaCx - matCharW / 2, bottom: blanketBottom + blanketH * 0.72, alignItems: 'center' },
           ]}
           pointerEvents="none"
         >
@@ -704,7 +704,7 @@ export default function Finale({
           >
             <Image
               source={QUEST_CAMERA}
-              style={{ width: camS * 2, height: camS * 2 }}
+              style={{ width: camS * 3, height: camS * 3 }}
               resizeMode="contain"
               accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
             />
@@ -806,7 +806,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
-  // The child's own camera, no background, big in the center of the page.
+  // The child's own camera, no background, big and high on the page —
+  // above the characters' heads.
   camCenter: {
     position: 'absolute',
     left: 0,
@@ -814,7 +815,8 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: '7%',
     zIndex: 45,
     elevation: 45,
   },

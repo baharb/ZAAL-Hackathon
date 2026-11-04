@@ -28,6 +28,7 @@ import ColorDot from './ColorDot';
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 import { Story } from './stories';
 import { gardenDrawnSize, gardenSourceSize } from './QuestBackdrop';
+import { grandmaArtFor } from './grandmaArt';
 import WordArt from './WordArt';
 
 const POP_SOUND = require('../../assets/audio/pop.wav');
@@ -963,7 +964,7 @@ export default function DriveGame({
           }}
         >
           <Image
-            source={story.grandma}
+            source={grandmaArtFor(buddy)}
             style={{ width: grandmaW, height: grandmaH }}
             resizeMode="contain"
             accessibilityLabel={isFa ? 'مادربزرگ' : 'Grandma'}
