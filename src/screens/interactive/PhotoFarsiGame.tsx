@@ -274,9 +274,12 @@ export default function PhotoFarsiGame() {
   // Scene: buddy stands big on the floor (bottom-anchored, never mid-air),
   // bubble right over her head, the big yellow camera square bottom-center.
   // One line of text, never wrapped.
-  const camS = Math.min(height * 0.3, 150 * k);
+  // Wide candy camera pill on EVERY size (never a tall narrow square):
+  // fixed height, generous width, icon + one-line label centered inside.
+  const camH = Math.max(56, 64 * k);
+  const camW = Math.min(W * 0.44, 300 * k);
   const miniS = Math.max(56, 60 * k);
-  const ctrlL = (W - (miniS * 2 + camS + 24 * k)) / 2;
+  const ctrlL = (W - (miniS * 2 + camW + 24 * k)) / 2;
   // Never reach into the camera row: on squarer screens the controls start
   // left of where a full-height buddy would end.
   const buddyS = Math.min(200 * k, height * 0.44, Math.max(120, ctrlL - 24));
@@ -305,7 +308,7 @@ export default function PhotoFarsiGame() {
         </View>
 
         {/* Right: polaroid / thinking / answer (kept above the camera). */}
-        <View style={[s.right, { paddingBottom: camS + 20 * k }]}>
+        <View style={[s.right, { paddingBottom: camH + 20 * k }]}>
           {!photo ? null : asking && !result ? (
             <GameCard radius={22 * k} style={s.thinkCard}>
               <ThinkingDots size={14 * k} />
@@ -339,7 +342,7 @@ export default function PhotoFarsiGame() {
         </View>
       </View>
       {error ? (
-        <View style={[s.errorWrap, { bottom: camS + 26 * k }]} pointerEvents="none">
+        <View style={[s.errorWrap, { bottom: camH + 26 * k }]} pointerEvents="none">
           <Text style={[s.error, dir('fa'), { textAlign: 'center' }]}>{error}</Text>
         </View>
       ) : null}
@@ -359,13 +362,13 @@ export default function PhotoFarsiGame() {
         </TouchableOpacity>
         {!photo ? (
           <TouchableOpacity
-            style={[s.camBtn, { width: camS, height: camS, borderRadius: 22 * k }]}
+            style={[s.camBtn, { width: camW, height: camH, borderRadius: 999 }]}
             onPress={takePhoto}
             activeOpacity={0.85}
             accessibilityRole="button"
           >
-            <Image source={neliWorldAssets.ui.camera} style={{ width: camS * 0.44, height: camS * 0.44 }} resizeMode="contain" />
-            <Text style={[s.camText, dir('fa')]} numberOfLines={1}>عکس بگیر</Text>
+            <Image source={neliWorldAssets.ui.camera} style={{ width: camH * 0.52, height: camH * 0.52, flexShrink: 0 }} resizeMode="contain" />
+            <Text style={[s.camText, dir('fa')]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>عکس بگیر</Text>
           </TouchableOpacity>
         ) : (
           <CandyButton
@@ -373,7 +376,8 @@ export default function PhotoFarsiGame() {
             edge={PLAY_ACCENTS.green.edge}
             onPress={askNeli}
             disabled={asking}
-            height={camS * 0.72}
+            height={camH}
+            padH={camW * 0.3}
           >
             <Text style={[s.bigBtnText, dir('fa')]} numberOfLines={1}>{asking ? '…' : 'نلی بگو'}</Text>
           </CandyButton>
@@ -384,7 +388,7 @@ export default function PhotoFarsiGame() {
           activeOpacity={0.85}
           accessibilityRole="button"
         >
-          <OpenBookIcon size={40 * k} />
+          <OpenBookIcon size={miniS * 0.82} />
           <View style={s.heardBadge}>
             <Text style={s.heardText}>★ {heard.length}/{PHOTO_FARSI_WORDS.length}</Text>
           </View>
@@ -481,9 +485,11 @@ const styles = (k: number) =>
     },
     camBtn: {
       backgroundColor: '#FFB800',
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      rowGap: 2 * k,
+      columnGap: 10 * k,
+      paddingHorizontal: 18 * k,
       shadowColor: 'rgba(45,27,105,0.30)',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 1,
