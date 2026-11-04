@@ -29,11 +29,12 @@ type Tile = {
 };
 
 // Same order as the Home big cards: the main game first, then the rest.
-// Exact Home big-card colors: pink, blue, yellow, green.
+// Exact Home big-card colors: yellow, blue, pink, green (picnic and
+// Photo Farsi swapped on request).
 const TILES: Tile[] = [
-  { route: { name: 'DailyQuest' }, color: '#FF00F5', fa: 'پیک‌نیک با مامان‌بزرگ', buddy: 'neli' },
+  { route: { name: 'DailyQuest' }, color: '#F7D046', fa: 'پیک‌نیک با مامان‌بزرگ', buddy: 'neli' },
   { route: { name: 'MagicStory' }, color: '#00D1FF', fa: 'قصه جادویی', buddy: 'aidin' },
-  { route: { name: 'PhotoFarsi' }, color: '#F7D046', fa: 'فارسی با عکس', buddy: 'roboBoombo' },
+  { route: { name: 'PhotoFarsi' }, color: '#FF00F5', fa: 'فارسی با عکس', buddy: 'roboBoombo' },
   { route: { name: 'FirstLetter' }, color: '#18C977', fa: 'حرف اول', buddy: 'dara' },
 ];
 
@@ -46,12 +47,13 @@ function TileBuddy({ id, size }: { id: BuddyId; size: number }) {
 /** Mini scene per game, filling the square card above its title band. */
 function TileScene({ t, size, k }: { t: Tile; size: number; k: number }) {
   const artS = size * 0.42;
-  const buddyS = artS * 1.05;
+  // Characters twice as big as before, anchored over the title band.
+  const buddyS = size * 0.8;
   if (t.route.name === 'DailyQuest') {
-    // Neli in her red car on the gray road.
+    // Neli in her red car on the gray road — car and Neli bigger together.
     return (
       <View style={s.scene}>
-        <Image source={CAR_NELI} style={{ width: size * 0.72, height: size * 0.44, marginBottom: size * 0.1 }} resizeMode="contain" />
+        <Image source={CAR_NELI} style={{ width: size * 0.96, height: size * 0.58, marginBottom: size * 0.1 }} resizeMode="contain" />
         <View pointerEvents="none" style={[s.road, { height: size * 0.09, bottom: size * 0.24 }]}>
           <View style={s.dashes}>
             {Array.from({ length: 7 }).map((_, i) => (
@@ -155,7 +157,9 @@ const s = StyleSheet.create({
   },
   artWrap: { flex: 1, overflow: 'hidden' },
   scene: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  sceneRow: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  // Big buddies overlap their props a little, Home-card style, instead
+  // of pushing them off the card.
+  sceneRow: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', marginLeft: -18 },
   shade: {
     position: 'absolute',
     left: 0,
@@ -169,6 +173,7 @@ const s = StyleSheet.create({
     right: 14,
     bottom: 0,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   cardTitle: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', textAlign: 'center' },
   road: {

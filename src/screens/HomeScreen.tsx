@@ -257,12 +257,12 @@ function BigCardArt({ art, size }: { art: BigCard['art']; size: number }) {
         <Image source={MAGIC_BG} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, width: '100%', height: '125%' }} resizeMode="cover" />
         <Image
           source={MAGIC_GRANDMA}
-          style={{ position: 'absolute', width: 74 * k, height: 118 * k, bottom: 62 * k, left: 14 * k }}
+          style={{ position: 'absolute', width: 96 * k, height: 150 * k, bottom: 62 * k, left: 10 * k }}
           resizeMode="contain"
         />
         <Image
           source={MAGIC_CAR}
-          style={{ position: 'absolute', width: 168 * k, height: 96 * k, bottom: 58 * k, right: 6 * k }}
+          style={{ position: 'absolute', width: 208 * k, height: 120 * k, bottom: 58 * k, right: 2 * k }}
           resizeMode="contain"
         />
         {/* The gray street both of them stand on, just above the title band. */}
