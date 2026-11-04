@@ -32,6 +32,7 @@ import { SoftShadow } from '../ui/playKit';
 import { grandmaArtFor } from './grandmaArt';
 import TopBar from '../components/TopBar';
 import PicnicPhoto from './PicnicPhoto';
+import GameEndOverlay from '../components/GameEndOverlay';
 import SimpleBall from './SimpleBall';
 
 // Lila's happy-at-the-end art: the waving lamb in yellow overalls, not
@@ -718,33 +719,15 @@ export default function Finale({
           </View>
         </View>
       )}
-      {/* Game over, like the other games: a white card with the happy
-          buddy, آفرین! and the big تمام! — shown right after the photo. */}
+      {/* Game over, exactly like Feed Animals: the shared end overlay
+          (countdown ring + «بریم بازی دیگه!») after the celebration. */}
       {showTamam && photoPhase === 'saved' && (
-        <View style={styles.endOverlay}>
-          <View style={[styles.endCard, { borderRadius: 28 * k, padding: 20 * k }]}>
-            <Image
-              source={buddy === 'lila' ? LILA_HAPPY_END : buddyPose(buddy, 'celebration')}
-              style={{ width: 110 * k, height: 110 * k }}
-              resizeMode="contain"
-              accessibilityLabel={buddy}
-            />
-            <Text style={[styles.endTitle, { fontFamily: ff(lang, 'black'), fontSize: 30 * k }, dir(lang)]}>
-              {isFa ? 'آفرین!' : 'Well done!'}
-            </Text>
-            <TouchableOpacity
-              onPress={finishQuest}
-              activeOpacity={0.85}
-              accessibilityLabel={isFa ? 'تمام!' : 'Done!'}
-              accessibilityRole="button"
-              style={[styles.tamamBtn, { height: camS * 0.72, borderRadius: 18 }]}
-            >
-              <Text style={[styles.tamamText, { fontFamily: ff(lang, 'black'), fontSize: Math.max(18, camS * 0.26) }, dir(lang)]}>
-                {isFa ? 'تمام!' : 'Done!'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <GameEndOverlay
+          onGo={() => {
+            setShowTamam(false);
+            void finishQuest();
+          }}
+        />
       )}
       {showCeleb && <PopperCelebration visible />}
     </View>
@@ -852,30 +835,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   tamamText: { color: '#FFFFFF' },
-  endOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(46,26,107,0.45)',
-    zIndex: 50,
-    elevation: 50,
-  },
-  endCard: {
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    rowGap: 10,
-    maxWidth: '86%',
-    shadowColor: 'rgba(45,27,105,0.35)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  endTitle: { color: '#221044', textAlign: 'center' },
   camHandOver: {
     position: 'absolute',
     left: 0,
