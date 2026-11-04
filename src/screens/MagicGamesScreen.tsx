@@ -46,6 +46,7 @@ function TileBuddy({ id, size }: { id: BuddyId; size: number }) {
 
 const GRANDMA = require('../../assets/neli-world/characters/Grandma/grandma_standing.webp');
 const ROBO_HAPPY = require('../../assets/neli-world/characters/Robo Boombo/base_happy_2x_1024x1024.png');
+const STORY_BOOK = require('../../assets/neli-world/magic/story-book.png');
 
 /** Mini scene per game: the character stands in the CENTER of the box,
  * big, with the game's small pictures around them. */
@@ -72,12 +73,15 @@ function TileScene({ t, size, k }: { t: Tile; size: number; k: number }) {
     );
   }
   if (t.route.name === 'MagicStory') {
-    // Aidin center, open book small at his feet.
+    // Aidin in the center of the box, rising over the title band; the
+    // story book small at his side.
     return (
       <View style={s.scene}>
-        <TileBuddy id={t.buddy} size={buddyS} />
+        <View style={{ position: 'absolute', left: (size - buddyS) / 2 - size * 0.05, bottom: size * 0.22 }}>
+          <TileBuddy id={t.buddy} size={buddyS} />
+        </View>
         <View style={{ position: 'absolute', bottom: aboveBand * 0.7, right: corner }}>
-          <OpenBookIcon size={propS} />
+          <Image source={STORY_BOOK} style={{ width: propS, height: propS }} resizeMode="contain" />
         </View>
       </View>
     );
