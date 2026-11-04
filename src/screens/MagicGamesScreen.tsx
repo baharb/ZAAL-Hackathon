@@ -44,60 +44,64 @@ function TileBuddy({ id, size }: { id: BuddyId; size: number }) {
   );
 }
 
-/** Mini scene per game, filling the square card above its title band. */
+const GRANDMA = require('../../assets/neli-world/characters/Grandma/grandma_standing.webp');
+
+/** Mini scene per game: the character stands in the CENTER of the box,
+ * big, with the game's small pictures around them. */
 function TileScene({ t, size, k }: { t: Tile; size: number; k: number }) {
-  const artS = size * 0.42;
-  // Characters twice as big as before, anchored over the title band.
-  const buddyS = size * 0.8;
+  const buddyS = size * 0.62;
+  const propS = size * 0.3;
+  const corner = size * 0.06;
+  const aboveBand = size * 0.26;
   if (t.route.name === 'DailyQuest') {
-    // Neli in her red car on the gray road — car and Neli bigger together.
+    // Neli in her car in the center, Grandma small at the street side.
     return (
       <View style={s.scene}>
-        <Image source={CAR_NELI} style={{ width: size * 0.96, height: size * 0.58, marginBottom: size * 0.1 }} resizeMode="contain" />
-        <View pointerEvents="none" style={[s.road, { height: size * 0.09, bottom: size * 0.24 }]}>
+        <Image source={CAR_NELI} style={{ width: size * 0.78, height: size * 0.48, marginBottom: size * 0.16 }} resizeMode="contain" />
+        <View pointerEvents="none" style={[s.road, { height: size * 0.08, bottom: aboveBand }]}>
           <View style={s.dashes}>
             {Array.from({ length: 7 }).map((_, i) => (
               <View key={i} style={[s.dash, { width: 12 * k, height: 3.5 * k, marginHorizontal: 5 * k }]} />
             ))}
           </View>
         </View>
+        <Image source={GRANDMA} style={{ position: 'absolute', width: size * 0.24, height: size * 0.38, bottom: aboveBand, left: corner }} resizeMode="contain" />
+        <Image source={neliWorldAssets.ui.sparkle} style={{ position: 'absolute', width: propS * 0.6, height: propS * 0.6, top: corner, right: corner }} resizeMode="contain" />
       </View>
     );
   }
   if (t.route.name === 'MagicStory') {
-    // Aidin with an open storybook under sparkles.
+    // Aidin center, open book small at his feet, sparkles around.
     return (
-      <View style={s.sceneRow}>
+      <View style={s.scene}>
         <TileBuddy id={t.buddy} size={buddyS} />
-        <View>
-          <OpenBookIcon size={artS * 1.05} />
-          <Image
-            source={neliWorldAssets.ui.sparkle}
-            style={{ position: 'absolute', top: -artS * 0.18, right: -artS * 0.1, width: artS * 0.4, height: artS * 0.4 }}
-            resizeMode="contain"
-          />
+        <View style={{ position: 'absolute', bottom: aboveBand * 0.7, right: corner }}>
+          <OpenBookIcon size={propS} />
         </View>
+        <Image source={neliWorldAssets.ui.sparkle} style={{ position: 'absolute', width: propS * 0.55, height: propS * 0.55, top: corner, left: corner }} resizeMode="contain" />
+        <Image source={neliWorldAssets.ui.sparkle} style={{ position: 'absolute', width: propS * 0.4, height: propS * 0.4, top: size * 0.2, right: corner }} resizeMode="contain" />
       </View>
     );
   }
   if (t.route.name === 'PhotoFarsi') {
-    // Robo Boombo with the camera.
+    // Robo Boombo center, camera small at his side, sparkle above.
     return (
-      <View style={s.sceneRow}>
+      <View style={s.scene}>
         <TileBuddy id={t.buddy} size={buddyS} />
-        <Image source={neliWorldAssets.ui.camera} style={{ width: artS, height: artS }} resizeMode="contain" />
+        <Image source={neliWorldAssets.ui.camera} style={{ position: 'absolute', width: propS, height: propS, bottom: aboveBand * 0.7, right: corner }} resizeMode="contain" />
+        <Image source={neliWorldAssets.ui.sparkle} style={{ position: 'absolute', width: propS * 0.5, height: propS * 0.5, top: corner, left: corner }} resizeMode="contain" />
       </View>
     );
   }
-  // First Letter: Dara with chunky toy blocks.
+  // First Letter: Dara center, toy blocks small at both bottom corners.
   return (
-    <View style={s.sceneRow}>
+    <View style={s.scene}>
       <TileBuddy id={t.buddy} size={buddyS} />
-      <View style={[s.miniBlock, { backgroundColor: '#E63B3B', borderBottomColor: '#B91C1C', width: artS * 0.62, height: artS * 0.62, borderRadius: 8 * k }]}>
-        <Text style={[s.miniGlyph, dir('fa'), { fontSize: artS * 0.4 }]}>ب</Text>
+      <View style={[s.miniBlock, { position: 'absolute', bottom: aboveBand * 0.7, left: corner, backgroundColor: '#E63B3B', borderBottomColor: '#B91C1C', width: propS * 0.8, height: propS * 0.8, borderRadius: 8 * k }]}>
+        <Text style={[s.miniGlyph, dir('fa'), { fontSize: propS * 0.45 }]}>ب</Text>
       </View>
-      <View style={[s.miniBlock, { backgroundColor: '#FFB800', borderBottomColor: '#D99A00', width: artS * 0.62, height: artS * 0.62, borderRadius: 8 * k }]}>
-        <Text style={[s.miniGlyph, dir('fa'), { fontSize: artS * 0.4 }]}>ا</Text>
+      <View style={[s.miniBlock, { position: 'absolute', bottom: aboveBand * 0.7, right: corner, backgroundColor: '#FFB800', borderBottomColor: '#D99A00', width: propS * 0.8, height: propS * 0.8, borderRadius: 8 * k }]}>
+        <Text style={[s.miniGlyph, dir('fa'), { fontSize: propS * 0.45 }]}>ا</Text>
       </View>
     </View>
   );
@@ -157,9 +161,7 @@ const s = StyleSheet.create({
   },
   artWrap: { flex: 1, overflow: 'hidden' },
   scene: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  // Big buddies overlap their props a little, Home-card style, instead
-  // of pushing them off the card.
-  sceneRow: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', marginLeft: -18 },
+  sceneRow: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' },
   shade: {
     position: 'absolute',
     left: 0,
