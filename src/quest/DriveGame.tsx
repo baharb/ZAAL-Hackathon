@@ -11,7 +11,7 @@ import Svg, { Line, Rect } from 'react-native-svg';
 import { createAudioPlayer } from 'expo-audio';
 import { useWindowDimensions } from '../layout/PortraitFallback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import TopBar from '../components/TopBar';
+import TopBar, { topBarHeight } from '../components/TopBar';
 import { useNav } from '../store/NavContext';
 import { AppContext } from '../store/AppContext';
 import { dir, ff } from '../theme/fonts';
@@ -266,11 +266,11 @@ function QuestionView({
   };
 
   return (
-    <View style={[styles.question, { paddingBottom: lift }]} pointerEvents="box-none">
+    <View style={[styles.question, { paddingBottom: lift, justifyContent: 'flex-end' }]} pointerEvents="box-none">
       <QuestionPill
         text={isFa ? `${round.answer.fa} کدومه؟` : `Which one is ${round.answer.fa}?`}
         replayKey={replayKey}
-        fontSize={Math.max(16, optSize * 0.24)}
+        fontSize={Math.min(26, Math.max(15, optSize * 0.22))}
       />
       <View style={[styles.qRow, isFa && { flexDirection: 'row-reverse' }]}>
         {choices.map(word => {
@@ -296,7 +296,7 @@ function QuestionView({
             >
               {showHandQ && isTarget && (
                 <View pointerEvents="none" style={styles.handOver}>
-                  <IdleHand size={optSize} />
+                  <IdleHand size={optSize * 0.6} />
                 </View>
               )}
               <OptionArt word={word} kind={round.kind} size={optSize * 0.85} />
@@ -448,11 +448,11 @@ function BalloonView({
   const riseY = rise.interpolate({ inputRange: [0, 1], outputRange: [0, -riseDist] });
 
   return (
-    <View style={[styles.question, { paddingBottom: lift }]} pointerEvents="box-none">
+    <View style={[styles.question, { paddingBottom: lift, justifyContent: 'flex-end' }]} pointerEvents="box-none">
       <QuestionPill
         text={isFa ? `${round.answer.fa} کدومه؟` : `Which one is ${round.answer.fa}?`}
         replayKey={replayKey}
-        fontSize={Math.max(16, optSize * 0.24)}
+        fontSize={Math.min(26, Math.max(15, optSize * 0.22))}
       />
       <View style={[styles.qRow, isFa && { flexDirection: 'row-reverse' }]}>
         {choices.map(word => {
@@ -478,7 +478,7 @@ function BalloonView({
             >
               {showHand && isTarget && (
                 <View pointerEvents="none" style={styles.handOver}>
-                  <IdleHand size={optSize} />
+                  <IdleHand size={optSize * 0.6} />
                 </View>
               )}
               <Animated.View style={isRising ? { transform: [{ translateY: riseY }] } : undefined}>
@@ -557,8 +557,24 @@ export default function DriveGame({
   // Question content is scaled to the measured space above the parked car,
   // so it is never cut off — even on a 360pt-tall phone with the car up in
   // the far lane. Each game passes its own height in optSize units.
-  const fitFor = (units: number) => Math.min(1, Math.max(0.2, (carTop - 40) / (optSize * units)));
   const optSize = Math.max(48, Math.min(gw * 0.13, gh * 0.26));
+  // Every question step is fitted like the FIRST one (counting): the
+  // whole block — pill over options — must fit between the bottom of the
+  // purple TopBar and the car roof, anchored just above the car. `units`
+  // is the content height in optSize units, `fixed` its pixel extras
+  // (pill padding, margins, balloon string headroom).
+  const fitAboveCar = (units: number, fixed: number) => {
+    const avail = carTop - topBarHeight(H, insets.top) - 16;
+    return Math.max(30, Math.min(optSize, (avail - fixed) / units));
+  };
+  // Balloon content: pill (~0.55u + 14) over a balloon (1.16u + 12), and
+  // three options must also fit the width.
+  const balloonOptSize = Math.min(
+    fitAboveCar(1.75, 26),
+    (gw * 0.92 - 36) / (3 * 1.05),
+  );
+  // Dish content: pill (~0.47u + 14) over a 1.15u option tile.
+  const dishOptSize = fitAboveCar(1.62, 22);
   // Landmarks stand on the grass behind the road, never taller than the car.
   const landmarkH = carH * 0.95;
   const landmarkW = landmarkH * 1.3;
@@ -828,8 +844,11 @@ export default function DriveGame({
     const round = rounds[legIndex]!;
     firstTriesRef.current.push(firstTry);
     setPhase('flying');
-    // The counting round already played its number clip; nothing else plays.
-    if (round.kind !== 'fruit') replayDone.current = questPlay(questionClip(round));
+    // The counting round already played its number clip; the balloon
+    // round must NOT replay its "pick the balloon" question after the
+    // child already picked it — only the dish round says its word again
+    // as the item flies to the car.
+    if (round.kind === 'dish') replayDone.current = questPlay(questionClip(round));
     // The open box is already faded (the question covers it); remove it so
     // the reverse never flashes it back.
     setBoxGone(true);
@@ -1203,7 +1222,7 @@ export default function DriveGame({
               key={legIndex}
               round={rounds[legIndex]!}
               choices={choices}
-              optSize={optSize * fitFor(1.55)}
+              optSize={balloonOptSize}
               lift={questionLift}
               riseDist={gh * 0.25}
               replayKey={questionClip(rounds[legIndex]!)}
@@ -1214,7 +1233,7 @@ export default function DriveGame({
               key={legIndex}
               round={rounds[legIndex]!}
               choices={choices}
-              optSize={optSize * fitFor(1.15)}
+              optSize={dishOptSize}
               lift={questionLift}
               replayKey={questionClip(rounds[legIndex]!)}
               onCorrect={answerCorrect}
