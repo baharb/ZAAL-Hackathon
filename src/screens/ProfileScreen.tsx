@@ -12,6 +12,11 @@ import { PREMIUM_ENABLED } from '../config/features';
 import { usePremiumGate } from '../hooks/usePremiumGate';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { AppContext, Lang, LANGUAGES } from '../store/AppContext';
+import { loadMyDays, MyDayEntry } from '../quest/myDaysStore';
+import { STORIES } from '../quest/stories';
+import { grandmaArtFor } from '../quest/grandmaArt';
+import { displayWordById } from '../quest/questGroups';
+import PicnicPhoto from '../quest/PicnicPhoto';
 import { useNav } from '../store/NavContext';
 import { dir, ff } from '../theme/fonts';
 
@@ -52,6 +57,28 @@ const SHOW_REWARDS_BOX = false;
 
 const APP_VERSION = Constants.expoConfig?.version ?? '';
 
+/** Small picnic thumbnail on a parent note card — same scene as the album. */
+function NotePhoto({ day, size }: { day: MyDayEntry; size: number }) {
+  const story = STORIES.find(s => s.id === day.storyId);
+  const fruitPick = day.picks[0];
+  const dishPick = day.picks[2];
+  return (
+    <PicnicPhoto
+      background={story?.background}
+      grandma={grandmaArtFor(day.buddy)}
+      buddy={day.buddy}
+      fruitWord={fruitPick ? displayWordById(fruitPick.id) : null}
+      fruitCount={Math.min(Math.max(fruitPick?.count ?? 1, 1), 5)}
+      dishWord={dishPick ? displayWordById(dishPick.id) : null}
+      balloonIds={(day.balloonIds ?? []).slice(0, 3)}
+      colorHex={day.colorHex}
+      w={size}
+      h={Math.round(size * 0.52)}
+      radius={10}
+    />
+  );
+}
+
 export default function ProfileScreen() {
   const {
     settingsLang, setSettingsLang, stars, streak, badges, completedSections, age, setAge, selectedCharacterId, accountContact, changePassword,
@@ -71,12 +98,20 @@ export default function ProfileScreen() {
   // "Tonight at home" parent notes (device only, newest first). This
   // screen sits behind the settings password, so notes live here only.
   const [parentNotes, setParentNotes] = useState<ParentNote[]>([]);
+  // That day's picnic (Daily Quest), by date — Daily-Quest-day notes get
+  // its thumbnail next to the note; other days stay text-only.
+  const [picnics, setPicnics] = useState<Record<string, MyDayEntry>>({});
   React.useEffect(() => {
     let alive = true;
     void (async () => {
       await ensureTodayParentNote();
       const notes = await loadParentNotes();
-      if (alive) setParentNotes(notes);
+      const days = await loadMyDays();
+      const byDay: Record<string, MyDayEntry> = {};
+      for (const day of days) {
+        if (!day.game && STORIES.some(s => s.id === day.storyId) && !byDay[day.dateISO]) byDay[day.dateISO] = day;
+      }
+      if (alive) { setParentNotes(notes); setPicnics(byDay); }
     })();
     return () => {
       alive = false;
@@ -303,7 +338,10 @@ export default function ProfileScreen() {
             {parentNotes.map(note => (
               <View key={note.day} style={{ marginBottom: Math.max(10, Math.round(12 * ui)) }}>
                 <Text style={[styles.noteDay, { fontFamily: ff(lang, 'bold') }]}>{note.day}</Text>
-                <Text style={[styles.noteText, { fontFamily: ff(lang, 'regular') }]}>{note.text}</Text>
+                <View style={{ flexDirection: isFa ? 'row-reverse' : 'row', gap: Math.max(8, Math.round(10 * ui)), alignItems: 'flex-start' }}>
+                  {picnics[note.day] ? <NotePhoto day={picnics[note.day]!} size={Math.min(150, Math.max(96, Math.round(120 * ui)))} /> : null}
+                  <Text style={[styles.noteText, { fontFamily: ff(lang, 'regular'), flex: 1 }]}>{note.text}</Text>
+                </View>
               </View>
             ))}
           </View>

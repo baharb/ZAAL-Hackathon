@@ -11,6 +11,7 @@
 import { askMeta } from './metaAI';
 import { FA_TEST_AUDIO } from '../assets/faTestAudio.generated';
 import { getTodayWordIds, loadWordLog, todayKey } from '../store/wordLog';
+import type { Lang } from '../store/AppContext';
 
 export type NeliAllowedWord = { id: string; audioKey: string };
 
@@ -82,30 +83,44 @@ export async function getTodayPractice(): Promise<TodayWordPractice[]> {
   });
 }
 
-/** Offline template note, built only from today's word ids. */
-export function templateParentNote(words: TodayWordPractice[], faNameOf: (id: string) => string | null): string {
+const LANG_NAMES: Record<Lang, string> = { en: 'English', fa: 'Farsi', fr: 'French', es: 'Spanish', ar: 'Arabic', zh: 'Chinese', ko: 'Korean' };
+
+/** Offline template note in the parent's language; the dinner sentence
+ * stays in Farsi, with a short translation unless the language is Farsi. */
+export function templateParentNote(words: TodayWordPractice[], faNameOf: (id: string) => string | null, lang: Lang): string {
   const enNames = words.map(w => w.id.split('/').pop() ?? w.id).slice(0, 5);
-  const fa = words.map(w => faNameOf(w.id)).find(Boolean) ?? 'سیب';
-  return (
-    `Tonight at home: today your child practiced ${enNames.join(', ')}. ` +
-    `At dinner, point at one and ask together: «این چیه؟ ${fa}!»`
-  );
+  const faNames = words.map(w => faNameOf(w.id)).filter((v): v is string => Boolean(v)).slice(0, 5);
+  const fa = faNames[0] ?? 'سیب';
+  const en = enNames[0] ?? 'apple';
+  const dinner = `«این چیه؟ ${fa}!»`;
+  switch (lang) {
+    case 'fa': return `امشب در خانه: امروز فرزندتان این واژه‌ها را تمرین کرد: ${(faNames.length ? faNames : enNames).join('، ')}. سر شام به یکی از آنها اشاره کنید و با هم بپرسید: ${dinner}`;
+    case 'fr': return `Ce soir à la maison : aujourd'hui, votre enfant a pratiqué ${enNames.join(', ')}. Au dîner, montrez-en un et demandez ensemble : ${dinner} [Qu'est-ce que c'est ? ${en}!]`;
+    case 'es': return `Esta noche en casa: hoy tu hijo practicó ${enNames.join(', ')}. En la cena, señala uno y pregunten juntos: ${dinner} [¿Qué es esto? ${en}!]`;
+    case 'ar': return `الليلة في البيت: اليوم تدرّب طفلكم على ${enNames.join('، ')}. عند العشاء أشيروا إلى واحد واسألوا معاً: ${dinner} [ما هذا؟ ${en}!]`;
+    case 'zh': return `今晚在家：今天孩子练习了 ${enNames.join('、')}。晚餐时指着其中一个，一起问：${dinner} [这是什么？${en}!]`;
+    case 'ko': return `오늘 밤 집에서: 오늘 아이가 ${enNames.join(', ')} 단어를 연습했어요. 저녁 식사 때 하나를 가리키며 함께 물어보세요: ${dinner} [이게 뭐예요? ${en}!]`;
+    default: return `Tonight at home: today your child practiced ${enNames.join(', ')}. At dinner, point at one and ask together: ${dinner} [What is this? ${en}!]`;
+  }
 }
 
-/** Ask Muse Spark for a 2-3 line parent note (English + one simple Farsi
- * dinner phrase using today's words). Returns null when offline/invalid,
- * so the caller uses templateParentNote instead. Sends ids + counts only. */
-export async function askParentNote(words: TodayWordPractice[]): Promise<string | null> {
+/** Ask Muse Spark for a 2-3 line parent note in the parent's language
+ * (the dinner sentence stays in Farsi, plus a short translation when the
+ * language is not Farsi). Returns null when offline/invalid, so the
+ * caller uses templateParentNote instead. Sends ids + counts only. */
+export async function askParentNote(words: TodayWordPractice[], lang: Lang): Promise<string | null> {
   if (words.length === 0) return null;
+  const langName = LANG_NAMES[lang] ?? 'English';
   try {
     const prompt =
       `A young child practiced these Farsi words today in a learning app ` +
       `(word id, times correct, times wrong): ${JSON.stringify(words)}. ` +
-      `Write a note for the PARENT: 2 or 3 short lines in English, warm and concrete, saying what to try at dinner tonight. ` +
-      `Include exactly ONE simple Farsi phrase in «» that uses one of today's words, with its English meaning in brackets. ` +
-      `No hype, no medical or developmental claims. Reply with the note text only.`;
+      `Write a note for the PARENT in ${langName}: 2 or 3 short lines, warm and concrete, saying what to try at dinner tonight. ` +
+      `Include exactly ONE simple dinner sentence in FARSI inside «» that uses one of today's words` +
+      (lang === 'fa' ? `.` : `, followed by its short ${langName} translation in [brackets].`) +
+      ` No hype, no medical or developmental claims. Reply with the note text only.`;
     const res = await withTimeout(
-      askMeta({ prompt, system: 'Write only a short parent note (2-3 lines). No other text.', maxTokens: 220, temperature: 0.5 }, 0),
+      askMeta({ prompt, system: `Write only a short parent note (2-3 lines) in ${langName}, with one Farsi dinner sentence in «». No other text.`, maxTokens: 220, temperature: 0.5 }, 0),
       PICK_TIMEOUT_MS,
     );
     if ('error' in res || !res.text) return null;
@@ -113,6 +128,7 @@ export async function askParentNote(words: TodayWordPractice[]): Promise<string 
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     if (lines.length < 1 || lines.length > 4 || text.length > 600) return null;
     if (!text.includes('«')) return null;
+    if (!/[؀-ۿ]/.test(text)) return null; // dinner sentence must contain Farsi script
     return lines.join('\n');
   } catch {
     return null;

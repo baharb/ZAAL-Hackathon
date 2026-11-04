@@ -8,6 +8,7 @@ import { todayKey } from './wordLog';
 import { askParentNote, getTodayPractice, templateParentNote } from '../services/neliPicks';
 import { PHOTO_FARSI_WORDS } from '../data/photoFarsiWords';
 import { QUEST_WORDS } from '../data/questWords';
+import type { Lang } from './AppContext';
 
 const STORAGE_KEY = 'parent_notes_v1';
 const KEEP_NOTES = 14;
@@ -42,6 +43,20 @@ function faNameOf(id: string): string | null {
   );
 }
 
+const LANG_CODES: Lang[] = ['en', 'fa', 'fr', 'es', 'zh', 'ko', 'ar'];
+
+/** The parent's Settings language, read from the app state AppProvider
+ * saves — so every caller (games included) gets it without extra wiring. */
+async function readParentLang(): Promise<Lang> {
+  try {
+    const raw = await AsyncStorage.getItem('lz_state_v2');
+    const s = raw ? (JSON.parse(raw) as { settingsLang?: unknown }) : null;
+    return LANG_CODES.includes(s?.settingsLang as Lang) ? (s?.settingsLang as Lang) : 'en';
+  } catch {
+    return 'en';
+  }
+}
+
 let making = false;
 
 /** Make today's note once (after a session). Safe to call often: it does
@@ -55,7 +70,8 @@ export async function ensureTodayParentNote(): Promise<void> {
     if (notes.some(n => n.day === day)) return;
     const words = await getTodayPractice();
     if (words.length === 0) return;
-    const text = (await askParentNote(words)) ?? templateParentNote(words, faNameOf);
+    const lang = await readParentLang();
+    const text = (await askParentNote(words, lang)) ?? templateParentNote(words, faNameOf, lang);
     await saveParentNotes([{ day, text }, ...notes]);
   } catch {
     // Offline / storage failure: no note today, never an error.
