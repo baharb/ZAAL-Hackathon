@@ -33,8 +33,8 @@ import { BUDDIES, BuddyId, loadBuddy } from '../../quest/buddyStore';
 import { saveMyDay } from '../../quest/myDaysStore';
 
 // The same camera the picnic game uses, and a crayon for drawing.
-const QUEST_CAMERA = require('../../assets/neli-world/quest/camera.png');
-const CRAYON_ART = require('../../assets/neli-world/painting/crayons/crayon_red.webp');
+const QUEST_CAMERA = require('../../../assets/neli-world/quest/camera.png');
+const CRAYON_ART = require('../../../assets/neli-world/painting/crayons/crayon_red.webp');
 import { buddyPose } from '../../quest/questTheme';
 import {
   BuddyGuide,
