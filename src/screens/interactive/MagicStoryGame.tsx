@@ -66,7 +66,7 @@ function tap() {
   }
 }
 
-export type StoryCastMember = { item: RoomItem; fa: string; en: string; heroUri?: string };
+export type StoryCastMember = { item: RoomItem; fa: string; en: string; heroUri?: string; plain?: boolean };
 
 /** What Muse Spark sees in the child's drawing — the friend's real
  * name (گربه, خونه…), never «نقاشی». Validated simple and safe; any
@@ -350,6 +350,11 @@ function StickerFrame({ size, tilt = -6, children }: { size: number; tilt?: numb
 /** One cast sticker for a cast member: the AI cartoon when the member
  * carries one (the child's own drawing), catalog art otherwise. */
 function CastSticker({ m, size, tilt = -6 }: { m: StoryCastMember; size: number; tilt?: number }) {
+  // Photo characters: just the character itself — no circle frame, no
+  // dot pattern over the picture.
+  if (m.plain && m.heroUri) {
+    return <Image source={{ uri: m.heroUri }} style={{ width: size, height: size }} resizeMode="contain" />;
+  }
   return m.heroUri ? (
     <CartoonSticker uri={m.heroUri} size={size} tilt={tilt} />
   ) : (
@@ -692,11 +697,11 @@ export default function MagicStoryGame() {
       // never blocked.
       const chars: PhotoChar[] = things.map((th, i) => ({ ...th, id: th.en + '-' + i }));
       setFoundThings(chars);
-      setPhotoStep('pick');
-      setAnalyzing(false);
+      // The cards are NOT shown yet: Neli's looking screen stays until
+      // every cartoon picture is fully ready (see below).
       const photoB64 = asset.base64;
       const settled = chars.map(ch =>
-        askCartoon({ imageBase64: photoB64, kind: 'photo', subject: ch.en, look: ch.look }).then(r => {
+        askCartoon({ imageBase64: photoB64, kind: 'photo', subject: ch.en, look: ch.look }, 0).then(r => {
           if (genRef.current !== gen) return ch;
           if ('base64' in r) {
             const done = { ...ch, imageBase64: r.base64, dataUri: 'data:image/png;base64,' + r.base64 };
@@ -712,6 +717,13 @@ export default function MagicStoryGame() {
       // No hero picking: the buddy + ALL these cartoon items go into
       // the story together, as soon as every cartoon is ready.
       const finalChars = await Promise.all(settled);
+      if (genRef.current !== gen) return;
+      // All pictures are loaded: NOW show the realized characters with
+      // their names, give the child a moment to see them, then start.
+      setFoundThings(finalChars);
+      setPhotoStep('pick');
+      setAnalyzing(false);
+      await new Promise(r => setTimeout(r, 2600));
       if (genRef.current !== gen) return;
       void startPhotoStory(finalChars);
     } catch (e) {
@@ -954,7 +966,7 @@ export default function MagicStoryGame() {
     // book code; the first item is the page-picture main reference.
     const members: StoryCastMember[] = chars.map(ch => {
       const item: RoomItem = matchRoomItem(ch.fa, ch.en) ?? { id: 'photo-' + ch.en.replace(/\s+/g, '-'), fa: [ch.fa], en: [ch.en], art: null };
-      return { item, fa: ch.fa, en: ch.en, heroUri: ch.dataUri };
+      return { item, fa: ch.fa, en: ch.en, heroUri: ch.dataUri, plain: true };
     });
     setCast(members); setSelectedIds(members.map(m => m.item.id)); setStoryObjects([]);
     try {
@@ -1250,11 +1262,9 @@ export default function MagicStoryGame() {
                 {foundThings.map(ch => (
                   <View key={ch.id} style={{ alignItems: 'center', width: tileS * 1.35 }}>
                     {ch.dataUri ? (
-                      <CartoonSticker uri={ch.dataUri} size={tileS * 1.3} tilt={-4} />
+                      <Image source={{ uri: ch.dataUri }} style={{ width: tileS * 1.3, height: tileS * 1.3 }} resizeMode="contain" />
                     ) : (
-                      <StickerFrame size={tileS * 1.3} tilt={-4}>
-                        <Image source={neliWorldAssets.ui.sparkle} style={{ width: tileS * 0.6, height: tileS * 0.6 }} resizeMode="contain" />
-                      </StickerFrame>
+                      <Image source={neliWorldAssets.ui.sparkle} style={{ width: tileS * 0.6, height: tileS * 0.6 }} resizeMode="contain" />
                     )}
                     <Text style={[s.castFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{ch.fa}</Text>
                   </View>
