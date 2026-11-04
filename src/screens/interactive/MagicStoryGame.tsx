@@ -31,6 +31,10 @@ import { STORY_FOCUS_WORDS, STORY_PLACES, StoryFocus, fallbackStory, validStoryL
 import { ROOM_ITEMS, RecognizedWord, RoomItem, matchRoomItem } from '../../data/roomItems';
 import { BUDDIES, BuddyId, loadBuddy } from '../../quest/buddyStore';
 import { saveMyDay } from '../../quest/myDaysStore';
+
+// The same camera the picnic game uses, and a crayon for drawing.
+const QUEST_CAMERA = require('../../assets/neli-world/quest/camera.png');
+const CRAYON_ART = require('../../assets/neli-world/painting/crayons/crayon_red.webp');
 import { buddyPose } from '../../quest/questTheme';
 import {
   BuddyGuide,
@@ -1016,29 +1020,36 @@ export default function MagicStoryGame() {
         <View style={[s.stage, { paddingTop: topBarHeight(H, insets.top) + 10 * k }]}>
           {!photo && cast.length === 0 ? (
             <>
-              <TouchableOpacity style={s.bubble} activeOpacity={0.9} onPress={() => { tap(); void playFaAudio('story/draw-or-photo'); }} accessibilityRole="button" accessibilityLabel="از اتاقت عکس بگیر یا نقاشی بکش!">
-                <Text style={[s.bubbleText, dir('fa'), { textAlign: 'center' }]}>از اتاقت عکس بگیر یا نقاشی بکش!</Text>
-              </TouchableOpacity>
-              <View style={s.tail} />
-              <BuddyGuide mood={mood} size={entryBuddyH} />
-              <SoftShadow width={entryBuddyH} />
-              {/* Both buttons live at the bottom, left and right of her —
-                  never over her feet or the bubble's tail. */}
+              {/* No instruction box, no titles: the character in the
+                  middle, one plain white button on each side — camera
+                  (the picnic camera) on the left, crayon + drawn line
+                  on the right. The voice still says what to do. */}
               <View style={s.entryRow}>
-                <View style={[s.entryHalf, { flex: 1.3 }]}>
-                  <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={takeRoomPhoto} disabled={analyzing} height={wandH} padH={wandH * 0.15}>
-                    <Image source={neliWorldAssets.ui.camera} style={{ width: wandH * 0.3, height: wandH * 0.3, flexShrink: 0 }} resizeMode="contain" />
-                    <Text style={s.tellText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>عکس بگیر</Text>
-                  </CandyButton>
+                <TouchableOpacity
+                  style={[s.entryBtn, { width: wandH * 1.15, height: wandH * 1.15, borderRadius: 20 * k }]}
+                  onPress={takeRoomPhoto}
+                  disabled={analyzing}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel="عکس بگیر"
+                >
+                  <Image source={QUEST_CAMERA} style={{ width: wandH * 0.85, height: wandH * 0.85 }} resizeMode="contain" />
+                </TouchableOpacity>
+                <View style={{ alignItems: 'center' }}>
+                  <BuddyGuide mood={mood} size={entryBuddyH} />
+                  <SoftShadow width={entryBuddyH} />
                 </View>
-                <View style={[s.entryHalf, { flex: 0.7 }]}>
-                  <CandyButton color={PLAY_ACCENTS.sunny.color} edge={PLAY_ACCENTS.sunny.edge} onPress={openDrawing} disabled={analyzing} height={wandH}>
-                    <Text style={s.tellText}>بکش!</Text>
-                  </CandyButton>
-                </View>
-              </View>
-              <View style={s.privacyPill}>
-                <Text style={[s.privacy, dir('fa'), { textAlign: 'center' }]}>عکس‌ها از دستگاه بیرون نمی‌رود</Text>
+                <TouchableOpacity
+                  style={[s.entryBtn, { width: wandH * 1.15, height: wandH * 1.15, borderRadius: 20 * k }]}
+                  onPress={openDrawing}
+                  disabled={analyzing}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel="نقاشی بکش"
+                >
+                  <Image source={CRAYON_ART} style={{ width: wandH * 0.6, height: wandH * 0.6 }} resizeMode="contain" />
+                  <View style={{ width: wandH * 0.55, height: Math.max(4, 5 * k), borderRadius: 99, backgroundColor: '#E63B3B', marginTop: 4 * k }} />
+                </TouchableOpacity>
               </View>
             </>
           ) : analyzing || cast.length === 0 ? (
@@ -1463,7 +1474,17 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
   errorRow: { alignItems: 'center', rowGap: 8 * k, maxWidth: '92%' },
   retryBtn: { backgroundColor: '#FFB800', borderRadius: 999, paddingHorizontal: 26 * k, paddingVertical: 10 * k },
   retryText: { fontFamily: ff('fa', 'black'), color: '#1E1B4B', fontSize: 16 * k },
-  entryRow: { flexDirection: 'row', gap: 10 * k, width: '100%', maxWidth: 480, justifyContent: 'center' },
+  entryRow: { flexDirection: 'row', gap: 18 * k, width: '100%', maxWidth: 560, justifyContent: 'center', alignItems: 'flex-end' },
+  entryBtn: {
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: 'rgba(45,27,105,0.30)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 5,
+  },
   entryHalf: { flex: 1 },
   drawCard: {
     backgroundColor: '#FFFDF4',
