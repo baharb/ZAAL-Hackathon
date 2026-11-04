@@ -723,6 +723,9 @@ export default function Finale({
           After the photo, تمام! takes the same spot. */}
       {camReady && photoPhase === 'none' && (
         <View pointerEvents="box-none" style={styles.camCenter}>
+          {/* Soft dark veil behind the camera (only while it shows) so
+              the big yellow camera reads bold against the picnic. */}
+          <View pointerEvents="none" style={styles.camDim} />
           <View>
             <TouchableOpacity
               onPress={takePhoto}
@@ -827,6 +830,7 @@ const styles = StyleSheet.create({
   },
   // The child's own camera, no background, big at the bottom-center
   // below the blanket — never over Grandma's or the buddy's faces.
+  camDim: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(24,12,54,0.38)' },
   camCenter: {
     position: 'absolute',
     left: 0,
