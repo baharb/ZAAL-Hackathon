@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
   const apiKey = Deno.env.get('MODEL_API_KEY');
   if (!apiKey) return json({ error: 'MODEL_API_KEY secret is not set on the server' }, 500);
 
-  let body: { imageBase64?: string; kind?: string };
+  let body: { imageBase64?: string; kind?: string; subject?: string };
   try {
     body = await req.json();
   } catch {
@@ -70,6 +70,11 @@ Deno.serve(async (req: Request) => {
   if (imageBase64.length > MAX_IMAGE_BASE64_CHARS) return json({ error: 'image is too large' }, 413);
   const kind = body.kind === 'photo' ? 'photo' : body.kind === 'drawing' ? 'drawing' : null;
   if (!kind) return json({ error: 'kind must be "drawing" or "photo"' }, 400);
+  // Optional subject ("cat", "house"): only short simple English words
+  // are let through into the prompt; anything else is dropped.
+  const subjectRaw = typeof body.subject === 'string' ? body.subject.trim().toLowerCase() : '';
+  const subject = /^[a-z][a-z ]{1,28}$/.test(subjectRaw) ? subjectRaw : '';
+  const subjectLine = subject ? ` The main character is a cute picture-book ${subject}, inspired by the source.` : '';
 
   try {
     const res = await fetch(META_EDIT_URL, {
@@ -80,7 +85,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: IMAGE_MODEL,
-        prompt: `${CARTOON_STYLE} ${KIND_INSTRUCTION[kind]}`,
+        prompt: `${CARTOON_STYLE} ${KIND_INSTRUCTION[kind]}${subjectLine}`,
         // The source picture to repaint, as a data URL.
         images: [{ image_url: `data:image/png;base64,${imageBase64}` }],
         n: 1,

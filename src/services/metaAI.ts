@@ -27,6 +27,9 @@ export type CartoonRequest = {
   imageBase64: string;
   /** Same cartoon model repaints both; the prompt differs slightly. */
   kind: 'drawing' | 'photo';
+  /** What the drawing/photo shows (e.g. "cat"), so the picture-book
+   * character is that subject. Short simple English, server-validated. */
+  subject?: string;
 };
 
 export type CartoonResult = { base64: string } | { error: string };
@@ -109,7 +112,7 @@ export async function askCartoon(req: CartoonRequest, retries = 1): Promise<Cart
     try {
       const { data, error } = await withTimeout(
         supabase.functions.invoke('cartoon', {
-          body: { imageBase64: clean, kind: req.kind },
+          body: { imageBase64: clean, kind: req.kind, ...(req.subject ? { subject: req.subject } : {}) },
         }),
         INVOKE_TIMEOUT_MS,
       );

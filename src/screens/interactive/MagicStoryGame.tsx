@@ -62,6 +62,44 @@ function tap() {
 
 export type StoryCastMember = { item: RoomItem; fa: string; en: string; heroUri?: string };
 
+/** What Muse Spark sees in the child's drawing — the friend's real
+ * name (گربه, خونه…), never «نقاشی». Validated simple and safe; any
+ * doubt falls back to a magic friend. */
+export type DrawingSubject = { fa: string; en: string; isCreature: boolean };
+export const DRAWING_FALLBACK: DrawingSubject = { fa: 'یه دوست جادویی', en: 'magic friend', isCreature: true };
+const DRAWING_BANNED = ['ترس', 'ترسناک', 'هیولا', 'غم', 'گریه', 'مرد', 'خون', 'زشت', 'بدجنس', 'scary', 'sad', 'dead', 'blood', 'monster'];
+
+export async function identifyDrawingSubject(imageBase64: string): Promise<DrawingSubject> {
+  try {
+    const res = await askMeta(
+      {
+        prompt:
+          'What is in this drawing? Reply with JSON only: {"fa":"<simple Farsi name a 4-year-old knows, e.g. گربه خرگوش خونه خورشید ماشین>","en":"<english>","isCreature":true|false}. ' +
+          'isCreature is true only for a living creature (animal, person, bird, fish). A house, car, sun, flower or ball is NOT a creature.',
+        system: 'Reply with JSON only: {"fa":"...","en":"...","isCreature":true}. No other text.',
+        imageBase64,
+        maxTokens: 300,
+      },
+      0,
+    );
+    if ('error' in res || !res.text) return DRAWING_FALLBACK;
+    const clean = res.text.replace(/```json|```/g, '');
+    const start = clean.indexOf('{');
+    const end = clean.lastIndexOf('}');
+    if (start < 0 || end <= start) return DRAWING_FALLBACK;
+    const p = JSON.parse(clean.slice(start, end + 1)) as { fa?: unknown; en?: unknown; isCreature?: unknown };
+    const fa = typeof p.fa === 'string' ? p.fa.trim() : '';
+    const en = typeof p.en === 'string' ? p.en.trim().toLowerCase() : '';
+    const blob = `${fa} ${en}`;
+    if (!fa || fa.length > 14 || fa.split(/\s+/).length > 3) return DRAWING_FALLBACK;
+    if (!/^[a-z][a-z ]{1,24}$/.test(en)) return DRAWING_FALLBACK;
+    if (DRAWING_BANNED.some(w => blob.includes(w))) return DRAWING_FALLBACK;
+    return { fa, en, isCreature: p.isCreature === true };
+  } catch {
+    return DRAWING_FALLBACK;
+  }
+}
+
 /** The child's own drawing as a cast member: catalog-shaped (so the story
  * pipeline accepts it) but painted with the AI cartoon, not catalog art. */
 const DRAW_ITEM: RoomItem = { id: 'mydrawing', fa: ['نقاشی'], en: ['drawing', 'painting'], art: null };
@@ -461,6 +499,10 @@ export default function MagicStoryGame() {
   const [storySaved, setStorySaved] = useState(false);
   // The page picture gently pops in when it (or the page) arrives.
   const pagePop = useRef(new Animated.Value(1)).current;
+
+  /** End-page camera button: save this story into روزهای من (device only). */
+  const saveStory = async () => {
+    if (storySaved) return;
     tap();
     try {
       const b = (await loadBuddy()) ?? 'neli';
@@ -505,6 +547,8 @@ export default function MagicStoryGame() {
   const [drawWidthIdx, setDrawWidthIdx] = useState(0);
   const [conjuring, setConjuring] = useState(false);
   const [cartoonUri, setCartoonUri] = useState<string | null>(null);
+  // What Spark says the drawing IS (گربه, خونه…) — the friend's name.
+  const [drawingSubject, setDrawingSubject] = useState<DrawingSubject>(DRAWING_FALLBACK);
   // The room photo repainted as a real cartoon (kind "photo") — the same
   // sticker treatment as drawings. Requested in the background once the
   // cast is known; the photo stays until it arrives (or forever on error).
@@ -775,7 +819,11 @@ export default function MagicStoryGame() {
     let b64 = '';
     try {
       b64 = drawingToPngBase64(dstrokes, 384);
-      const res = await askCartoon({ imageBase64: b64, kind: 'drawing' });
+      // First ask Spark WHAT the drawing is, so the friend has a real
+      // name (never «نقاشی») and the cartoon is that very subject.
+      const subject = await identifyDrawingSubject(b64);
+      setDrawingSubject(subject);
+      const res = await askCartoon({ imageBase64: b64, kind: 'drawing', subject: subject.en });
       if ('error' in res) {
         // Never stuck: the child's own drawing becomes the hero sticker
         // (same die-cut frame) and the story goes on without the cartoon.
@@ -804,7 +852,7 @@ export default function MagicStoryGame() {
     tap();
     clearStory();
     setPhoto(null);
-    const m: StoryCastMember = { item: DRAW_ITEM, fa: 'نقاشی', en: 'drawing', heroUri: cartoonUri };
+    const m: StoryCastMember = { item: DRAW_ITEM, fa: drawingSubject.fa, en: drawingSubject.en, heroUri: cartoonUri };
     setCast([m]);
     setSelectedIds([DRAW_ITEM.id]);
     setStoryObjects([]);
@@ -850,11 +898,19 @@ export default function MagicStoryGame() {
               .map(o => `${o.fa} (${o.en})`)
               .join(' and ')}. Mention each at most once, in passing. `
           : '';
+      // The child's own drawing friend: a creature gets a cute name and
+      // talks; an object is a magic thing, never a talking person.
+      const friendLine =
+        friend.item.id === 'mydrawing'
+          ? drawingSubject.isCreature
+            ? `Friend: a little ${drawingSubject.en} (${drawingSubject.fa}) from the child's own drawing — a cute talking friend. Give this little ${drawingSubject.en} a cute short Farsi name in the story and let it talk. `
+            : `Magic object: ${drawingSubject.fa} (a ${drawingSubject.en}) from the child's own drawing — a magic object in the story. It NEVER talks and is not a person; the hero finds it, uses it and plays with it. `
+          : `Friend: ${friend.fa} (${friend.en}). `;
       const buildPrompt = () =>
         `Write a picture-book story in Farsi for a 4-to-6-year-old: EXACTLY 8 lines, ` +
         `plus a title, a one-line recap and a one-line sweet lesson. ` +
         `Hero: ${buddy.fa} (${buddy.en}) — the child's best friend. ` +
-        `Friend: ${friend.fa} (${friend.en}). ` +
+        friendLine +
         objLine +
         `Setting: ${place.fa} (${place.en}) — the whole story happens there. ` +
         `Everyday spoken Farsi, the way a mom tells a story to her 5-year-old. ` +
@@ -1324,6 +1380,8 @@ export default function MagicStoryGame() {
                 <StickerFrame size={revealS} tilt={-6}>
                   <ToonPhoto uri={cartoonUri} size={revealS * 0.78} />
                 </StickerFrame>
+                {/* The friend's real name under its picture — never «نقاشی». */}
+                <Text style={[s.drawSubjectFa, dir('fa'), { textAlign: 'center' }]}>{drawingSubject.fa}</Text>
                 <CandyButton
                   color={PLAY_ACCENTS.story.color}
                   edge={PLAY_ACCENTS.story.edge}
@@ -1500,6 +1558,7 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
   saveBtn: { backgroundColor: '#FFB800', alignItems: 'center', justifyContent: 'center' },
   saveBtnDone: { backgroundColor: '#22C55E' },
   savedFa: { fontFamily: ff('fa', 'black'), color: '#15803D', fontSize: 15 * k },
+  drawSubjectFa: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 22 * k },
   tapeLeft: { position: 'absolute', top: -8 * k, left: 26 * k, width: 64 * k, height: 20 * k, backgroundColor: 'rgba(255,255,255,0.75)', transform: [{ rotate: '-8deg' }] },
   tapeRight: { position: 'absolute', top: -8 * k, right: 26 * k, width: 64 * k, height: 20 * k, backgroundColor: 'rgba(255,255,255,0.75)', transform: [{ rotate: '8deg' }] },
   noteThinking: { alignItems: 'center', rowGap: 10 * k, paddingVertical: 20 * k },
