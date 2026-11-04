@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   empty: { color: '#FFFFFF', marginTop: 40, textAlign: 'center', paddingHorizontal: 24 },
   list: { alignItems: 'center', gap: 12, paddingHorizontal: 8, paddingVertical: 12 },
   card: {
-    backgroundColor: '#FFFDF5',
+    backgroundColor: '#FFC93C',
     padding: 10,
     shadowColor: '#170736',
     shadowOffset: { width: 0, height: 6 },
