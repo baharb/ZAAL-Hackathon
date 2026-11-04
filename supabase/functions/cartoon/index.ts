@@ -172,7 +172,7 @@ Deno.serve(async (req: Request) => {
   const lookRaw = typeof body.look === 'string' ? body.look.trim().toLowerCase() : '';
   const look = /^[a-z0-9 ,'-]{4,90}$/.test(lookRaw) ? lookRaw : '';
   const photoCharPrompt =
-    kind === 'photo' && look
+    (kind === 'photo' || kind === 'drawing') && look
       ? `A cute children's picture-book character based on a ${look}: same object, same colors, ` +
         'with a friendly face, small arms and legs, soft rounded shapes, clean outlines, bright colors, ' +
         'plain white background, no text. Safe and kind for a 3-year-old.'

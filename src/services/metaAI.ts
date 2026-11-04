@@ -199,8 +199,6 @@ export async function askPagePicture(req: {
   buddyBase64?: string | null;
   /** More item characters from the same photo (all are in the story). */
   extraBase64?: string[];
-  /** Pages after page 1 also send the finished page-1 picture (style lock). */
-  page1Base64?: string | null;
   location: string;
   scene: string;
 }): Promise<CartoonResult> {
@@ -219,7 +217,6 @@ export async function askPagePicture(req: {
           heroBase64: hero,
           ...(buddy && BASE64_RE.test(buddy) ? { buddyBase64: buddy } : {}),
           ...(req.extraBase64?.length ? { extraBase64: req.extraBase64.map(strip).filter(x => x && BASE64_RE.test(x)).slice(0, 3) } : {}),
-          ...(req.page1Base64 ? (() => { const p = strip(req.page1Base64); return p && BASE64_RE.test(p) ? { page1Base64: p } : {}; })() : {}),
           location: req.location,
           scene: req.scene,
         },
