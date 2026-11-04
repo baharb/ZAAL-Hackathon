@@ -113,12 +113,10 @@ export default function Finale({
   const [celebrating, setCelebrating] = useState(false);
   const [photoPhase, setPhotoPhase] = useState<PhotoPhase>('none');
   const [showCeleb, setShowCeleb] = useState(false);
-  const [balloonsGone, setBalloonsGone] = useState(false);
   const pops = useRef(words.map(() => new Animated.Value(0))).current;
   const buddyBounce = useRef(new Animated.Value(1)).current;
   const flashAnim = useRef(new Animated.Value(0)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
-  const balloonRise = useRef(new Animated.Value(0)).current;
   const photoTaken = useRef(false);
   const exitedRef = useRef(false);
   const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -146,11 +144,15 @@ export default function Finale({
     onDone();
   };
 
-  // تمام! says see-you, then closes the quest.
+  // تمام! says see-you, then closes the quest — but never waits on the
+  // clip: 2.5s at most, so the end always feels snappy.
   const finishQuest = async () => {
     if (exitedRef.current) return;
     setShowTamam(false);
-    await questPlay('quest/see-you' as FaTestAudioKey, { awaitFinish: true });
+    await Promise.race([
+      questPlay('quest/see-you' as FaTestAudioKey, { awaitFinish: true }),
+      new Promise(resolve => setTimeout(resolve, 2500)),
+    ]);
     if (exitedRef.current) return;
     safeExit();
   };
@@ -247,26 +249,23 @@ export default function Finale({
   photoPhaseRef.current = photoPhase;
   const armExit = () => {
     if (exitTimer.current) clearTimeout(exitTimer.current);
-    exitTimer.current = setTimeout(() => void finishQuest(), 60000);
+    exitTimer.current = setTimeout(() => void finishQuest(), 30000);
   };
   const finalizePhoto = () => {
     setPhotoPhase('saved');
+    // The game-over card shows IMMEDIATELY — the saved voice plays in
+    // the background and never delays the end screen.
+    setShowTamam(true);
     if (!savedSpoken.current) {
       savedSpoken.current = true;
       if (!albumActiveRef.current) {
-        void (async () => {
-          await questPlay('quest/saved' as FaTestAudioKey, { awaitFinish: true });
-          if (exitedRef.current) return;
-          setShowTamam(true);
-          if (!albumActiveRef.current) armExit();
-        })();
+        void questPlay('quest/saved' as FaTestAudioKey, { awaitFinish: true });
+        armExit();
       } else {
         voicePending.current = true;
-        setShowTamam(true);
       }
-    } else {
-      setShowTamam(true);
-      if (!albumActiveRef.current && !exitTimer.current) armExit();
+    } else if (!albumActiveRef.current && !exitTimer.current) {
+      armExit();
     }
   };
 
@@ -306,10 +305,13 @@ export default function Finale({
   // Grandma reads as AT the picnic instead of tiny at the far edge.
   const charH = gh * 0.384;
   const charW = charH * 0.85;
-  // Each figure sits mostly OUTSIDE its blanket edge (only 18% tucks over
-  // the cloth), so the space between the two figures is the blanket's
-  // width minus that small tuck — they can never overlap each other,
-  // even on a tablet where charW grows but the blanket is capped.
+  // On the mat: each figure sits at a front corner of the blanket, at
+  // most 28% of its width, centers 30% apart each way — the gap between
+  // them is wide and they can never overlap, at any size.
+  const matCharW = Math.min(charW, blanketW * 0.28);
+  const matCharH = matCharW / 0.85;
+  const buddyCx = gw / 2 + (isFa ? 1 : -1) * blanketW * 0.3;
+  const grandmaCx = gw / 2 - (isFa ? 1 : -1) * blanketW * 0.3;
 
   // Tree behind the blanket with the trip balloons tied to it.
   const treeH = Math.min(charH * 0.9, gh * 0.3);
@@ -399,19 +401,14 @@ export default function Finale({
       Animated.timing(flashAnim, { toValue: 0, duration: 320, useNativeDriver: true }),
     ]).start(() => {
       setPhotoPhase('card');
-      // The moment the captured photo shows: yay + celebration together
-      // while the balloons float up, all at once.
+      // The moment the captured photo shows: yay + celebration together.
+      // The ball stays on the ground beside the mat.
       setShowCeleb(true);
       playYay();
-      Animated.timing(balloonRise, { toValue: 1, duration: 1400, useNativeDriver: true }).start(() => {
-        setBalloonsGone(true);
-      });
       cardAnim.setValue(0);
       Animated.timing(cardAnim, { toValue: 1, duration: 450, useNativeDriver: true }).start(() => {
-        // Let the child look at the captured photo for 4 seconds, then
-        // fly it into the album. The scene stays put: saved speaks, the
-        // تمام! button waits where the camera was, and only tapping it
-        // says see-you and closes the quest.
+        // Let the child look at the captured photo briefly, then fly it
+        // into the album and show the game-over card right away.
         photoTimer.current = setTimeout(() => {
           setPhotoPhase('flying');
           cardAnim.setValue(0);
@@ -421,16 +418,10 @@ export default function Finale({
             // above replays the voice and arms the timer.
             finalizePhoto();
           });
-        }, 4000);
+        }, 2200);
       });
     });
   };
-
-  // The trip balloons float up off the top together once the photo is shown.
-  const balloonRiseY = balloonRise.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -(treeBottom + treeH + bs * 1.3 + 40)],
-  });
 
   // The polaroid flies from the center into the album chip (top-left).
   const flyX = cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -gw * 0.3] });
@@ -539,15 +530,16 @@ export default function Finale({
             accessibilityLabel={isFa ? 'درخت' : 'Tree'}
           />
         </View>
-        {balloonIds.length > 0 && !balloonsGone && (
-          <Animated.View
+        {/* The chosen-color ball rests on the ground beside the mat.
+            It never floats up. */}
+        {balloonIds.length > 0 && (
+          <View
             style={[
               styles.balloonRow,
               {
-                left: gw / 2 - (balloonIds.length * bs + (balloonIds.length - 1) * 6) / 2,
-                bottom: treeBottom + treeH - 6,
+                left: Math.min(gw / 2 + blanketW / 2 + gw * 0.03, gw - bs * balloonIds.length - (balloonIds.length - 1) * 6 - 8),
+                bottom: Math.max(6, blanketBottom - bs * 0.25),
                 gap: 6,
-                transform: [{ translateY: balloonRiseY }],
               },
             ]}
             pointerEvents="none"
@@ -555,7 +547,7 @@ export default function Finale({
             {balloonIds.map(id => (
               <StripedBall key={id} color={COLOR_HEX[id] ?? '#CCCCCC'} size={bs} />
             ))}
-          </Animated.View>
+          </View>
         )}
         {/* Soft contact shadow, tilted exactly like the mat. */}
         <View
@@ -611,39 +603,39 @@ export default function Finale({
             ))}
           </View>
         </View>
+        {/* Both sit ON the picnic mat, one on each half, with a clear
+            gap between them — never overlapped. */}
         <View
           style={[
             styles.buddySide,
-            isFa ? { right: gw / 2 - blanketW / 2 - charW * 0.82 } : { left: gw / 2 - blanketW / 2 - charW * 0.82 },
-            { bottom: blanketBottom + blanketH * 0.55, alignItems: 'center' },
+            { left: buddyCx - matCharW / 2, bottom: blanketBottom + blanketH * 0.04, alignItems: 'center' },
           ]}
           pointerEvents="none"
         >
           <Animated.View style={{ transform: [{ scale: buddyBounce }], alignItems: 'center' }}>
             <Image
               source={buddyPose(buddy, celebrating ? 'celebration' : 'base')}
-              style={{ width: charW, height: charH }}
+              style={{ width: matCharW, height: matCharH }}
               resizeMode="contain"
               accessibilityLabel={buddy}
             />
-            <SoftShadow width={charW} />
+            <SoftShadow width={matCharW} />
           </Animated.View>
         </View>
         <View
           style={[
             styles.grandmaSide,
-            isFa ? { left: gw / 2 - blanketW / 2 - charW * 0.82 } : { right: gw / 2 - blanketW / 2 - charW * 0.82 },
-            { bottom: blanketBottom + blanketH * 0.55, alignItems: 'center' },
+            { left: grandmaCx - matCharW / 2, bottom: blanketBottom + blanketH * 0.04, alignItems: 'center' },
           ]}
           pointerEvents="none"
         >
           <Image
             source={story.grandma}
-            style={{ width: charW, height: charH }}
+            style={{ width: matCharW, height: matCharH }}
             resizeMode="contain"
             accessibilityLabel={isFa ? 'مادربزرگ' : 'Grandma'}
           />
-          <SoftShadow width={charW} />
+          <SoftShadow width={matCharW} />
         </View>
       </View>
       {/* White camera flash. */}
@@ -717,19 +709,32 @@ export default function Finale({
           </TouchableOpacity>
         </View>
       )}
+      {/* Game over, like the other games: a white card with the happy
+          buddy, آفرین! and the big تمام! — shown right after the photo. */}
       {showTamam && photoPhase === 'saved' && (
-        <View pointerEvents="box-none" style={[styles.camBottom, { bottom: 2 }]}>
-          <TouchableOpacity
-            onPress={finishQuest}
-            activeOpacity={0.85}
-            accessibilityLabel={isFa ? 'تمام!' : 'Done!'}
-            accessibilityRole="button"
-            style={[styles.tamamBtn, { height: camS * 0.72, borderRadius: 18 }]}
-          >
-            <Text style={[styles.tamamText, { fontFamily: ff(lang, 'black'), fontSize: Math.max(18, camS * 0.26) }, dir(lang)]}>
-              {isFa ? 'تمام!' : 'Done!'}
+        <View style={styles.endOverlay}>
+          <View style={[styles.endCard, { borderRadius: 28 * k, padding: 20 * k }]}>
+            <Image
+              source={buddyPose(buddy, 'celebration')}
+              style={{ width: 110 * k, height: 110 * k }}
+              resizeMode="contain"
+              accessibilityLabel={buddy}
+            />
+            <Text style={[styles.endTitle, { fontFamily: ff(lang, 'black'), fontSize: 30 * k }, dir(lang)]}>
+              {isFa ? 'آفرین!' : 'Well done!'}
             </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={finishQuest}
+              activeOpacity={0.85}
+              accessibilityLabel={isFa ? 'تمام!' : 'Done!'}
+              accessibilityRole="button"
+              style={[styles.tamamBtn, { height: camS * 0.72, borderRadius: 18 }]}
+            >
+              <Text style={[styles.tamamText, { fontFamily: ff(lang, 'black'), fontSize: Math.max(18, camS * 0.26) }, dir(lang)]}>
+                {isFa ? 'تمام!' : 'Done!'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
       {showCeleb && <PopperCelebration visible />}
@@ -823,6 +828,30 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   tamamText: { color: '#FFFFFF' },
+  endOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(46,26,107,0.45)',
+    zIndex: 50,
+    elevation: 50,
+  },
+  endCard: {
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    rowGap: 10,
+    maxWidth: '86%',
+    shadowColor: 'rgba(45,27,105,0.35)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  endTitle: { color: '#221044', textAlign: 'center' },
   camHint: {
     position: 'absolute',
     alignItems: 'center',

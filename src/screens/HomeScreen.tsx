@@ -268,12 +268,12 @@ function BigCardArt({ art, size }: { art: BigCard['art']; size: number }) {
             a real gap between them (no overlap at card size 230). */}
         <Image
           source={MAGIC_GRANDMA}
-          style={{ position: 'absolute', width: 68 * k, height: 108 * k, bottom: 74 * k, left: 8 * k }}
+          style={{ position: 'absolute', width: 58 * k, height: 92 * k, bottom: 74 * k, left: 6 * k }}
           resizeMode="contain"
         />
         <Image
           source={MAGIC_CAR}
-          style={{ position: 'absolute', width: 136 * k, height: 78 * k, bottom: 72 * k, right: 6 * k }}
+          style={{ position: 'absolute', width: 163 * k, height: 94 * k, bottom: 72 * k, right: 4 * k }}
           resizeMode="contain"
         />
         <Image source={neliWorldAssets.ui.sparkle} style={[styles.magicSpark, { width: 26 * k, height: 26 * k, top: 10 * k, right: 14 * k }]} resizeMode="contain" />
