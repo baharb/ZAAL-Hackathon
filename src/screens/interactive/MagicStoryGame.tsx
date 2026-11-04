@@ -31,6 +31,7 @@ import { STORY_FOCUS_WORDS, STORY_PLACES, StoryFocus, fallbackStory, validStoryL
 import { ROOM_ITEMS, RecognizedWord, RoomItem, matchRoomItem } from '../../data/roomItems';
 import { BUDDIES, BuddyId, loadBuddy } from '../../quest/buddyStore';
 import { saveMyDay } from '../../quest/myDaysStore';
+import { IdleHand } from '../../quest/IdleHand';
 
 // The same camera the picnic game uses, and a crayon for drawing.
 const QUEST_CAMERA = require('../../../assets/neli-world/quest/camera.png');
@@ -418,28 +419,7 @@ function ChoiceFigure({
   );
 }
 
-/** The guiding hand: bounces beside «بعدی» when she sits on a page. */
-function IdleHand({ size }: { size: number }) {
-  const nudge = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(nudge, { toValue: 1, duration: 450, useNativeDriver: true }),
-        Animated.timing(nudge, { toValue: 0, duration: 450, useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [nudge]);
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={{ transform: [{ translateX: nudge.interpolate({ inputRange: [0, 1], outputRange: [0, size * 0.3] }) }] }}
-    >
-      <Image source={neliWorldAssets.ui.point} style={{ width: size, height: size }} resizeMode="contain" />
-    </Animated.View>
-  );
-}
+{}
 
 /** The only error a child ever sees — Farsi, short, with a retry. */
 const ERR_FA = 'نلی الان نمی‌تونه، دوباره امتحان کن';
@@ -1014,10 +994,23 @@ export default function MagicStoryGame() {
   const storyIdx = Math.max(0, safeIdx - 1);
   // Every page: the buddy AND the one friend, side by side, big.
   const friend = lines && selected.length > 0 ? selected[0]! : null;
+  // No «کجا؟» question: the place follows the characters themselves.
+  useEffect(() => {
+    const f = selected[0];
+    if (!f) return;
+    const blob = `${f.en} ${f.fa}`;
+    if (/fish|boat|ship|sea|jellyfish|ماهی|قایق|دریا/.test(blob)) setPlaceId('sea');
+    else if (/house|home|bed|room|خونه|خانه|تخت/.test(blob)) setPlaceId('home');
+    else setPlaceId('garden');
+  }, [selected]);
   const buddyArt = buddyPose(buddyId, 'base');
   return (
     <View style={s.root}>
-      {placeId === 'sea' ? (
+      {analyzing || (cast.length > 0 && !lines) ? (
+        // After the camera tap: one simple soft color behind the
+        // characters — no scene picture.
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#EAF6FF' }} />
+      ) : placeId === 'sea' ? (
         <SeaScene width={W} height={H} />
       ) : (
         <GameBg pick={placeId === 'home' ? roomBackgroundPickers.bedroom : roomBackgroundPickers.garden} />
@@ -1123,63 +1116,27 @@ export default function MagicStoryGame() {
                   <Text style={[s.bubbleSmallText, dir('fa'), { textAlign: 'center' }]}>{selected[0] ? 'قصه بساز!' : 'کدوم دوست توی قصه باشه؟'}</Text>
                 </View>
               </View>
-              <View style={s.qPill}><Text style={[s.qPillText, dir('fa')]}>کی؟</Text></View>
+              {/* Friends to choose from: pictures only, no names
+                  written, and no «کجا؟» — the place is chosen from the
+                  characters themselves (fish/boat → sea, house → home,
+                  otherwise the garden). */}
               <View style={s.castRow}>
                 {cast.map(m => {
                   const on = selectedIds.includes(m.item.id);
                   return (
-                    <View key={m.item.id} style={{ alignItems: 'center' }}>
-                      <ChoiceFigure
-                        size={tileS}
-                        selected={on}
-                        dimmed={!on}
-                        disabled={asking}
-                        onPress={() => toggleItem(m.item.id)}
-                      >
-                        <CastSticker m={m} size={tileS * 0.92} tilt={-6} />
-                      </ChoiceFigure>
-                      <Text style={[s.castFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={1}>{m.fa}</Text>
-                    </View>
-                  );
-                })}
-              </View>
-              <View style={s.qPill}><Text style={[s.qPillText, dir('fa')]}>کجا؟</Text></View>
-              <View style={s.placeRow}>
-                {STORY_PLACES.map(p => {
-                  const on = placeId === p.id;
-                  const boatArt = ROOM_ITEMS.find(i => i.id === 'boat')?.art;
-                  return (
-                    <TouchableOpacity
-                      key={p.id}
-                      onPress={() => { tap(); setPlaceId(p.id); }}
-                      activeOpacity={0.85}
-                      accessibilityRole="button"
-                      style={[s.placeChip, on && s.placeChipOn, { width: 76 * k, height: 62 * k }]}
+                    <ChoiceFigure
+                      key={m.item.id}
+                      size={tileS}
+                      selected={on}
+                      dimmed={!on}
+                      disabled={asking}
+                      onPress={() => toggleItem(m.item.id)}
                     >
-                      {p.id === 'sea' ? (
-                        <View style={s.seaChip}>
-                          {boatArt ? <Image source={boatArt} style={{ width: 44 * k, height: 44 * k }} resizeMode="contain" /> : null}
-                        </View>
-                      ) : (
-                        <Image
-                          source={p.id === 'home' ? roomBackgroundPickers.bedroom(W, H) : roomBackgroundPickers.garden(W, H)}
-                          style={s.placeChipImg}
-                          resizeMode="cover"
-                        />
-                      )}
-                      <Text style={[s.placeChipText, dir('fa')]} numberOfLines={1}>{p.fa}</Text>
-                    </TouchableOpacity>
+                      <CastSticker m={m} size={tileS * 0.92} tilt={-6} />
+                    </ChoiceFigure>
                   );
                 })}
               </View>
-              {unmatched.length > 0 ? (
-                <Text style={[s.extraFa, dir('fa'), { textAlign: 'center' }]}>…و {unmatched.join('، ')} هم هست</Text>
-              ) : null}
-              {storyObjects.length > 0 ? (
-                <Text style={[s.extraFa, dir('fa'), { textAlign: 'center' }]}>
-                  تو قصه هست: {storyObjects.map(o => o.fa).join('، ')}
-                </Text>
-              ) : null}
               <CandyButton color={PLAY_ACCENTS.story.color} edge={PLAY_ACCENTS.story.edge} onPress={tellStory} disabled={asking || selected.length === 0} height={wandH}>
                 <Image source={neliWorldAssets.ui.sparkle} style={{ width: wandH * 0.45, height: wandH * 0.45 }} resizeMode="contain" />
                 <Text style={s.tellText}>{asking ? '…' : 'قصه بگو'}</Text>
@@ -1233,7 +1190,15 @@ export default function MagicStoryGame() {
                     {isRecap ? (
                       friend ? <CastSticker m={friend} size={Math.min(170 * k, H * 0.34)} tilt={-4} /> : null
                     ) : pageArt[storyIdx] && !isTitle ? (
-                      <Image source={{ uri: pageArt[storyIdx]! }} style={s.bookIllustration} resizeMode="cover" />
+                      <>
+                        <Image source={{ uri: pageArt[storyIdx]! }} style={s.bookIllustration} resizeMode="cover" />
+                        {/* The cartoon hero and the buddy stand on every
+                            story picture, with what the page is about. */}
+                        <View style={{ position: 'absolute', left: 8 * k, right: 8 * k, bottom: 6 * k, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                          <Image source={buddyArt} style={{ width: Math.min(58 * k, H * 0.12), height: Math.min(58 * k, H * 0.12) }} resizeMode="contain" />
+                          {friend ? <CastSticker m={friend} size={Math.min(58 * k, H * 0.12)} tilt={-6} /> : null}
+                        </View>
+                      </>
                     ) : (
                       <View style={s.bookFallback}>
                         {roomCartoon ? (
@@ -1530,7 +1495,7 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
     elevation: 6,
   },
   entryBtn: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.88)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: 'rgba(45,27,105,0.30)',
