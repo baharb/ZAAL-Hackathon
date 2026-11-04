@@ -28,6 +28,7 @@ import ColorDot from './ColorDot';
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 import { Story } from './stories';
 import { gardenDrawnSize, gardenSourceSize } from './QuestBackdrop';
+import { Asset } from 'expo-asset';
 import { grandmaArtFor } from './grandmaArt';
 import WordArt from './WordArt';
 
@@ -594,6 +595,14 @@ export default function DriveGame({
   const zoomAnim = useRef(new Animated.Value(0)).current;
   const dimAnim = useRef(new Animated.Value(0)).current;
   const qAnim = useRef(new Animated.Value(0)).current;
+  // Animated nodes built ONCE. Recreating multiply/interpolate nodes on
+  // every render made the whole world snap for a frame at each box —
+  // the "screen flashes like it reloads" bug. The garden, road and world
+  // camera now stay mounted and untouched across every phase change;
+  // only the dim + question layer on top fades in and out.
+  const camTranslateX = useRef(Animated.multiply(cameraX, -1)).current;
+  const dimOpacity = useRef(dimAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.35] })).current;
+  const qScale = useRef(qAnim.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] })).current;
   const flyAnim = useRef(new Animated.Value(0)).current;
   const grandmaBounce = useRef(new Animated.Value(1)).current;
   const grandmaWave = useRef(new Animated.Value(0)).current;
@@ -617,6 +626,24 @@ export default function DriveGame({
   const later = (ms: number, fn: () => void) => {
     timers.current.push(setTimeout(fn, ms));
   };
+
+  // Preload every drive image ONCE at the start (garden, road art, car,
+  // boxes, landmarks, destination, Grandma, and every round's word art)
+  // so nothing decodes or reloads mid-drive at a box.
+  useEffect(() => {
+    const mods: unknown[] = [
+      story.background ?? GARDEN_BG,
+      story.destination,
+      BOX_CLOSED,
+      BOX_OPEN,
+      CARS[buddy],
+      grandmaArtFor(buddy),
+      ...SCENERY_SRC,
+      ...rounds.flatMap(r => pickPool(r.kind).map(w => w.art)),
+    ].filter(Boolean);
+    void Asset.loadAsync(mods as never[]).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(
     () => () => {
@@ -879,7 +906,7 @@ export default function DriveGame({
     <View style={styles.root} onLayout={onGameLayout}>
       {/* Every game gets the same navy X home (unmount stops the engine). */}
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
-        <TopBar title="Picnic with Grandma" titleFa="پیک‌نیک با مامان‌بزرگ" dark showClose onBack={() => navigate({ name: 'MagicGames' })} />
+        <TopBar titleFa="پیک‌نیک با مامان‌بزرگ" dark showClose showSettingsIcon={false} onBack={() => navigate({ name: 'MagicGames' })} />
       </View>
       {/* Camera: the long world slides past; only the part around the car shows. */}
       <Animated.View
@@ -889,7 +916,7 @@ export default function DriveGame({
           top: 0,
           width: worldW,
           height: gh,
-          transform: [{ translateX: Animated.multiply(cameraX, -1) }],
+          transform: [{ translateX: camTranslateX }],
         }}
       >
         {/* Garden background tiled across the whole world. Copies overlap
@@ -926,8 +953,8 @@ export default function DriveGame({
 
         {/* Gray road drawn in code along the bottom, full world length. */}
         <Svg width={worldW} height={roadH} style={{ position: 'absolute', left: 0, top: roadTop }}>
-          <Rect x={0} y={0} width={worldW} height={roadH} fill="#A8ADB3" />
-          <Rect x={0} y={0} width={worldW} height={Math.max(4, roadH * 0.06)} fill="#8F959C" />
+          <Rect x={0} y={0} width={worldW} height={roadH} fill="#5E6573" />
+          <Rect x={0} y={0} width={worldW} height={Math.max(4, roadH * 0.06)} fill="#434956" />
           <Line
             x1={0}
             y1={roadH * 0.5}
@@ -937,7 +964,7 @@ export default function DriveGame({
             strokeWidth={Math.max(3, roadH * 0.035)}
             strokeDasharray="16,20"
             strokeLinecap="round"
-            opacity={0.8}
+            opacity={0.95}
           />
         </Svg>
 
@@ -1117,7 +1144,7 @@ export default function DriveGame({
           bottom: 0,
           zIndex: 20,
           backgroundColor: '#000000',
-          opacity: dimAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.35] }),
+          opacity: dimOpacity,
         }}
       />
 
@@ -1158,7 +1185,7 @@ export default function DriveGame({
             bottom: 0,
             zIndex: 40,
             opacity: qAnim,
-            transform: [{ scale: qAnim.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }) }],
+            transform: [{ scale: qScale }],
           }}
           pointerEvents={phase === 'question' ? 'box-none' : 'none'}
         >

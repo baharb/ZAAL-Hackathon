@@ -32,6 +32,7 @@ import { SoftShadow } from '../ui/playKit';
 import { grandmaArtFor } from './grandmaArt';
 import TopBar from '../components/TopBar';
 import PicnicPhoto, { Sun, Flower } from './PicnicPhoto';
+import { Asset } from 'expo-asset';
 import GameEndOverlay from '../components/GameEndOverlay';
 import SimpleBall from './SimpleBall';
 

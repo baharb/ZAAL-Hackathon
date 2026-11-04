@@ -111,7 +111,7 @@ export default function MyDaysScreen({ onBack }: { onBack: () => void }) {
   return (
     <View style={styles.root}>
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
-        <TopBar title="روزهای من" titleFa="روزهای من" dark showClose onBack={onBack} />
+        <TopBar title="روزهای من" titleFa="روزهای من" dark showClose showSettingsIcon={false} onBack={onBack} />
       </View>
       <View style={[styles.topRow, isFa && { flexDirection: 'row-reverse' }]}>
         <View style={styles.back} />

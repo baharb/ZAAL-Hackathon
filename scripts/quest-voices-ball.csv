@@ -1,0 +1,13 @@
+file,text,voice,speaker,category
+quest/pick-buddy,امروز می‌خوایم با هم بریم پیک‌نیک! دوست داری امروز کدوم دوستمون باشی؟,Callirrhoe,Speaker 1,quest
+quest/which-fruit,چه میوه‌ای می‌خوای با خودت ببری؟,Callirrhoe,Speaker 1,quest
+quest/which-color,توپ چه رنگی با خودت می‌بری؟,Callirrhoe,Speaker 1,quest
+quest/which-food,چه غذایی دوست داری ببری؟,Callirrhoe,Speaker 1,quest
+quest/balloon-red,توپ قرمز کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-blue,توپ آبی کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-yellow,توپ زرد کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-green,توپ سبز کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-orange,توپ نارنجی کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-purple,توپ بنفش کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-pink,توپ صورتی کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-brown,توپ قهوه‌ای کدومه؟,Callirrhoe,Speaker 1,quest

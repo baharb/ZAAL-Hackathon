@@ -1,19 +1,19 @@
 file,text,voice,speaker,category
-quest/pick-buddy,دوستت رو انتخاب کن!,Callirrhoe,Speaker 1,quest
-quest/which-fruit,کدوم میوه رو دوست داری,Callirrhoe,Speaker 1,quest
-quest/which-color,کدوم رنگ رو دوست داری,Callirrhoe,Speaker 1,quest
-quest/which-food,کدوم غذا رو دوست داری,Callirrhoe,Speaker 1,quest
+quest/pick-buddy,امروز می‌خوایم با هم بریم پیک‌نیک! دوست داری امروز کدوم دوستمون باشی؟,Callirrhoe,Speaker 1,quest
+quest/which-fruit,چه میوه‌ای می‌خوای با خودت ببری؟,Callirrhoe,Speaker 1,quest
+quest/which-color,توپ چه رنگی با خودت می‌بری؟,Callirrhoe,Speaker 1,quest
+quest/which-food,چه غذایی دوست داری ببری؟,Callirrhoe,Speaker 1,quest
 quest/lets-go,بزن بریم!,Callirrhoe,Speaker 1,quest
 quest/tap-box,بزن روی جعبه!,Callirrhoe,Speaker 1,quest
 quest/how-many,چندتا میبینی,Callirrhoe,Speaker 1,quest
-quest/balloon-red,بادکنک قرمز کدومه,Callirrhoe,Speaker 1,quest
-quest/balloon-blue,بادکنک آبی کدومه,Callirrhoe,Speaker 1,quest
-quest/balloon-yellow,بادکنک زرد کدومه,Callirrhoe,Speaker 1,quest
-quest/balloon-green,بادکنک سبز کدومه,Callirrhoe,Speaker 1,quest
-quest/balloon-orange,بادکنک نارنجی کدومه,Callirrhoe,Speaker 1,quest
-quest/balloon-purple,بادکنک بنفش کدومه,Callirrhoe,Speaker 1,quest
-quest/balloon-pink,بادکنک صورتی کدومه,Callirrhoe,Speaker 1,quest
-quest/balloon-brown,بادکنک قهوهای کدومه,Callirrhoe,Speaker 1,quest
+quest/balloon-red,توپ قرمز کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-blue,توپ آبی کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-yellow,توپ زرد کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-green,توپ سبز کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-orange,توپ نارنجی کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-purple,توپ بنفش کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-pink,توپ صورتی کدومه؟,Callirrhoe,Speaker 1,quest
+quest/balloon-brown,توپ قهوه‌ای کدومه؟,Callirrhoe,Speaker 1,quest
 quest/arrived,رسیدیم! پیکنیک با مامانبزرگ!,Callirrhoe,Speaker 1,quest
 quest/grandma-hello,سلام عزیزم! چه پیکنیک خوشمزهای!,Callirrhoe,Speaker 1,quest
 quest/yum,به به!,Callirrhoe,Speaker 1,quest
