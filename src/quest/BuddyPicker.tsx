@@ -13,6 +13,8 @@ import { buddyPose } from './questTheme';
 import { questPlay } from './questSound';
 import { FaTestAudioKey } from '../assets/faTestAudio.generated';
 
+const ROBO_PICKER_ART = require('../../assets/neli-world/characters/Robo Boombo/base_happy_2x_1024x1024.png');
+
 function BuddyButton({
   id,
   fa,
@@ -86,15 +88,12 @@ function BuddyButton({
       ) : null}
       <Animated.View style={{ transform: [{ scale: bounce }], alignItems: 'center' }}>
         {id === 'roboBoombo' ? (
-          // The waving art has a stray arm baked in at the left edge,
-          // cropped out here (shared art untouched).
-          <View style={{ width: size * 0.88, height: size * 0.88, overflow: 'hidden' }}>
-            <Image
-              source={buddyPose(id, 'waving')}
-              style={{ width: size, height: size, marginLeft: -size * 0.14 }}
-              resizeMode="contain"
-            />
-          </View>
+          // Robo Boombo's picker portrait: the happy base art.
+          <Image
+            source={ROBO_PICKER_ART}
+            style={{ width: size * 0.88, height: size * 0.88 }}
+            resizeMode="contain"
+          />
         ) : (
           <Image
             source={buddyPose(id, 'waving')}
@@ -133,7 +132,8 @@ export default function BuddyPicker({
   // No bar on this scene — the buddies get the whole garden.
   const bodyH = height - insets.top - insets.bottom;
   const gap = Math.max(8, width * 0.012);
-  const cardSize = Math.min((width * 0.92 - gap * (BUDDIES.length - 1)) / BUDDIES.length, bodyH * 0.66);
+  // Every character 10% bigger than before, still fitting the row.
+  const cardSize = Math.min((width * 0.98 - gap * (BUDDIES.length - 1)) / BUDDIES.length, bodyH * 0.73);
 
   // The instruction speaks as the screen opens: who will be today's hero?
   useEffect(() => {
@@ -148,13 +148,6 @@ export default function BuddyPicker({
 
   return (
     <View style={styles.root}>
-      <View style={styles.titlePill}>
-        <Text
-          style={[styles.title, { fontFamily: ff(lang, 'black'), fontSize: Math.max(11, bodyH * 0.038) }, dir(lang)]}
-        >
-          {isFa ? 'امروز می‌خوای کدوم دوست باشی؟' : 'Which character do you want to be today?'}
-        </Text>
-      </View>
       <View style={[styles.row, isFa && { flexDirection: 'row-reverse' }, { gap }]}>
         {BUDDIES.map(b => (
           <BuddyButton

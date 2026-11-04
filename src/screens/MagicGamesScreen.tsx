@@ -57,7 +57,7 @@ function TileScene({ t, size, k }: { t: Tile; size: number; k: number }) {
     // Neli in her car in the center, Grandma small at the street side.
     return (
       <View style={s.scene}>
-        <Image source={CAR_NELI} style={{ width: size * 0.78, height: size * 0.48, marginBottom: size * 0.16 }} resizeMode="contain" />
+        <Image source={CAR_NELI} style={{ width: size * 0.6, height: size * 0.4, marginBottom: size * 0.16, marginLeft: size * 0.3 }} resizeMode="contain" />
         <View pointerEvents="none" style={[s.road, { height: size * 0.08, bottom: aboveBand }]}>
           <View style={s.dashes}>
             {Array.from({ length: 7 }).map((_, i) => (
@@ -65,8 +65,7 @@ function TileScene({ t, size, k }: { t: Tile; size: number; k: number }) {
             ))}
           </View>
         </View>
-        <Image source={GRANDMA} style={{ position: 'absolute', width: size * 0.24, height: size * 0.38, bottom: aboveBand, left: corner }} resizeMode="contain" />
-        <Image source={neliWorldAssets.ui.sparkle} style={{ position: 'absolute', width: propS * 0.6, height: propS * 0.6, top: corner, right: corner }} resizeMode="contain" />
+        <Image source={GRANDMA} style={{ position: 'absolute', width: size * 0.46, height: size * 0.7, bottom: aboveBand, left: size * 0.02 }} resizeMode="contain" />
       </View>
     );
   }

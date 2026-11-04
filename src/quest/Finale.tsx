@@ -29,9 +29,12 @@ import { buddyPose } from './questTheme';
 import { saveMyDay } from './myDaysStore';
 import WordArt from './WordArt';
 import { SoftShadow } from '../ui/playKit';
+import { grandmaArtFor } from './grandmaArt';
 import TopBar from '../components/TopBar';
 import PicnicPhoto from './PicnicPhoto';
-import StripedBall from './StripedBall';
+import SimpleBall from './SimpleBall';
+
+const QUEST_CAMERA = require('../../assets/neli-world/quest/camera.png');
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 
 const CLICK_SOUND = require('../../assets/audio/key-tap.wav');
@@ -308,10 +311,10 @@ export default function Finale({
   // On the mat: each figure sits at a front corner of the blanket, at
   // most 28% of its width, centers 30% apart each way — the gap between
   // them is wide and they can never overlap, at any size.
-  const matCharW = Math.min(charW, blanketW * 0.28);
+  const matCharW = Math.min(blanketW * 0.44, charW * 1.8);
   const matCharH = matCharW / 0.85;
-  const buddyCx = gw / 2 + (isFa ? 1 : -1) * blanketW * 0.3;
-  const grandmaCx = gw / 2 - (isFa ? 1 : -1) * blanketW * 0.3;
+  const buddyCx = gw / 2 + (isFa ? 1 : -1) * blanketW * 0.27;
+  const grandmaCx = gw / 2 - (isFa ? 1 : -1) * blanketW * 0.27;
 
   // Tree behind the blanket with the trip balloons tied to it.
   const treeH = Math.min(charH * 0.9, gh * 0.3);
@@ -545,7 +548,7 @@ export default function Finale({
             pointerEvents="none"
           >
             {balloonIds.map(id => (
-              <StripedBall key={id} color={COLOR_HEX[id] ?? '#CCCCCC'} size={bs} />
+              <SimpleBall key={id} color={COLOR_HEX[id] ?? '#CCCCCC'} size={bs} />
             ))}
           </View>
         )}
@@ -608,7 +611,7 @@ export default function Finale({
         <View
           style={[
             styles.buddySide,
-            { left: buddyCx - matCharW / 2, bottom: blanketBottom + blanketH * 0.04, alignItems: 'center' },
+            { left: buddyCx - matCharW / 2, bottom: blanketBottom + blanketH * 0.5, alignItems: 'center' },
           ]}
           pointerEvents="none"
         >
@@ -625,12 +628,12 @@ export default function Finale({
         <View
           style={[
             styles.grandmaSide,
-            { left: grandmaCx - matCharW / 2, bottom: blanketBottom + blanketH * 0.04, alignItems: 'center' },
+            { left: grandmaCx - matCharW / 2, bottom: blanketBottom + blanketH * 0.5, alignItems: 'center' },
           ]}
           pointerEvents="none"
         >
           <Image
-            source={story.grandma}
+            source={grandmaArtFor(buddy)}
             style={{ width: matCharW, height: matCharH }}
             resizeMode="contain"
             accessibilityLabel={isFa ? 'مادربزرگ' : 'Grandma'}
@@ -662,7 +665,7 @@ export default function Finale({
           <View style={[styles.polaroidPhoto, { height: cardPhotoH }]}>
             <PicnicPhoto
               background={story.background}
-              grandma={story.grandma}
+              grandma={grandmaArtFor(buddy)}
               buddy={buddy}
               fruitWord={fruitWord ?? null}
               fruitCount={fruitCount}
@@ -687,10 +690,10 @@ export default function Finale({
           and the balloons rise while yay and the celebration play together.
           After the photo, تمام! takes the same spot. */}
       {camReady && photoPhase === 'none' && (
-        <View pointerEvents="box-none" style={[styles.camBottom, { bottom: 2 }]}>
+        <View pointerEvents="box-none" style={styles.camCenter}>
           {camIdle && (
             <View pointerEvents="none" style={styles.camHint}>
-              <IdleHand size={camS * 0.5} />
+              <IdleHand size={camS * 0.6} />
             </View>
           )}
           <TouchableOpacity
@@ -698,11 +701,10 @@ export default function Finale({
             activeOpacity={0.85}
             accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
             accessibilityRole="button"
-            style={[styles.camBtn, { width: camS, height: camS, borderRadius: 22 }]}
           >
             <Image
-              source={neliWorldAssets.ui.camera}
-              style={{ width: camS * 0.52, height: camS * 0.52 }}
+              source={QUEST_CAMERA}
+              style={{ width: camS * 2, height: camS * 2 }}
               resizeMode="contain"
               accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
             />
@@ -803,6 +805,18 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     justifyContent: 'flex-end',
+  },
+  // The child's own camera, no background, big in the center of the page.
+  camCenter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 45,
+    elevation: 45,
   },
   camBtn: {
     backgroundColor: '#FFB800',

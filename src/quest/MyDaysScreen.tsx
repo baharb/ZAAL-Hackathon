@@ -15,6 +15,7 @@ import { neliWorldAssets } from '../assets/neliWorldAssets';
 import { WordArt as PlayWordArt, WORD_ART } from '../ui/playKit';
 import TopBar from '../components/TopBar';
 import PicnicPhoto from './PicnicPhoto';
+import { grandmaArtFor } from './grandmaArt';
 import { displayWordById } from './questGroups';
 
 // The album card shows the same picnic scene at a small size: garden
@@ -60,7 +61,7 @@ function DayCard({ entry, cardW }: { entry: MyDayEntry; cardW: number }) {
     <View style={[styles.card, { width: cardW, borderRadius: cardW * 0.05 }]}>
       <PicnicPhoto
         background={story?.background}
-        grandma={story?.grandma}
+        grandma={grandmaArtFor(entry.buddy)}
         buddy={entry.buddy}
         fruitWord={fruitWord}
         fruitCount={fruitCount}

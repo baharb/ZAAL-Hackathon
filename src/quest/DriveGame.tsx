@@ -23,7 +23,7 @@ import { DisplayWord } from './questGroups';
 import { COLOR_HEX, farApartPair, PickKind, pickPool, sampleOptions, shuffle } from './pickLists';
 import { FA_TEST_AUDIO, FaTestAudioKey } from '../assets/faTestAudio.generated';
 import { neliWorldAssets } from '../assets/neliWorldAssets';
-import Balloon from './Balloon';
+import SimpleBall from './SimpleBall';
 import ColorDot from './ColorDot';
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 import { Story } from './stories';
@@ -209,25 +209,6 @@ function OptionArt({ word, kind, size }: { word: DisplayWord; kind: PickKind; si
   );
 }
 
-/** One question pill: the text plus a small speaker INSIDE it — the whole
- * pill replays the question. No stray icons beside it. */
-function QuestionPill({ text, replayKey, fontSize }: { text: string; replayKey: FaTestAudioKey; fontSize: number }) {
-  const { lang } = useContext(AppContext);
-  const isFa = lang === 'fa' || lang === 'ar';
-  return (
-    <TouchableOpacity
-      onPress={() => questPlay(replayKey)}
-      activeOpacity={0.8}
-      accessibilityLabel={isFa ? 'دوباره بشنو' : 'Hear it again'}
-      accessibilityRole="button"
-      style={styles.pillBox}
-    >
-      <Text style={[styles.prompt, { fontFamily: ff(lang, 'black'), fontSize }, dir(lang)]} numberOfLines={1}>{text}</Text>
-      <Image source={neliWorldAssets.ui.voice} style={{ width: fontSize * 1.15, height: fontSize * 1.15 }} resizeMode="contain" />
-    </TouchableOpacity>
-  );
-}
-
 function QuestionView({
   round,
   choices,
@@ -267,11 +248,6 @@ function QuestionView({
 
   return (
     <View style={[styles.question, { paddingBottom: lift, justifyContent: 'flex-end' }]} pointerEvents="box-none">
-      <QuestionPill
-        text={isFa ? `${round.answer.fa} کدومه؟` : `Which one is ${round.answer.fa}?`}
-        replayKey={replayKey}
-        fontSize={Math.min(26, Math.max(15, optSize * 0.22))}
-      />
       <View style={[styles.qRow, isFa && { flexDirection: 'row-reverse' }]}>
         {choices.map(word => {
           const isTarget = word.id === round.answer.id;
@@ -354,11 +330,6 @@ function CountingView({
 
   return (
     <View style={[styles.question, { paddingBottom: lift, justifyContent: 'flex-end' }]} pointerEvents="box-none">
-      <QuestionPill
-        text={isFa ? 'چندتا می‌بینی؟' : 'How many do you see?'}
-        replayKey={replayKey}
-        fontSize={Math.max(16, numSize * 0.2)}
-      />
       <View style={[styles.fruitRow, { gap: 6, marginTop: 6 }]}>
         {Array.from({ length: count }).map((_, i) => (
           <WordArt key={i} word={fruit} size={fruitSize} />
@@ -449,11 +420,6 @@ function BalloonView({
 
   return (
     <View style={[styles.question, { paddingBottom: lift, justifyContent: 'flex-end' }]} pointerEvents="box-none">
-      <QuestionPill
-        text={isFa ? `${round.answer.fa} کدومه؟` : `Which one is ${round.answer.fa}?`}
-        replayKey={replayKey}
-        fontSize={Math.min(26, Math.max(15, optSize * 0.22))}
-      />
       <View style={[styles.qRow, isFa && { flexDirection: 'row-reverse' }]}>
         {choices.map(word => {
           const isTarget = word.id === round.answer.id;
@@ -482,7 +448,7 @@ function BalloonView({
                 </View>
               )}
               <Animated.View style={isRising ? { transform: [{ translateY: riseY }] } : undefined}>
-                <Balloon color={COLOR_HEX[word.id] ?? '#CCCCCC'} size={optSize * 0.85} />
+                <SimpleBall color={COLOR_HEX[word.id] ?? '#CCCCCC'} size={optSize * 0.9} />
               </Animated.View>
             </TouchableOpacity>
           );
@@ -616,7 +582,6 @@ export default function DriveGame({
   const [collected, setCollected] = useState<DisplayWord[]>([]);
   const [flying, setFlying] = useState<DisplayWord | null>(null);
   const [countQ, setCountQ] = useState<{ count: number; options: number[] } | null>(null);
-  const [bubble, setBubble] = useState(false);
   const boxIdle = useIdleHint(phase === 'atBox', IDLE_HAND_DELAY, 0);
 
   const carX = useRef(new Animated.Value(WORLD_SCREENS * W + 80)).current;
@@ -807,8 +772,6 @@ export default function DriveGame({
       // the open art with sparkles, as the scene gently dims.
       setSpark(true);
       setBoxOpen(true);
-      setBubble(true);
-      later(1600, () => setBubble(false));
       playPop();
       later(800, () => setSpark(false));
       Animated.parallel([
@@ -1059,13 +1022,6 @@ export default function DriveGame({
                   <IdleHand size={boxH * 0.78} />
                 </View>
               )}
-              {bubble && (
-                <View pointerEvents="none" style={[styles.bubble, { left: -14, top: -56 }]}>
-                  <Text style={[styles.bubbleText, { fontFamily: ff(lang, 'black') }, dir(lang)]}>
-                    {isFa ? 'بازش کن!' : 'Open it!'}
-                  </Text>
-                </View>
-              )}
               <Animated.View
                 style={{
                   width: boxW,
@@ -1138,7 +1094,7 @@ export default function DriveGame({
               >
                 {collected.map(w =>
                   w.id.startsWith('painting/color/') ? (
-                    <Balloon key={w.id} color={COLOR_HEX[w.id] ?? '#CCCCCC'} size={m * 0.75} />
+                    <SimpleBall key={w.id} color={COLOR_HEX[w.id] ?? '#CCCCCC'} size={m * 0.75} />
                   ) : (
                     <WordArt key={w.id} word={w} size={m} />
                   ),
@@ -1181,7 +1137,7 @@ export default function DriveGame({
           pointerEvents="none"
         >
           {rounds[leg]!.kind === 'color' ? (
-            <Balloon color={COLOR_HEX[flying.id] ?? '#CCCCCC'} size={optSize * 0.8} />
+            <SimpleBall color={COLOR_HEX[flying.id] ?? '#CCCCCC'} size={optSize * 0.85} />
           ) : (
             <OptionArt word={flying} kind={rounds[leg]!.kind} size={optSize * 0.8} />
           )}
