@@ -66,7 +66,7 @@ const DRAW_ITEM: RoomItem = { id: 'mydrawing', fa: ['نقاشی'], en: ['drawing
 
 /** Fat finger-friendly crayons for the drawing paper. */
 const DRAW_CRAYONS = ['#E63B3B', '#FF8A00', '#FFD93B', '#2FBF6B', '#2B7FFF', '#9B4DFF', '#5B3A29', '#222222'];
-const DRAW_WIDTHS = [0.025, 0.05];
+const DRAW_WIDTHS = [0.016, 0.03];
 
 /** Catalog ids that are animals — only these can be the tale's friend. */
 const ANIMAL_IDS = new Set([
@@ -429,7 +429,7 @@ export default function MagicStoryGame() {
   const [drawing, setDrawing] = useState(false);
   const [dstrokes, setDstrokes] = useState<(DrawStroke & { id: number })[]>([]);
   const [drawColor, setDrawColor] = useState(DRAW_CRAYONS[0]!);
-  const [drawWidthIdx, setDrawWidthIdx] = useState(1);
+  const [drawWidthIdx, setDrawWidthIdx] = useState(0);
   const [conjuring, setConjuring] = useState(false);
   const [cartoonUri, setCartoonUri] = useState<string | null>(null);
   // The room photo repainted as a real cartoon (kind "photo") — the same
@@ -622,13 +622,17 @@ export default function MagicStoryGame() {
       onPanResponderGrant: e => {
         const paper = paperRef.current;
         const { locationX, locationY } = e.nativeEvent;
-        // Touches starting off the paper (edges included) paint nothing.
         if (!paper.w || !paper.h || conjuring) return;
-        if (locationX < 0 || locationY < 0 || locationX > paper.w || locationY > paper.h) return;
+        // Way off the paper paints nothing; near the edge the point is
+        // clamped onto the paper so a fat finger still draws there.
+        if (locationX < -24 || locationY < -24 || locationX > paper.w + 24 || locationY > paper.h + 24) return;
         setError(null);
         const id = ++nextDrawId.current;
         activeDrawId.current = id;
-        const pt = { x: locationX / paper.w, y: locationY / paper.h };
+        const pt = {
+          x: Math.min(1, Math.max(0, locationX / paper.w)),
+          y: Math.min(1, Math.max(0, locationY / paper.h)),
+        };
         setDstrokes(prev => [...prev, { id, points: [pt], color: drawColorRef.current, width: drawWidthRef.current }]);
       },
       onPanResponderMove: e => {
@@ -636,13 +640,12 @@ export default function MagicStoryGame() {
         const id = activeDrawId.current;
         if (!paper.w || !paper.h || id == null) return;
         const { locationX, locationY } = e.nativeEvent;
-        // Sliding off the paper ends the stroke instead of streaking
-        // a line along the edge.
-        if (locationX < 0 || locationY < 0 || locationX > paper.w || locationY > paper.h) {
-          activeDrawId.current = null;
-          return;
-        }
-        const pt = { x: locationX / paper.w, y: locationY / paper.h };
+        // Sliding to (or past) the edge keeps drawing, clamped to the
+        // paper's edge — the stroke only ends when the finger lifts.
+        const pt = {
+          x: Math.min(1, Math.max(0, locationX / paper.w)),
+          y: Math.min(1, Math.max(0, locationY / paper.h)),
+        };
         setDstrokes(prev => prev.map(s => (s.id === id ? { ...s, points: [...s.points, pt] } : s)));
       },
       onPanResponderRelease: () => {

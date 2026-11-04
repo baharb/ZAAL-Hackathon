@@ -141,6 +141,13 @@ export function drawingToPngBase64(strokes: DrawStroke[], size = 384): string {
     }
   }
 
+  // Append without spreading huge arrays into a call: 440k arguments
+  // throw "Maximum call stack size exceeded" (Hermes far sooner), which
+  // killed every export before it ever reached the network.
+  const pushAll = (arr: number[], items: number[]) => {
+    for (let i = 0; i < items.length; i += 8192) arr.push(...items.slice(i, i + 8192));
+  };
+
   // Raw zlib stream: header + stored blocks + adler32. One stored block
   // holds whole scanlines (scanline = 1 filter byte + 3*S pixels).
   const rowLen = 1 + S * 3;
@@ -149,7 +156,9 @@ export function drawingToPngBase64(strokes: DrawStroke[], size = 384): string {
   let block: number[] = [];
   const flushBlock = (final: boolean) => {
     zlib.push(final ? 0x01 : 0x00);
-    zlib.push(...u16le(block.length), ...u16le(0xffff ^ block.length), ...block);
+    pushAll(zlib, u16le(block.length));
+    pushAll(zlib, u16le(0xffff ^ block.length));
+    pushAll(zlib, block);
     block = [];
   };
   for (let y = 0; y < S; y++) {
@@ -166,8 +175,8 @@ export function drawingToPngBase64(strokes: DrawStroke[], size = 384): string {
   const adler = adler32(adlerBytes);
 
   const png: number[] = [137, 80, 78, 71, 13, 10, 26, 10];
-  png.push(...chunk('IHDR', [...u32be(S), ...u32be(S), 8, 2, 0, 0, 0]));
-  png.push(...chunk('IDAT', [...zlib, ...u32be(adler)]));
-  png.push(...chunk('IEND', []));
+  pushAll(png, chunk('IHDR', [...u32be(S), ...u32be(S), 8, 2, 0, 0, 0]));
+  pushAll(png, chunk('IDAT', [...zlib, ...u32be(adler)]));
+  pushAll(png, chunk('IEND', []));
   return base64Encode(png);
 }
