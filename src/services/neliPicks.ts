@@ -51,7 +51,7 @@ export async function askNeliPicks(allowed: NeliAllowedWord[]): Promise<string[]
       `Choose exactly 3 allowed word ids to practice next: prefer words with more wrong than correct, ` +
       `then words heard least. Reply with ONLY this JSON and no other text: {"ids":["...","...","..."]}`;
     const res = await withTimeout(
-      askMeta({ prompt, system: 'Reply with JSON only: {"ids":["id1","id2","id3"]}. No other text.', maxTokens: 120, temperature: 0.3 }, 0),
+      askMeta({ prompt, system: 'Reply with JSON only: {"ids":["id1","id2","id3"]}. No other text.', maxTokens: 500, temperature: 0.3 }, 0),
       PICK_TIMEOUT_MS,
     );
     if ('error' in res || !res.text) return null;
@@ -120,7 +120,7 @@ export async function askParentNote(words: TodayWordPractice[], lang: Lang): Pro
       (lang === 'fa' ? `.` : `, followed by its short ${langName} translation in [brackets].`) +
       ` No hype, no medical or developmental claims. Reply with the note text only.`;
     const res = await withTimeout(
-      askMeta({ prompt, system: `Write only a short parent note (2-3 lines) in ${langName}, with one Farsi dinner sentence in «». No other text.`, maxTokens: 220, temperature: 0.5 }, 0),
+      askMeta({ prompt, system: `Write only a short parent note (2-3 lines) in ${langName}, with one Farsi dinner sentence in «». No other text.`, maxTokens: 600, temperature: 0.5 }, 0),
       PICK_TIMEOUT_MS,
     );
     if ('error' in res || !res.text) return null;

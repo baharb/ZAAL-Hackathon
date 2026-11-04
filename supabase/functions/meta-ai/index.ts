@@ -87,46 +87,54 @@ Deno.serve(async (req: Request) => {
   const t = Number(body.temperature);
   const temperature = body.temperature === undefined ? undefined : Math.min(Math.max(isNaN(t) ? 0.7 : t, 0), 2);
 
-  try {
-    const res = await fetch(`${META_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: maxTokens,
-        ...(temperature === undefined ? {} : { temperature }),
-        // Muse Spark always reasons silently and hidden reasoning tokens
-        // count toward max_tokens. 'minimal' keeps short kids' answers
-        // from being starved of visible output tokens.
-        reasoning_effort: 'minimal',
-        messages: [
-          { role: 'system', content: systemText },
-          { role: 'user', content: userContent },
-        ],
-      }),
-    });
+  // Hidden reasoning tokens count toward max_tokens, so a small budget
+  // can leave ZERO visible text. If that happens, retry once with a
+  // bigger budget before giving up.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const budget = attempt === 0 ? maxTokens : Math.min(maxTokens * 3, MAX_TOKENS_CAP);
+    try {
+      const res = await fetch(`${META_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: budget,
+          ...(temperature === undefined ? {} : { temperature }),
+          // Muse Spark always reasons silently and hidden reasoning tokens
+          // count toward max_tokens. 'minimal' keeps short kids' answers
+          // from being starved of visible output tokens.
+          reasoning_effort: 'minimal',
+          messages: [
+            { role: 'system', content: systemText },
+            { role: 'user', content: userContent },
+          ],
+        }),
+      });
 
-    if (!res.ok) {
-      const detail = await res.text();
-      console.error('Meta API error', res.status, detail.slice(0, 500));
-      return json({ error: `Meta API returned ${res.status}` }, 502);
-    }
+      if (!res.ok) {
+        const detail = await res.text();
+        console.error('Meta API error', res.status, detail.slice(0, 500));
+        return json({ error: `Meta API returned ${res.status}` }, 502);
+      }
 
-    const data = await res.json();
-    const raw = data?.choices?.[0]?.message?.content ?? '';
-    const text: string = Array.isArray(raw)
-      ? raw.map((p: unknown) => (typeof p === 'string' ? p : (p as { text?: unknown })?.text ?? '')).join('')
-      : String(raw ?? '');
-    if (!text.trim()) {
-      console.error('Meta API returned no visible text');
-      return json({ error: 'Model returned no text' }, 502);
+      const data = await res.json();
+      const raw = data?.choices?.[0]?.message?.content ?? '';
+      const text: string = Array.isArray(raw)
+        ? raw.map((p: unknown) => (typeof p === 'string' ? p : (p as { text?: unknown })?.text ?? '')).join('')
+        : String(raw ?? '');
+      if (text.trim()) return json({ text });
+      console.error(
+        'Meta API returned no visible text, attempt', attempt + 1,
+        'finish_reason:', data?.choices?.[0]?.finish_reason ?? 'unknown',
+        'usage:', JSON.stringify(data?.usage ?? {}),
+      );
+    } catch (err) {
+      console.error('Meta API request failed', err);
+      return json({ error: 'Could not reach the Meta API' }, 502);
     }
-    return json({ text });
-  } catch (err) {
-    console.error('Meta API request failed', err);
-    return json({ error: 'Could not reach the Meta API' }, 502);
   }
+  return json({ error: 'Model returned no text' }, 502);
 });
