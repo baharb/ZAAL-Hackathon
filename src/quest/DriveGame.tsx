@@ -915,7 +915,7 @@ export default function DriveGame({
     <View style={styles.root} onLayout={onGameLayout}>
       {/* Every game gets the same navy X home (unmount stops the engine). */}
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
-        <TopBar title="بازی امروز من" titleFa="بازی امروز من" dark showClose onBack={() => navigate({ name: 'MagicGames' })} />
+        <TopBar title="Picnic with Grandma" titleFa="پیک‌نیک با مامان‌بزرگ" dark showClose onBack={() => navigate({ name: 'MagicGames' })} />
       </View>
       {/* Camera: the long world slides past; only the part around the car shows. */}
       <Animated.View

@@ -477,7 +477,7 @@ export default function ListenFindGame() {
         <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(46,26,107,0.10)' }]} />
       </View>
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
-        <TopBar title="بشنو و پیدا کن" titleFa="بشنو و پیدا کن" dark showClose onBack={() => navigate({ name: 'MagicGames' })} />
+        <TopBar title="بشنو و پیدا کن" titleFa="بشنو و پیدا کن" dark showClose onBack={() => navigate({ name: 'Main', tab: 'Games' })} />
       </View>
 
       {/* Progress stars, top-center: big, bold, gold when filled. No round text. */}

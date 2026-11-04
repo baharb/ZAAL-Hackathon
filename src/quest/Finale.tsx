@@ -477,7 +477,7 @@ export default function Finale({
   return (
     <View style={styles.root} onLayout={onGameLayout}>
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
-        <TopBar title="بازی امروز من" titleFa="بازی امروز من" dark showClose onBack={safeExit} />
+        <TopBar title="Picnic with Grandma" titleFa="پیک‌نیک با مامان‌بزرگ" dark showClose onBack={safeExit} />
       </View>
       {/* Garden background, pinned to the bottom and oversized so its
           pale cloud band overflows off the top (never a half-cut strip),

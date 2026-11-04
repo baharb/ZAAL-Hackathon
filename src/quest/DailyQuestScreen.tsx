@@ -203,7 +203,7 @@ export default function DailyQuestScreen() {
       )}
       {(phase === 'buddy' || phase === 'picks' || phase === 'loading') && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
-          <TopBar title="بازی امروز من" titleFa="بازی امروز من" dark showClose onBack={goBack} />
+          <TopBar title="Picnic with Grandma" titleFa="پیک‌نیک با مامان‌بزرگ" dark showClose onBack={goBack} />
         </View>
       )}
       {(phase === 'picks' || phase === 'drive' || phase === 'arrived') && (

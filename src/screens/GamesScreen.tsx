@@ -28,11 +28,12 @@ type Tile = {
 };
 
 const GAMES: Tile[] = [
-  { id: 'dailyQuest', route: { name: 'DailyQuest' }, en: 'My Daily Quest', fa: 'بازی امروز من', descEn: 'A new game every day', descFa: 'هر روز یک بازی تازه', kind: 'quest', color: '#FF5C8A', accent: '#FACC15', group: 'play' },
+  { id: 'dailyQuest', route: { name: 'DailyQuest' }, en: 'Picnic with Grandma', fa: 'پیک‌نیک با مامان‌بزرگ', descEn: 'Drive to Grandma’s picnic', descFa: 'برو پیک‌نیک پیش مامان‌بزرگ', kind: 'quest', color: '#FF5C8A', accent: '#FACC15', group: 'play' },
   { id: 'talk', route: { name: 'ConversationGame' }, en: 'Talk with Neli', fa: 'گفت و گو', descEn: 'Listen and answer', descFa: 'بشنو و جواب بده', kind: 'talk', color: '#6C4EFF', accent: '#FACC15', group: 'play' },
   { id: 'grandma', route: { name: 'GrandmaCall' }, en: "Grandma's Call", fa: 'زنگ مامان‌بزرگ', descEn: 'Answer Grandma in Farsi', descFa: 'به مامان‌بزرگ جواب بده', kind: 'grandma', color: '#FF7A5C', accent: '#FFD86B', group: 'play' },
   { id: 'animals', route: { name: 'FeedAnimals' }, en: 'Feed Animals', fa: 'غذا بده', descEn: 'Drag food to animals', descFa: 'غذا را به حیوان بده', kind: 'animal', color: '#22C55E', accent: '#FACC15', group: 'play' },
   { id: 'teeth', route: { name: 'ToothBrush' }, en: 'Brush Teeth', fa: 'مسواک بزن', descEn: 'Move the brush', descFa: 'مسواک را حرکت بده', kind: 'tooth', color: '#38BDF8', accent: '#6C4EFF', group: 'play' },
+  { id: 'listenFind', route: { name: 'ListenFind' }, en: 'Listen & Find', fa: 'بشنو و پیدا کن', descEn: 'Listen and find it', descFa: 'بشنو و پیداش کن', kind: 'listen', color: '#F472B6', accent: '#FACC15', group: 'play' },
   { id: 'counting', route: { name: 'Game', gameId: 'counting' }, en: 'Counting', fa: 'بشمار', descEn: 'Count with pictures', descFa: 'با تصویر بشمار', kind: 'count', color: '#F72585', accent: '#FFE45E', group: 'learn' },
   { id: 'alphabetTrain', route: { name: 'AlphabetTrain' }, en: 'Alphabet Train', fa: 'قطار الفبا', descEn: 'Ride the letters and words', descFa: 'سوار قطار حرف‌ها شو', kind: 'alphabetTrain', color: '#06B6D4', accent: '#F97316', group: 'learn' },
   { id: 'dress', route: { name: 'DressUp' }, en: 'Dress Up', fa: 'لباس بپوشون', descEn: 'Drag clothes onto Neli', descFa: 'لباس را روی نلی بکش', kind: 'dress', color: '#EC4899', accent: '#FDE68A', group: 'play' },

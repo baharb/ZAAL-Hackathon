@@ -1,9 +1,8 @@
-// Magic Games — the judges' box. Each tile is its own mini scene with its
-// own buddy: Daily Quest = Neli in her red car on the road; Magic Story =
-// Aidin with an open storybook; Photo Farsi = Robo Boombo with the camera;
-// Listen & Find = Lila listening with objects; First Letter = Dara with
-// toy blocks. Daily Quest goes FIRST and biggest; all 5 tiles fit without
-// scrolling. No emoji, no English.
+// Magic Games — the judges' box, styled exactly like the first Home
+// page's big cards: one row of square cards on the deep-purple page,
+// each card a bold color with its own mini scene, and the game's name in
+// white on the navy shade band at the bottom. Four games live here —
+// Daily Quest first; Listen & Find moved to the main Games page.
 
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
@@ -23,27 +22,20 @@ const REFERENCE_H = 400;
 const CAR_NELI = require('../../assets/neli-world/quest/car-neli.png');
 
 type Tile = {
-  route: { name: 'MagicStory' } | { name: 'PhotoFarsi' } | { name: 'ListenFind' } | { name: 'FirstLetter' } | { name: 'DailyQuest' };
+  route: { name: 'MagicStory' } | { name: 'PhotoFarsi' } | { name: 'FirstLetter' } | { name: 'DailyQuest' };
   color: string;
-  edge: string;
   fa: string;
   buddy: BuddyId;
 };
 
-const SMALL_TILES: Tile[] = [
-  { route: { name: 'MagicStory' }, color: '#A855F7', edge: '#7C3AED', fa: 'قصه جادویی', buddy: 'aidin' },
-  { route: { name: 'PhotoFarsi' }, color: '#22D3EE', edge: '#0E9BB8', fa: 'فارسی با عکس', buddy: 'roboBoombo' },
-  { route: { name: 'ListenFind' }, color: '#F472B6', edge: '#DB2777', fa: 'بشنو و پیدا کن', buddy: 'lila' },
-  { route: { name: 'FirstLetter' }, color: '#06B6D4', edge: '#0E7490', fa: 'حرف اول', buddy: 'dara' },
+// Same order as the Home big cards: the main game first, then the rest.
+// Exact Home big-card colors: pink, blue, yellow, green.
+const TILES: Tile[] = [
+  { route: { name: 'DailyQuest' }, color: '#FF00F5', fa: 'پیک‌نیک با مامان‌بزرگ', buddy: 'neli' },
+  { route: { name: 'MagicStory' }, color: '#00D1FF', fa: 'قصه جادویی', buddy: 'aidin' },
+  { route: { name: 'PhotoFarsi' }, color: '#F7D046', fa: 'فارسی با عکس', buddy: 'roboBoombo' },
+  { route: { name: 'FirstLetter' }, color: '#18C977', fa: 'حرف اول', buddy: 'dara' },
 ];
-
-const QUEST_TILE: Tile = {
-  route: { name: 'DailyQuest' },
-  color: '#FF5C8A',
-  edge: '#D63A63',
-  fa: 'بازی امروز من',
-  buddy: 'neli',
-};
 
 function TileBuddy({ id, size }: { id: BuddyId; size: number }) {
   return (
@@ -51,13 +43,29 @@ function TileBuddy({ id, size }: { id: BuddyId; size: number }) {
   );
 }
 
-/** Mini scene per game. Same outer size for every small tile. */
-function TileScene({ t, artS, k }: { t: Tile; artS: number; k: number }) {
+/** Mini scene per game, filling the square card above its title band. */
+function TileScene({ t, size, k }: { t: Tile; size: number; k: number }) {
+  const artS = size * 0.42;
   const buddyS = artS * 1.05;
+  if (t.route.name === 'DailyQuest') {
+    // Neli in her red car on the gray road.
+    return (
+      <View style={s.scene}>
+        <Image source={CAR_NELI} style={{ width: size * 0.72, height: size * 0.44, marginBottom: size * 0.1 }} resizeMode="contain" />
+        <View pointerEvents="none" style={[s.road, { height: size * 0.09, bottom: size * 0.24 }]}>
+          <View style={s.dashes}>
+            {Array.from({ length: 7 }).map((_, i) => (
+              <View key={i} style={[s.dash, { width: 12 * k, height: 3.5 * k, marginHorizontal: 5 * k }]} />
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  }
   if (t.route.name === 'MagicStory') {
     // Aidin with an open storybook under sparkles.
     return (
-      <View style={s.scene}>
+      <View style={s.sceneRow}>
         <TileBuddy id={t.buddy} size={buddyS} />
         <View>
           <OpenBookIcon size={artS * 1.05} />
@@ -71,34 +79,17 @@ function TileScene({ t, artS, k }: { t: Tile; artS: number; k: number }) {
     );
   }
   if (t.route.name === 'PhotoFarsi') {
-    // Robo Boombo with the camera, bedroom colors behind.
+    // Robo Boombo with the camera.
     return (
-      <View style={s.scene}>
+      <View style={s.sceneRow}>
         <TileBuddy id={t.buddy} size={buddyS} />
         <Image source={neliWorldAssets.ui.camera} style={{ width: artS, height: artS }} resizeMode="contain" />
       </View>
     );
   }
-  if (t.route.name === 'ListenFind') {
-    // Lila listening, objects at her feet.
-    return (
-      <View style={s.scene}>
-        <View>
-          <TileBuddy id={t.buddy} size={buddyS} />
-          <Image
-            source={neliWorldAssets.ui.voice}
-            style={{ position: 'absolute', top: 0, right: 0, width: artS * 0.45, height: artS * 0.45 }}
-            resizeMode="contain"
-          />
-        </View>
-        <Image source={neliWorldAssets.foods.apple} style={{ width: artS * 0.55, height: artS * 0.55 }} resizeMode="contain" />
-        <Image source={neliWorldAssets.clothes.book} style={{ width: artS * 0.55, height: artS * 0.55 }} resizeMode="contain" />
-      </View>
-    );
-  }
   // First Letter: Dara with chunky toy blocks.
   return (
-    <View style={s.scene}>
+    <View style={s.sceneRow}>
       <TileBuddy id={t.buddy} size={buddyS} />
       <View style={[s.miniBlock, { backgroundColor: '#E63B3B', borderBottomColor: '#B91C1C', width: artS * 0.62, height: artS * 0.62, borderRadius: 8 * k }]}>
         <Text style={[s.miniGlyph, dir('fa'), { fontSize: artS * 0.4 }]}>ب</Text>
@@ -110,110 +101,76 @@ function TileScene({ t, artS, k }: { t: Tile; artS: number; k: number }) {
   );
 }
 
-function SmallTile({ t, w, h, k, onPress }: { t: Tile; w: number; h: number; k: number; onPress: () => void }) {
-  const artS = h * 0.44;
-  return (
-    <TouchableOpacity
-      style={[s.tile, { backgroundColor: t.color, width: w, height: h, borderRadius: 26 * k }]}
-      onPress={onPress}
-      activeOpacity={0.88}
-      accessibilityRole="button"
-    >
-      <TileScene t={t} artS={artS} k={k} />
-      {/* Same title format as the app's game boxes: white name centered
-          on the navy shade band at the bottom. */}
-      <View style={[s.shade, { height: Math.max(32, h * 0.3) }]}>
-        <Text style={[s.cardTitle, dir('fa'), { fontSize: Math.max(15, 16 * k) }]} numberOfLines={1}>{t.fa}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
 export default function MagicGamesScreen() {
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { navigate } = useNav();
   const k = H / REFERENCE_H;
-  // Every tile is measured from what is left under the standard purple
-  // TopBar — never scrolls, even on a 360pt-tall phone.
-  const availH = Math.max(200, H - topBarHeight(H, insets.top) - 8 * k - Math.max(12 * k, insets.bottom));
-  const gap = 8 * k;
-  const dqH = availH * 0.36;
-  const smallH = (availH - dqH - gap) / 2;
-  const smallW = (Math.min(W * 0.9, 640) - gap) / 2;
-  // Soft dot pattern over a lilac-cream base (never flat purple).
-  const dots = Array.from({ length: 42 }).map((_, i) => ({
-    left: ((i * 173) % 97) / 100 * W,
-    top: ((i * 89) % 93) / 100 * H,
-    r: 3 + (i % 4) * 2,
-    c: ['rgba(168,85,247,0.10)', 'rgba(244,114,182,0.10)', 'rgba(255,184,0,0.12)', 'rgba(34,211,238,0.10)'][i % 4]!,
-  }));
+  // Home big-card geometry: one centered row of square cards, sized by
+  // width AND by the height left under the TopBar, so it never scrolls.
+  const gap = Math.max(10, 12 * k);
+  const availH = Math.max(180, H - topBarHeight(H, insets.top) - 24 * k - Math.max(12 * k, insets.bottom));
+  const cardSize = Math.floor(Math.min((W * 0.94 - gap * (TILES.length - 1)) / TILES.length, availH, 300 * k));
+  const bandH = Math.max(34, Math.round(54 * (cardSize / 230)));
+  const radius = Math.max(22, Math.round(26 * k));
   return (
     <View style={s.root}>
-      {dots.map((d, i) => (
-        <View key={i} pointerEvents="none" style={{ position: 'absolute', left: d.left, top: d.top, width: d.r * 2, height: d.r * 2, borderRadius: d.r, backgroundColor: d.c }} />
-      ))}
       <TopBar title="بازی‌های جادویی" titleFa="بازی‌های جادویی" dark showClose onBack={() => navigate({ name: 'Home' })} />
-      <View style={[s.col, { paddingTop: 8 * k, paddingBottom: Math.max(12 * k, insets.bottom), rowGap: gap }]}>
-        {/* بازی امروز من — first and biggest: Neli in her red car. */}
-        <TouchableOpacity
-          style={[s.tile, s.quest, { backgroundColor: QUEST_TILE.color, width: smallW * 2 + gap, height: dqH, borderRadius: 26 * k }]}
-          onPress={() => navigate(QUEST_TILE.route)}
-          activeOpacity={0.88}
-          accessibilityRole="button"
-        >
-          <Image source={CAR_NELI} style={{ width: dqH * 1.15, height: dqH * 0.66 }} resizeMode="contain" />
-          {/* Road under the car, just above the title band. */}
-          <View pointerEvents="none" style={[s.road, { height: dqH * 0.14, bottom: Math.max(32, dqH * 0.3) }]}>
-            <View style={s.dashes}>
-              {Array.from({ length: 8 }).map((_, i) => (
-                <View key={i} style={[s.dash, { width: 14 * k, height: 4 * k, marginHorizontal: 6 * k }]} />
-              ))}
+      <View style={[s.row, { gap, paddingBottom: Math.max(12 * k, insets.bottom) }]}>
+        {TILES.map(t => (
+          <TouchableOpacity
+            key={t.fa}
+            style={[s.card, { backgroundColor: t.color, width: cardSize, height: cardSize, borderRadius: radius }]}
+            onPress={() => navigate(t.route)}
+            activeOpacity={0.88}
+            accessibilityRole="button"
+          >
+            <View style={[s.artWrap, { borderRadius: radius }]}>
+              <TileScene t={t} size={cardSize} k={k} />
+              {/* Home format: white name centered on the navy shade band. */}
+              <View style={[s.shade, { height: bandH }]} />
+              <View style={[s.textBand, { height: bandH }]}>
+                <Text style={[s.cardTitle, dir('fa'), { fontSize: Math.max(14, Math.round(cardSize * 0.075)) }]} numberOfLines={1}>{t.fa}</Text>
+              </View>
             </View>
-          </View>
-          <View style={[s.shade, { height: Math.max(32, dqH * 0.3) }]}>
-            <Text style={[s.cardTitle, dir('fa'), { fontSize: Math.max(16, 19 * k) }]} numberOfLines={1}>{QUEST_TILE.fa}</Text>
-          </View>
-        </TouchableOpacity>
-        <View style={[s.grid, { width: smallW * 2 + gap, gap }]}>
-          {SMALL_TILES.map(t => (
-            <SmallTile key={t.fa} t={t} w={smallW} h={smallH} k={k} onPress={() => navigate(t.route)} />
-          ))}
-        </View>
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F2EDFF' },
-  col: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
-  // Same card as the app's game boxes: bold flat color, big radius,
-  // soft shadow, scene art bleeding under the title band.
-  tile: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  // Same deep-purple page as Home.
+  root: { flex: 1, backgroundColor: '#2B1268' },
+  row: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  // Same card as Home's big cards: square, big radius, soft deep shadow.
+  card: {
     overflow: 'hidden',
     shadowColor: '#170736',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    elevation: 8,
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 9,
   },
-  scene: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center' },
+  artWrap: { flex: 1, overflow: 'hidden' },
+  scene: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  sceneRow: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   shade: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(37,16,92,0.62)',
-    alignItems: 'center',
+  },
+  textBand: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    bottom: 0,
     justifyContent: 'center',
-    paddingHorizontal: 10,
   },
   cardTitle: { fontFamily: ff('fa', 'black'), color: '#FFFFFF', textAlign: 'center' },
-  quest: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', columnGap: 10 },
   road: {
     position: 'absolute',
     left: 0,
