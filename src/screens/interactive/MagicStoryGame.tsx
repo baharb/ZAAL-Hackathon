@@ -1054,9 +1054,9 @@ export default function MagicStoryGame() {
               (photoStep === 'told' ? (
                 <View style={s.noteThinking}>
                   <Animated.View style={{ transform: [{ translateY: waitBounce }] }}>
-                    <Image source={buddyPose(randomBuddy, 'base')} style={{ width: Math.min(H * 0.58, W * 0.5), height: Math.min(H * 0.58, W * 0.5) }} resizeMode="contain" />
+                    <Image source={buddyPose(randomBuddy, 'base')} style={{ width: Math.min(H * 0.44, W * 0.4), height: Math.min(H * 0.44, W * 0.4) }} resizeMode="contain" />
                   </Animated.View>
-                  <SoftShadow width={Math.min(H * 0.58, W * 0.5)} />
+                  <SoftShadow width={Math.min(H * 0.44, W * 0.4)} />
                   <View style={s.qPill}>
                     <Text style={[s.qPillText, dir('fa'), { textAlign: 'center' }]}>نلی داره کتابت رو نقاشی میکنه</Text>
                   </View>
