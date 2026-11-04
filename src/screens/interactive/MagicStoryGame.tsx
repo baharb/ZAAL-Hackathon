@@ -959,13 +959,9 @@ export default function MagicStoryGame() {
       setRecap(filled.recap);
       setLesson(filled.lesson);
       setCelebrate(true);
-      // "This is your story" first when its recording ships, then the one
-      // spoken word only — no afarin after it. The story ends soft, and
-      // the recap page says what was learned.
+      // Only "This is your story" is spoken — the focus word stays
+      // written inside the tale, never read out on its own after it.
       await playFaAudio('story/your-story', { awaitFinish: true });
-      if (nextFocus.audioKey in FA_TEST_AUDIO) {
-        await playFaAudio(nextFocus.audioKey as FaTestAudioKey, { awaitFinish: true });
-      }
     } finally {
       setAsking(false);
     }
