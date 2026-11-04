@@ -939,10 +939,10 @@ export default function DriveGame({
           })}
         </View>
 
-        {/* Cream road drawn in code along the bottom, full world length. */}
+        {/* Gray road drawn in code along the bottom, full world length. */}
         <Svg width={worldW} height={roadH} style={{ position: 'absolute', left: 0, top: roadTop }}>
-          <Rect x={0} y={0} width={worldW} height={roadH} fill="#F6E7C8" />
-          <Rect x={0} y={0} width={worldW} height={Math.max(4, roadH * 0.06)} fill="#EAD3A8" />
+          <Rect x={0} y={0} width={worldW} height={roadH} fill="#A8ADB3" />
+          <Rect x={0} y={0} width={worldW} height={Math.max(4, roadH * 0.06)} fill="#8F959C" />
           <Line
             x1={0}
             y1={roadH * 0.5}
