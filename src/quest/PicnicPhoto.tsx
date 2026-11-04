@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { Image, View } from 'react-native';
-import Balloon from './Balloon';
+import StripedBall from './StripedBall';
 import WordArt from './WordArt';
 import { COLOR_HEX } from './pickLists';
 import { buddyPose } from './questTheme';
@@ -53,7 +53,7 @@ export default function PicnicPhoto({
       {balloonIds.length > 0 && (
         <View style={{ position: 'absolute', top: 2, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 2 }}>
           {balloonIds.map(id => (
-            <Balloon key={id} color={COLOR_HEX[id] ?? '#CCCCCC'} size={h * 0.16} />
+            <StripedBall key={id} color={COLOR_HEX[id] ?? '#CCCCCC'} size={h * 0.16} />
           ))}
         </View>
       )}

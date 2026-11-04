@@ -31,7 +31,7 @@ import WordArt from './WordArt';
 import { SoftShadow } from '../ui/playKit';
 import TopBar from '../components/TopBar';
 import PicnicPhoto from './PicnicPhoto';
-import Balloon from './Balloon';
+import StripedBall from './StripedBall';
 import { IdleHand, IDLE_HAND_DELAY, useIdleHint } from './IdleHand';
 
 const CLICK_SOUND = require('../../assets/audio/key-tap.wav');
@@ -306,8 +306,10 @@ export default function Finale({
   // Grandma reads as AT the picnic instead of tiny at the far edge.
   const charH = gh * 0.384;
   const charW = charH * 0.85;
-  // Distance of each figure from its screen edge: the blanket's edge minus
-  // a small overlap, so each figure tucks just against the blanket.
+  // Each figure sits mostly OUTSIDE its blanket edge (only 18% tucks over
+  // the cloth), so the space between the two figures is the blanket's
+  // width minus that small tuck — they can never overlap each other,
+  // even on a tablet where charW grows but the blanket is capped.
 
   // Tree behind the blanket with the trip balloons tied to it.
   const treeH = Math.min(charH * 0.9, gh * 0.3);
@@ -315,11 +317,11 @@ export default function Finale({
   const treeBottom = blanketBottom + blanketH * 0.55;
   // The camera floats over the middle of the scene and vanishes after
   // the photo, so the scene always owns the full height: the level pill
-  // is an overlay too. Balloons are capped so their tops always stay
-  // inside the scene, even on a 360pt-tall phone.
+  // is an overlay too. The striped balls are capped so their tops always
+  // stay inside the scene, even on a 360pt-tall phone.
   const sceneH = gh;
   const bsRaw = Math.min(charH * 0.42, 84);
-  const bsMax = (sceneH - 8 - (treeBottom + treeH - 6)) / 1.36;
+  const bsMax = sceneH - 8 - (treeBottom + treeH - 6);
   const bs = Math.min(bsRaw, Math.max(24, bsMax));
 
   // Polaroid card size (also from k, so it fits small phones).
@@ -344,10 +346,8 @@ export default function Finale({
       if (!alive) return;
       // No roll-call of the picked names: the friends are already dancing
       // on screen, and repeating every name bores a 4-year-old. The picnic
-      // speaks instead: arrived, grandma says hello, yum — then celebrate.
+      // speaks instead: arrived, yum — then celebrate.
       await questPlay('quest/arrived' as FaTestAudioKey, { awaitFinish: true });
-      if (!alive) return;
-      await questPlay('quest/grandma-hello' as FaTestAudioKey, { awaitFinish: true });
       if (!alive) return;
       await questPlay('quest/yum' as FaTestAudioKey, { awaitFinish: true });
       if (!alive) return;
@@ -553,7 +553,7 @@ export default function Finale({
             pointerEvents="none"
           >
             {balloonIds.map(id => (
-              <Balloon key={id} color={COLOR_HEX[id] ?? '#CCCCCC'} size={bs} />
+              <StripedBall key={id} color={COLOR_HEX[id] ?? '#CCCCCC'} size={bs} />
             ))}
           </Animated.View>
         )}
@@ -614,7 +614,7 @@ export default function Finale({
         <View
           style={[
             styles.buddySide,
-            isFa ? { right: gw / 2 - blanketW / 2 + blanketW * 0.07 } : { left: gw / 2 - blanketW / 2 + blanketW * 0.07 },
+            isFa ? { right: gw / 2 - blanketW / 2 - charW * 0.82 } : { left: gw / 2 - blanketW / 2 - charW * 0.82 },
             { bottom: blanketBottom + blanketH * 0.55, alignItems: 'center' },
           ]}
           pointerEvents="none"
@@ -632,7 +632,7 @@ export default function Finale({
         <View
           style={[
             styles.grandmaSide,
-            isFa ? { left: gw / 2 - blanketW / 2 + blanketW * 0.07 } : { right: gw / 2 - blanketW / 2 + blanketW * 0.07 },
+            isFa ? { left: gw / 2 - blanketW / 2 - charW * 0.82 } : { right: gw / 2 - blanketW / 2 - charW * 0.82 },
             { bottom: blanketBottom + blanketH * 0.55, alignItems: 'center' },
           ]}
           pointerEvents="none"
