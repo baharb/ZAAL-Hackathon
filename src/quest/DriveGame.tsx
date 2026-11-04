@@ -1013,9 +1013,6 @@ export default function DriveGame({
             return (
               <View key={i} style={{ position: 'absolute', left: worldX - boxW / 2, top: boxY - boxH / 2, zIndex: 2 }}>
                 <Image source={BOX_CLOSED} style={{ width: boxW, height: boxH }} resizeMode="contain" />
-                <View pointerEvents="none" style={{ position: 'absolute', right: -boxW * 0.04, top: -boxH * 0.04 }}>
-                  <Image source={neliWorldAssets.ui.star} style={{ width: boxW * 0.34, height: boxW * 0.34 }} resizeMode="contain" />
-                </View>
               </View>
             );
           }
@@ -1070,11 +1067,6 @@ export default function DriveGame({
                   style={{ position: 'absolute', left: 0, top: 0, width: boxW, height: boxH }}
                   resizeMode="contain"
                 />
-                {!boxOpen && (
-                  <View pointerEvents="none" style={{ position: 'absolute', right: -boxW * 0.04, top: -boxH * 0.04 }}>
-                    <Image source={neliWorldAssets.ui.star} style={{ width: boxW * 0.34, height: boxW * 0.34 }} resizeMode="contain" />
-                  </View>
-                )}
                 {spark && <SparkBurst x={boxW / 2} y={-boxH * 0.2} size={boxW} />}
               </Animated.View>
             </TouchableOpacity>
