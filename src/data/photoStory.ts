@@ -1,8 +1,8 @@
 // Magic Story PHOTO pipeline — pure data and gates (no React Native
 // imports, so scripts/test-photo-story.mjs can check them in Node).
 // Photo → Spark finds things → Muse Image makes each a character →
-// child picks ONE hero → + one random buddy → one 6-page story at one
-// fixed location → one referenced picture per page.
+// buddy + ALL cartoon items auto-start one 4-page story at one fixed
+// location → one referenced picture per page.
 import { STORY_BANNED } from './magicStory';
 
 export type FoundThing = { fa: string; en: string; look: string };
@@ -48,7 +48,7 @@ export function cleanFoundThings(items: unknown): FoundThing[] | null {
   return out.length > 0 ? out : null;
 }
 
-/** STEP 4 gate: title + the SAME location + exactly 6 clean pages, or
+/** STEP 4 gate: title + the SAME location + exactly 4 clean pages, or
  * null (the caller retries once, then uses a hand-written fallback). */
 export function validPhotoStory(parsed: Record<string, unknown> | null, location: PhotoLocation): PhotoStory | null {
   if (!parsed) return null;
@@ -56,7 +56,7 @@ export function validPhotoStory(parsed: Record<string, unknown> | null, location
   if (!title || title.length > 60 || STORY_BANNED.some(w => title.includes(w))) return null;
   if (parsed.location !== location.en) return null;
   const pages = Array.isArray(parsed.pages) ? parsed.pages : null;
-  if (!pages || pages.length !== 6) return null;
+  if (!pages || pages.length !== 4) return null;
   const out: PhotoStoryPage[] = [];
   for (const raw of pages) {
     const p = raw as { text?: unknown; scene?: unknown };

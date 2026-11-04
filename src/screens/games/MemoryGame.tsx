@@ -201,7 +201,7 @@ function CardBack() {
   return <View style={styles.cardBack} />;
 }
 
-function StepFlash({
+export function StepFlash({
   side,
   onPress,
   disabled,

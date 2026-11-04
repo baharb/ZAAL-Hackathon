@@ -51,6 +51,7 @@ import {
   WordArt,
 } from '../../ui/playKit';
 import PopperCelebration from '../../components/PopperCelebration';
+import { StepFlash as MemoryStepFlash } from '../games/MemoryGame';
 import { topBarHeight } from '../../components/TopBar';
 
 // Everything scales from a 400pt-tall reference (a landscape phone is
@@ -73,9 +74,9 @@ export type StoryCastMember = { item: RoomItem; fa: string; en: string; heroUri?
  * doubt falls back to a magic friend. */
 export type DrawingSubject = { fa: string; en: string; isCreature: boolean };
 
-/* ---- Photo story pipeline (STEPS 1-5) -------------------------------
+/* ---- Photo story pipeline (STEPS 1-7) -------------------------------
  * Photo → Spark finds things → Muse Image makes each a character →
- * child picks ONE hero → + one random buddy → one 6-page story → one
+ * buddy + ALL cartoon items auto-start one 4-page story → one
  * referenced picture per page. Every step validates and falls back
  * without ever blocking the child. */
 
@@ -532,7 +533,7 @@ export default function MagicStoryGame() {
   // storybook stage behind the cast follows this place.
   const [placeId, setPlaceId] = useState('garden');
   // Photo pipeline (STEPS 1-7): found things -> sticker characters ->
-  // one hero + one random buddy -> 6-page story -> page pictures.
+  // buddy + all cartoon items -> 4-page story -> page pictures -> book.
   const [foundThings, setFoundThings] = useState<PhotoChar[]>([]);
   const [heroId, setHeroId] = useState<string | null>(null);
   const [randomBuddy, setRandomBuddy] = useState<BuddyId>('neli');
@@ -972,8 +973,8 @@ export default function MagicStoryGame() {
     try {
       const castLine = chars.map(c => c.fa + ' (' + c.look + ')').join(', ');
       const prompt =
-        'Write a 6-page picture-book story in Farsi for a 4-to-6-year-old. Reply with JSON only: ' +
-        '{"title":"...","location":"' + location.en + '","pages":[{"text":"...","scene":"..."}, exactly 6 pages]}. ' +
+        'Write a 4-page picture-book story in Farsi for a 4-to-6-year-old. Reply with JSON only: ' +
+        '{"title":"...","location":"' + location.en + '","pages":[{"text":"...","scene":"..."}, exactly 4 pages]}. ' +
         'Characters from the child\'s photo, now friendly cartoon characters: ' + castLine + '. ' +
         'Plus one app friend: ' + buddy.fa + ' (' + buddy.en + '). No other characters ever. ' +
         'Setting on every page: ' + location.en + '. ' +
@@ -982,7 +983,7 @@ export default function MagicStoryGame() {
         'Include one short line of dialogue in \u00AB\u00BB and one feeling word (\u062E\u0648\u0634\u062D\u0627\u0644, \u062A\u0639\u062C\u0628 \u06A9\u0631\u062F, \u0630\u0648\u0642 \u06A9\u0631\u062F). ' +
         'Each scene is one short English sentence describing the picture for that page (the characters, the setting, what they do). ' +
         'Never write about fear, the dark, monsters, sleeping or crying.';
-      const system = 'JSON only: {"title":"...","location":"' + location.en + '","pages":[{"text":"...","scene":"..."} x6]}. Simple kind Farsi for a young child, no scary or sad words.';
+      const system = 'JSON only: {"title":"...","location":"' + location.en + '","pages":[{"text":"...","scene":"..."} x4]}. Simple kind Farsi for a young child, no scary or sad words.';
       let story: { title: string; pages: { text: string; scene: string }[] } | null = null;
       for (let attempt = 0; attempt < 2 && !story; attempt++) {
         try {
@@ -996,9 +997,41 @@ export default function MagicStoryGame() {
       if (genRef.current !== gen) return;
       if (!story) {
         const fb = fallbackStory({ buddy: buddy.fa, friend: hero.fa, obj: chars[1]?.fa ?? hero.fa }, Math.floor(Math.random() * 5));
-        story = { title: fb.title, pages: fb.lines.slice(0, 6).map((text, i) => ({ text, scene: fb.scenes?.[i] ?? 'Friends play together happily' })) };
+        story = { title: fb.title, pages: fb.lines.slice(0, 4).map((text, i) => ({ text, scene: fb.scenes?.[i] ?? 'Friends play together happily' })) };
       }
-      pageArtRef.current = story.pages.map(() => null);
+      // STEP 5 — page 1 starts first so pages 2-4 can carry its finished
+      // picture as a style reference; the book only opens once all 4 are
+      // ready (60s cap; a missing page reuses the nearest ready one).
+      // Meanwhile the child sees only the big waiting buddy.
+      const locEn = PHOTO_LOCS.find(l => l.id === photoLocationId)?.en ?? 'garden';
+      const itemB64 = chars.filter(c => c.id !== hero.id && c.imageBase64).map(c => c.imageBase64!).slice(0, 3);
+      const buddyB64 = await buddyBase64(randomBuddy);
+      if (genRef.current !== gen) return;
+      const picAt = async (i: number, page1: string | null): Promise<string | null> => {
+        const scene = story.pages[i]!.scene;
+        let res = await askPagePicture({ heroBase64: hero.imageBase64 ?? '', buddyBase64: buddyB64, extraBase64: itemB64, page1Base64: i === 0 ? null : page1, location: locEn, scene });
+        if ('error' in res && (buddyB64 || itemB64.length > 0 || page1)) {
+          if (__DEV__) console.warn('[image] page picture with references failed, hero only:', res.error);
+          res = await askPagePicture({ heroBase64: hero.imageBase64 ?? '', location: locEn, scene });
+        }
+        return 'base64' in res ? res.base64 : null;
+      };
+      const all = (async (): Promise<(string | null)[]> => {
+        const p1 = await picAt(0, null);
+        if (genRef.current !== gen) return [null, null, null, null];
+        const rest = await Promise.all([1, 2, 3].map(i => picAt(i, p1)));
+        return [p1, ...rest];
+      })();
+      const got = (await Promise.race([all, new Promise<null>(r => setTimeout(() => r(null), 60000))])) ?? [null, null, null, null];
+      if (genRef.current !== gen) return;
+      pageArtRef.current = got.map((p, i) => {
+        if (p) return 'data:image/png;base64,' + p;
+        for (let d = 1; d < got.length; d++) {
+          if (got[i - d]) return 'data:image/png;base64,' + got[i - d]!;
+          if (got[i + d]) return 'data:image/png;base64,' + got[i + d]!;
+        }
+        return null;
+      });
       setPageArt([...pageArtRef.current]);
       setStoryTitle(story.title);
       setScenes(story.pages.map(p => p.scene));
@@ -1158,6 +1191,7 @@ export default function MagicStoryGame() {
   const tileS = Math.min(H * 0.13, 76 * k);
   const wandH = Math.max(64, 72 * k);
   const s = styles(k, totalSlides > 7);
+  const stepFlashSize = Math.max(60, Math.round(112 * Math.min(1, H / 600)));
   const storyIdx = Math.max(0, safeIdx - 1);
   // Every page: the buddy AND the one friend, side by side, big.
   const friend = lines && selected.length > 0 ? selected[0]! : null;
@@ -1365,12 +1399,18 @@ export default function MagicStoryGame() {
           Nothing else on the page but round arrows and page dots. */}
       {showingNote ? (
         <View style={[s.noteWrap, { top: topBarHeight(H, insets.top) }]} pointerEvents="box-none">
-          <View style={[s.book, { width: Math.min(W * 0.9, 920 * k), height: Math.min(H * 0.82, 560 * k) }]}>
+          <View style={[s.book, { width: Math.min(W * 0.9, 920 * k), height: Math.min(H * 0.82, 560 * k) }, { position: 'relative' }]}>
             {asking || !lines ? (
-              <View style={s.noteThinking}>
-                <BuddyGuide mood="thinking" size={64 * k} />
-                <ThinkingDots size={12 * k} />
-              </View>
+              (photoStep === 'told' ? (
+                <View style={s.noteThinking}>
+                  <BuddyGuide mood="thinking" size={Math.min(170 * k, H * 0.4)} />
+                </View>
+              ) : (
+                <View style={s.noteThinking}>
+                  <BuddyGuide mood="thinking" size={64 * k} />
+                  <ThinkingDots size={12 * k} />
+                </View>
+              ))
             ) : (
               <>
                 <View style={s.openPages}>
@@ -1443,39 +1483,20 @@ export default function MagicStoryGame() {
                     )}
                   </View>
                 </View>
-                <View style={s.pageControls}>
-                  <TouchableOpacity
-                    style={[s.arrowBtn, { width: 56 * k, height: 56 * k, borderRadius: 28 * k }, safeIdx >= totalSlides - 1 && s.pageBtnOff]}
-                    disabled={safeIdx >= totalSlides - 1}
-                    onPress={() => { tap(); setPageIdx(safeIdx + 1); }}
-                    activeOpacity={0.85}
-                    accessibilityRole="button"
-                    accessibilityLabel="صفحه بعد"
-                  >
-                    <Image source={neliWorldAssets.ui.next} style={{ width: 40 * k, height: 40 * k }} resizeMode="contain" />
-                  </TouchableOpacity>
-                  {idleHint && !isRecap ? (
-                    <View pointerEvents="none" style={{ position: 'absolute', left: 6 * k, top: -14 * k, zIndex: 5 }}>
-                      <IdleHand size={30 * k} />
-                    </View>
-                  ) : null}
+                                <View style={s.pageControls}>
                   <View style={s.dots}>
                     {Array.from({ length: totalSlides }).map((_, i) => (
                       <View key={i} style={[s.dot, i === safeIdx && s.dotOn]} />
                     ))}
                   </View>
-                  
-                  <TouchableOpacity
-                    style={[s.arrowBtn, { width: 56 * k, height: 56 * k, borderRadius: 28 * k }, safeIdx === 0 && s.pageBtnOff]}
-                    disabled={safeIdx === 0}
-                    onPress={() => { tap(); setPageIdx(safeIdx - 1); }}
-                    activeOpacity={0.85}
-                    accessibilityRole="button"
-                    accessibilityLabel="صفحه قبل"
-                  >
-                    <Image source={neliWorldAssets.ui.back} style={{ width: 40 * k, height: 40 * k }} resizeMode="contain" />
-                  </TouchableOpacity>
                 </View>
+                <MemoryStepFlash side="left" onPress={() => { tap(); setPageIdx(safeIdx - 1); }} disabled={safeIdx === 0} size={stepFlashSize} />
+                <MemoryStepFlash side="right" onPress={() => { tap(); setPageIdx(safeIdx + 1); }} disabled={safeIdx >= totalSlides - 1} size={stepFlashSize} />
+                {idleHint && !isRecap ? (
+                  <View pointerEvents="none" style={{ position: 'absolute', right: 2 * k, top: '50%', marginTop: -15 * k, zIndex: 5 }}>
+                    <IdleHand size={30 * k} />
+                  </View>
+                ) : null}
               </>
             )}
           </View>

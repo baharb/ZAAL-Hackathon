@@ -90,6 +90,7 @@ Deno.serve(async (req: Request) => {
     heroBase64?: string;
     buddyBase64?: string;
     extraBase64?: string[];
+    page1Base64?: string;
     location?: string;
     scene?: string;
   };
@@ -124,11 +125,16 @@ Deno.serve(async (req: Request) => {
       const ex = cleanB64(typeof raw === 'string' ? raw : '');
       if (ex && ex.length >= 100 && ex.length <= MAX_B64_LEN && B64.test(ex)) images.push({ image_url: pngDataUrl(ex) });
     }
+    // Pages after page 1 carry the finished page-1 picture as a style lock.
+    const page1Raw = cleanB64(typeof body.page1Base64 === 'string' ? body.page1Base64 : '');
+    const page1 = page1Raw && page1Raw.length >= 100 && page1Raw.length <= MAX_B64_LEN && B64.test(page1Raw) ? page1Raw : '';
+    if (page1) images.push({ image_url: pngDataUrl(page1) });
     const prompt =
       "Children's picture-book illustration. Use EXACTLY these characters from the reference images — " +
       'same shapes, colors and faces, do not redesign them. ' +
       `Setting: ${location} (the same setting on every page). Scene: ${scene}. ` +
-      'Simple, bright, soft shapes, no text, no other characters.';
+      'Simple, bright, soft shapes, no text, no other characters.' +
+      (page1 ? ' Same characters, same art style and same place as the reference page — only the action changes.' : '');
     try {
       const res = await fetch(META_EDIT_URL, {
         method: 'POST',

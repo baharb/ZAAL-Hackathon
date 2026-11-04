@@ -40,9 +40,10 @@ check('null on non-array', cleanFoundThings('nope') === null);
 // STEP 4 gate
 const loc = PHOTO_LOCATIONS[0];
 const page = (i) => ({ text: 'نلی و توپ قرمز با هم بازی کردن امروز', scene: 'Two friends play with a red ball in a garden, page ' + i });
-const good = { title: 'نلی و توپ', location: loc.en, pages: [1, 2, 3, 4, 5, 6].map(page) };
-check('accepts a clean 6-page story', validPhotoStory(good, loc)?.pages.length === 6);
-check('rejects 5 pages', validPhotoStory({ ...good, pages: good.pages.slice(0, 5) }, loc) === null);
+const good = { title: 'نلی و توپ', location: loc.en, pages: [1, 2, 3, 4].map(page) };
+check('accepts a clean 4-page story', validPhotoStory(good, loc)?.pages.length === 4);
+check('rejects 3 pages', validPhotoStory({ ...good, pages: good.pages.slice(0, 3) }, loc) === null);
+check('rejects 5 pages', validPhotoStory({ ...good, pages: [...good.pages, page(5)] }, loc) === null);
 check('rejects wrong location', validPhotoStory(good, PHOTO_LOCATIONS[1]) === null);
 check('rejects banned word', validPhotoStory({ ...good, pages: good.pages.map((p, i) => i === 2 ? { ...p, text: 'نلی از تاریک ترسید و گریه کرد' } : p) }, loc) === null);
 check('rejects a page over 14 words', validPhotoStory({ ...good, pages: good.pages.map((p, i) => i === 0 ? { ...p, text: Array(15).fill('توپ').join(' ') } : p) }, loc) === null);
