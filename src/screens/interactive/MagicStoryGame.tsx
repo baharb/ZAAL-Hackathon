@@ -937,7 +937,7 @@ export default function MagicStoryGame() {
       // always gets a real story, never an error screen.
       let filled = null as null | StoryText;
       for (let attempt = 0; attempt < 2 && !filled; attempt++) {
-        const res = await askMeta({ prompt: buildPrompt(), system, maxTokens: 1200, temperature: 0.7 });
+        const res = await askMeta({ prompt: buildPrompt(), system, maxTokens: 1200, temperature: 0.7 }, 0);
         if ('error' in res || !res.text || !res.text.trim()) {
           if (__DEV__) console.warn('[story] story request failed:', 'error' in res ? res.error : 'empty reply');
           continue;

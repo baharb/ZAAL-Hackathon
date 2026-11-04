@@ -90,6 +90,8 @@ Deno.serve(async (req: Request) => {
   // Hidden reasoning tokens count toward max_tokens, so a small budget
   // can leave ZERO visible text. If that happens, retry once with a
   // bigger budget before giving up.
+  let lastFinish = 'unknown';
+  let lastUsage = '{}';
   for (let attempt = 0; attempt < 2; attempt++) {
     const budget = attempt === 0 ? maxTokens : Math.min(maxTokens * 3, MAX_TOKENS_CAP);
     try {
@@ -126,6 +128,8 @@ Deno.serve(async (req: Request) => {
         ? raw.map((p: unknown) => (typeof p === 'string' ? p : (p as { text?: unknown })?.text ?? '')).join('')
         : String(raw ?? '');
       if (text.trim()) return json({ text });
+      lastFinish = String(data?.choices?.[0]?.finish_reason ?? 'unknown');
+      lastUsage = JSON.stringify(data?.usage ?? {});
       console.error(
         'Meta API returned no visible text, attempt', attempt + 1,
         'finish_reason:', data?.choices?.[0]?.finish_reason ?? 'unknown',
@@ -136,5 +140,5 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'Could not reach the Meta API' }, 502);
     }
   }
-  return json({ error: 'Model returned no text' }, 502);
+  return json({ error: `Model returned no text (finish_reason=${lastFinish}, usage=${lastUsage})` }, 502);
 });
