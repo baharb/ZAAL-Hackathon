@@ -115,7 +115,7 @@ export default function PicnicPhoto({
         </View>
       ))}
       {balloonIds.length > 0 && (
-        <View style={{ position: 'absolute', top: 2, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 2 }}>
+        <View style={{ position: 'absolute', bottom: Math.max(2, h * 0.02), left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 2 }}>
           {balloonIds.map(id => (
             <SimpleBall key={id} color={COLOR_HEX[id] ?? '#CCCCCC'} size={h * 0.16} />
           ))}

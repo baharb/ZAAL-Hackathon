@@ -270,6 +270,10 @@ export default function Finale({
         // (never overlapping another clip).
         void (async () => {
           await questPlay('quest/saved' as FaTestAudioKey, { awaitFinish: true });
+          // iOS drops the audio session ~100ms after the saved clip
+          // ends; a fresh player started inside that window plays
+          // silent. Wait it out (same settle faAudio uses), then cheer.
+          await new Promise(resolve => setTimeout(resolve, 320));
           if (!exitedRef.current) playYay();
         })();
         armExit();
@@ -341,6 +345,13 @@ export default function Finale({
   // Polaroid card size (also from k, so it fits small phones).
   const cardW = Math.min(gw * 0.44, gh * 0.92, 330);
   const cardPhotoH = cardW * 0.62;
+
+  // Preload the picnic's big images once so arriving from the drive
+  // never flashes while they decode.
+  useEffect(() => {
+    void Asset.loadAsync([story.background, QUEST_CAMERA, TREE_SRC, PLATE_SRC, grandmaArtFor(buddy), buddyPose(buddy, 'celebration')] as never[]).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -479,7 +490,7 @@ export default function Finale({
   return (
     <View style={styles.root} onLayout={onGameLayout}>
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, elevation: 60 }}>
-        <TopBar title="Picnic with Grandma" titleFa="پیک‌نیک با مامان‌بزرگ" dark showClose onBack={safeExit} />
+        <TopBar titleFa="پیک‌نیک با مامان‌بزرگ" dark showClose showSettingsIcon={false} onBack={safeExit} />
       </View>
       {/* Garden background, pinned to the bottom and oversized so its
           pale cloud band overflows off the top (never a half-cut strip),
@@ -720,7 +731,7 @@ export default function Finale({
             >
               <Image
                 source={QUEST_CAMERA}
-                style={{ width: camS * 3, height: camS * 3 }}
+                style={{ width: camS, height: camS }}
                 resizeMode="contain"
                 accessibilityLabel={isFa ? 'عکس بگیر!' : 'Take a photo!'}
               />
@@ -813,8 +824,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
-  // The child's own camera, no background, big and high on the page —
-  // above the characters' heads.
+  // The child's own camera, no background, big at the bottom-center
+  // below the blanket — never over Grandma's or the buddy's faces.
   camCenter: {
     position: 'absolute',
     left: 0,
@@ -822,8 +833,8 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: '7%',
+    justifyContent: 'flex-end',
+    paddingBottom: 4,
     zIndex: 45,
     elevation: 45,
   },
