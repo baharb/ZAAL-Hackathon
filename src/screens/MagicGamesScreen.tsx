@@ -45,11 +45,13 @@ function TileBuddy({ id, size }: { id: BuddyId; size: number }) {
 }
 
 const GRANDMA = require('../../assets/neli-world/characters/Grandma/grandma_standing.webp');
+const ROBO_HAPPY = require('../../assets/neli-world/characters/Robo Boombo/base_happy_2x_1024x1024.png');
 
 /** Mini scene per game: the character stands in the CENTER of the box,
  * big, with the game's small pictures around them. */
 function TileScene({ t, size, k }: { t: Tile; size: number; k: number }) {
-  const buddyS = size * 0.62;
+  // Every character except the picnic one is 15% bigger.
+  const buddyS = size * 0.71;
   const propS = size * 0.3;
   const corner = size * 0.06;
   const aboveBand = size * 0.26;
@@ -70,25 +72,22 @@ function TileScene({ t, size, k }: { t: Tile; size: number; k: number }) {
     );
   }
   if (t.route.name === 'MagicStory') {
-    // Aidin center, open book small at his feet, sparkles around.
+    // Aidin center, open book small at his feet.
     return (
       <View style={s.scene}>
         <TileBuddy id={t.buddy} size={buddyS} />
         <View style={{ position: 'absolute', bottom: aboveBand * 0.7, right: corner }}>
           <OpenBookIcon size={propS} />
         </View>
-        <Image source={neliWorldAssets.ui.sparkle} style={{ position: 'absolute', width: propS * 0.55, height: propS * 0.55, top: corner, left: corner }} resizeMode="contain" />
-        <Image source={neliWorldAssets.ui.sparkle} style={{ position: 'absolute', width: propS * 0.4, height: propS * 0.4, top: size * 0.2, right: corner }} resizeMode="contain" />
       </View>
     );
   }
   if (t.route.name === 'PhotoFarsi') {
-    // Robo Boombo center, camera small at his side, sparkle above.
+    // Robo Boombo (happy base art) center, camera small at his side.
     return (
       <View style={s.scene}>
-        <TileBuddy id={t.buddy} size={buddyS} />
+        <Image source={ROBO_HAPPY} style={{ width: buddyS, height: buddyS }} resizeMode="contain" />
         <Image source={neliWorldAssets.ui.camera} style={{ position: 'absolute', width: propS, height: propS, bottom: aboveBand * 0.7, right: corner }} resizeMode="contain" />
-        <Image source={neliWorldAssets.ui.sparkle} style={{ position: 'absolute', width: propS * 0.5, height: propS * 0.5, top: corner, left: corner }} resizeMode="contain" />
       </View>
     );
   }
