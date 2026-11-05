@@ -1177,7 +1177,7 @@ export default function MagicStoryGame() {
       {/* Drawing overlay: finger painting, then the AI cartoon reveal. */}
       {drawing ? (
         <View style={s.noteWrap} pointerEvents="box-none">
-          <View style={[s.drawCard, { width: Math.min(W * 0.94, 860), height: H * 0.94 }]}>
+          <View style={[s.drawCard, { width: W, height: H, borderRadius: 0 }]}>
               <>
                 <View style={s.drawHead}>
                   <Text style={[s.drawTitle, dir('fa')]}>نقاشیتو بکش!</Text>
