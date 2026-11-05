@@ -906,7 +906,7 @@ export default function MagicStoryGame() {
   const tileS = Math.min(H * 0.13, 76 * k);
   const wandH = Math.max(64, 72 * k);
   const s = styles(k, totalSlides > 7);
-  const stepFlashSize = Math.max(60, Math.round(112 * Math.min(1, H / 600)));
+  const stepFlashSize = Math.max(44, Math.round(64 * Math.min(1, H / 600)));
   const storyIdx = Math.max(0, safeIdx - 1);
   // Every page: the buddy AND the one friend, side by side, big.
   const friend = lines && cast.length > 0 ? cast[0]! : null;
