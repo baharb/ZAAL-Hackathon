@@ -411,6 +411,8 @@ export default function MagicStoryGame() {
   const pageArtRef = useRef<(string | null)[]>([]);
   const [storyTitle, setStoryTitle] = useState('');
   const [storySaved, setStorySaved] = useState(false);
+  // The End "photo": the story's title and characters, saved to the day.
+  const [showCard, setShowCard] = useState(false);
   // The page picture gently pops in when it (or the page) arrives.
   const pagePop = useRef(new Animated.Value(1)).current;
 
@@ -428,9 +430,9 @@ export default function MagicStoryGame() {
         picks: [],
         colorHex: '#FFFFFF',
         game: {
-          fa: 'قصه جادویی',
+          fa: storyTitle || 'قصه جادویی',
           en: 'Magic Story',
-          words: cast.map(m => ({ id: m.item.id, fa: (Array.isArray(m.item.fa) ? m.item.fa[0] : m.item.fa) ?? '', emoji: '' })),
+          words: cast.map(m => ({ id: m.item.id, fa: (Array.isArray(m.item.fa) ? m.item.fa[0] : m.item.fa) ?? '', emoji: '⭐' })),
         },
       });
     } catch {
@@ -624,6 +626,7 @@ export default function MagicStoryGame() {
     setPageIdx(0);
     setError(null);
     setPicsReady(0);
+    setShowCard(false);
   };
 
   const openDrawing = () => {
@@ -1125,8 +1128,7 @@ export default function MagicStoryGame() {
                         <Text style={[s.titleFa, dir('fa'), { textAlign: 'center' }]}>پایان قصه</Text>
                         <TouchableOpacity
                           style={[s.saveBtn, storySaved && s.saveBtnDone, { width: 76 * k, height: 76 * k, borderRadius: 38 * k }]}
-                          onPress={() => void saveStory()}
-                          disabled={storySaved}
+                          onPress={() => { tap(); setShowCard(true); void saveStory(); }}
                           activeOpacity={0.85}
                           accessibilityRole="button"
                           accessibilityLabel="ذخیره در روزهای من"
@@ -1160,6 +1162,22 @@ export default function MagicStoryGame() {
         </View>
       ) : null}
 
+      {showCard && lines ? (
+        <View style={s.cardWrap} pointerEvents="box-none">
+          <TouchableOpacity style={s.cardShade} onPress={() => { tap(); setShowCard(false); }} activeOpacity={0.9}>
+            <View style={s.photoCard}>
+              <Text style={[s.titleFa, dir('fa'), { textAlign: 'center' }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.6}>{storyTitle}</Text>
+              <View style={s.cardRow}>
+                {cast.map(m => m.heroUri ? (
+                  <Image key={m.item.id} source={{ uri: m.heroUri }} style={{ width: 64 * k, height: 64 * k }} resizeMode="contain" />
+                ) : null)}
+                <Image source={buddyArt} style={{ width: 64 * k, height: 64 * k }} resizeMode="contain" />
+              </View>
+              <Text style={[s.savedFa, dir('fa'), { textAlign: 'center' }]}>{storySaved ? 'ذخیره شد در روزهای من' : '...'}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       {error && showingNote ? (
         <View style={s.errorWrap}>
           <Text style={[s.error, dir('fa')]}>{error}</Text>
@@ -1446,6 +1464,10 @@ const styles = (k: number, compactDots: boolean) => StyleSheet.create({
   arrowText: { color: '#FFFFFF', fontFamily: ff('fa', 'black'), lineHeight: 34 * k },
   saveBtn: { backgroundColor: '#FFB800', alignItems: 'center', justifyContent: 'center' },
   saveBtnDone: { backgroundColor: '#22C55E' },
+  cardWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  cardShade: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(30,27,75,0.45)', alignItems: 'center', justifyContent: 'center' },
+  photoCard: { backgroundColor: '#FFF9E8', borderRadius: 24 * k, paddingHorizontal: 20 * k, paddingVertical: 16 * k, alignItems: 'center', rowGap: 12 * k, maxWidth: '88%' },
+  cardRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-end', gap: 8 * k },
   savedFa: { fontFamily: ff('fa', 'black'), color: '#15803D', fontSize: 15 * k },
   drawSubjectFa: { fontFamily: ff('fa', 'black'), color: PLAY_INK, fontSize: 22 * k },
   tapeLeft: { position: 'absolute', top: -8 * k, left: 26 * k, width: 64 * k, height: 20 * k, backgroundColor: 'rgba(255,255,255,0.75)', transform: [{ rotate: '-8deg' }] },
