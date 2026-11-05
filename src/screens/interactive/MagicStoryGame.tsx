@@ -831,7 +831,7 @@ export default function MagicStoryGame() {
       const locEn = location.en;
       const heroB64 = hero.imageBase64 ?? '';
       const itemB64 = chars.filter(c => c.id !== hero.id && c.imageBase64).map(c => c.imageBase64!).slice(0, 3);
-      const buddyB64 = await buddyBase64(randomBuddy);
+      const buddyB64 = await buddyBase64(rb);
       if (genRef.current !== gen) return;
       setPicsReady(0);
       const picAt = async (i: number): Promise<string | null> => {
