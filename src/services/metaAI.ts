@@ -11,8 +11,10 @@ import { supabase, supabaseConfigured } from './supabaseClient';
 
 export type MetaRequest = {
   prompt: string;
-  /** Base64 JPEG (no "data:" prefix). Keep it small: resize to ~768px first. */
+  /** Base64 image (no "data:" prefix). Keep it small: resize to ~768px first. */
   imageBase64?: string;
+  /** Image format: photos are 'jpeg', drawings are 'png'. Defaults to 'jpeg'. */
+  mime?: 'jpeg' | 'png';
   /** Extra instructions; the server always prepends ZAAL's child-safety rules. */
   system?: string;
   maxTokens?: number;

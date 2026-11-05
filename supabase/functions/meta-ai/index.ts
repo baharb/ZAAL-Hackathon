@@ -56,7 +56,7 @@ Deno.serve(async (req: Request) => {
   const apiKey = Deno.env.get('MODEL_API_KEY');
   if (!apiKey) return json({ error: 'MODEL_API_KEY secret is not set on the server' }, 500);
 
-  let body: { prompt?: string; imageBase64?: string; system?: string; maxTokens?: number; temperature?: number };
+  let body: { prompt?: string; imageBase64?: string; mime?: string; system?: string; maxTokens?: number; temperature?: number };
   try {
     body = await req.json();
   } catch {
@@ -76,7 +76,7 @@ Deno.serve(async (req: Request) => {
   if (body.imageBase64) {
     userContent.push({
       type: 'image_url',
-      image_url: { url: `data:image/jpeg;base64,${body.imageBase64}` },
+      image_url: { url: `data:image/${body.mime === 'png' ? 'png' : 'jpeg'};base64,${body.imageBase64}` },
     });
   }
 
